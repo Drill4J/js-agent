@@ -1,8 +1,8 @@
 import request from "supertest";
 import { app, server } from '../src/index'
 
-afterAll(() => {
-  server.close();
+beforeEach(async () => {
+  await server.close();
 });
 
 test('should test status controller', async () => {

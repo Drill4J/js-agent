@@ -1,13 +1,8 @@
 import * as express from "express";
 import { Request, Response } from "express";
+import { BaseController } from "./base.controller";
 
-export class StatusControler {
-    public path = "/";
-    public router = express.Router();
-
-    constructor() {
-        this.initRoutes();
-    }
+export class StatusControler extends BaseController {
 
     public initRoutes() {
         this.router.get("/", (req: Request, res: Response) => {
