@@ -1,14 +1,21 @@
-import express from "express";
+import { App } from "./app";
 
-const app = express();
-const port = 8080;
+import * as bodyParser from "body-parser";
+import { StatusControler } from "./controllers/status.controller";
+import { loggerMiddleware } from "./middleware/logger";
 
-// define a route handler for the default home page
-app.get( "/", (req, res ) => {
-    res.send( "Hello world!" );
-} );
+const PORT = parseInt(process.env.PORT) || 8080;
 
-// start the Express server
-app.listen(port, () => {
-    // console.log( `server started at http://localhost:${ port }` );
-} );
+export const app = new App({
+    port: PORT,
+    controllers: [
+        new StatusControler()
+    ],
+    middleWares: [
+        bodyParser.json(),
+        bodyParser.urlencoded({ extended: true }),
+        // loggerMiddleware
+    ]
+});
+
+export const server = app.listen();

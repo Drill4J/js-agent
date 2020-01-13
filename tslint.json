@@ -5,7 +5,13 @@
     ],
     "jsRules": {},
     "rules": {
-        "trailing-comma": [ false ]
+        "radix": false,
+        "object-literal-sort-keys": false,
+        "trailing-comma": [ false ],
+        "no-console": {
+            "severity": "warning",
+            "options": ["debug", "info", "log", "time", "timeEnd", "trace"]
+        }
     },
     "rulesDirectory": []
 }
