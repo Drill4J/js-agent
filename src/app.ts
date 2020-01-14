@@ -1,45 +1,48 @@
-import express from "express";
-import { Application } from "express";
+import express from 'express';
+import { Application } from 'express';
 
 export class App {
+  public app: Application;
+  public port: number;
 
-    public app: Application;
-    public port: number;
+  constructor(appInit: { port: number; middleWares: any; controllers: any }) {
+    this.app = express();
+    this.port = appInit.port;
 
-    constructor(appInit: { port: number; middleWares: any; controllers: any; }) {
-        this.app = express();
-        this.port = appInit.port;
+    this.middlewares(appInit.middleWares);
+    this.routes(appInit.controllers);
+    this.assets();
+    this.template();
+  }
 
-        this.middlewares(appInit.middleWares);
-        this.routes(appInit.controllers);
-        this.assets();
-        this.template();
-    }
+  public listen() {
+    return this.app.listen(this.port, () => {
+      console.log(`App listening on the http://localhost:${this.port}`);
+    });
+  }
 
-    public listen() {
-        return this.app.listen(this.port, () => {
-            console.log(`App listening on the http://localhost:${this.port}`);
-        });
-    }
+  private middlewares(middleWares: {
+    forEach: (arg0: (middleWare: any) => void) => void;
+  }) {
+    middleWares.forEach(middleWare => {
+      this.app.use(middleWare);
+    });
+  }
 
-    private middlewares(middleWares: { forEach: (arg0: (middleWare: any) => void) => void; }) {
-        middleWares.forEach((middleWare) => {
-            this.app.use(middleWare);
-        });
-    }
+  private routes(controllers: {
+    forEach: (arg0: (controller: any) => void) => void;
+  }) {
+    controllers.forEach(controller => {
+      this.app.use('/', controller.router);
+    });
+  }
 
-    private routes(controllers: { forEach: (arg0: (controller: any) => void) => void; }) {
-        controllers.forEach((controller) => {
-            this.app.use("/", controller.router);
-        });
-    }
+  private assets() {
+    this.app.use(express.static('public'));
+    this.app.use(express.static('views'));
+  }
 
-    private assets() {
-        this.app.use(express.static("public"));
-        this.app.use(express.static("views"));
-    }
-
-    private template() {
-        this.app.set("view engine", "pug");
-    }
+  private template() {
+    this.app.set('view engine', 'pug');
+  }
 }

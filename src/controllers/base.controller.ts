@@ -1,7 +1,6 @@
-import * as express from "express";
+import * as express from 'express';
 
 export abstract class BaseController {
-
   public router = express.Router();
 
   constructor() {
@@ -9,5 +8,4 @@ export abstract class BaseController {
   }
 
   public abstract initRoutes(): void;
-
 }

@@ -5,10 +5,11 @@ beforeEach(async () => {
     await server.close();
 });
 
-test('should test status controller', async () => {
+test('should test source maps controller', async () => {
     const data = { 
         version: 3,
-        file: "test.js"
+        file: "test.js",
+        name: ""
     }  
     
     
@@ -17,5 +18,5 @@ test('should test status controller', async () => {
       .send(data);
 
       expect(res.status).toEqual(200)
-      expect(res.body).toEqual({"status": "saved"})
+      expect(res.body).toEqual({"status": "Source map saved as ./sourceMaps/test.js.map"})
 })

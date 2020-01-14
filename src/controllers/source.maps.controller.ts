@@ -1,21 +1,25 @@
-import fs from "fs-extra";
-import path from "path";
-import { BaseController } from "./base.controller";
+import fs from 'fs-extra';
+import path from 'path';
+import { SOURCE_MAP_FOLDER } from '../constants';
+import { BaseController } from './base.controller';
 
-const SOURCE_MAP_FOLDER = process.env.SOURCE_MAP_FOLDER || "./sourceMaps";
+export const mainScriptNames: string[] = [];
 
 export class SourceMapsController extends BaseController {
-    public initRoutes() {
-        this.router.post("/source-maps", async (req, res) => {
-            const sourceMap = req.body;
-            const scriptName = path.basename(sourceMap.file);
+  public initRoutes() {
+    this.router.post('/source-maps', async (req, res) => {
+      const sourceMap = req.body;
+      const scriptName = path.basename(sourceMap.file);
 
-            await fs.ensureDir(`${SOURCE_MAP_FOLDER}`);
+      const fileName = `${SOURCE_MAP_FOLDER}${path.sep}${scriptName}.map`;
 
-            await fs.writeJSON(`${SOURCE_MAP_FOLDER}${path.sep}${scriptName}`, sourceMap);
+      await fs.ensureDir(`${SOURCE_MAP_FOLDER}`);
 
-            res.json({status: "saved"});
-        });
-    }
+      await fs.writeJSON(fileName, sourceMap);
 
+      mainScriptNames.push(scriptName);
+
+      res.json({ status: `Source map saved as ${fileName}` });
+    });
+  }
 }
