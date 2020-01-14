@@ -2,9 +2,9 @@ import convertSourceMap, { fromBase64 } from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SOURCE_MAP_FOLDER } from '../constants';
+import { astData } from './ast.controller';
 import { BaseController } from './base.controller';
 import { mainScriptNames } from './source.maps.controller';
-import { astData } from './ast.controller';
 
 const filters = [
   'node_modules',
@@ -52,13 +52,13 @@ export class CoverageController extends BaseController {
     this.router.get('/coverage', (req, res) => {
       const data = [];
 
-      astData['results'].forEach(result => {
+      astData.results.forEach(result => {
         const file = result.filePath;
 
         const fileCoverage = coverageData.filter(it => it.source === file);
 
         const cov = {
-          file: file,
+          file,
           methods: [],
         };
 

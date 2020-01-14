@@ -1,6 +1,6 @@
 import { BaseController } from './base.controller';
 
-export let astData = {};
+export let astData: any = {};
 
 export class AstController extends BaseController {
   public initRoutes() {
@@ -11,7 +11,7 @@ export class AstController extends BaseController {
     });
 
     this.router.get('/ast', (req, res) => {
-        res.json(astData)
-    })
+      res.json(astData);
+    });
   }
 }
