@@ -44,18 +44,28 @@ export class CoverageController extends BaseController {
         return res.send(resp);
       }
 
-      coverageData = result;
+      coverageData.push({
+        runUuid: runUuid,
+        testName: testName,
+        coverage: result,
+      });
 
       res.json({ status: 'coverage data saved' });
     });
 
     this.router.get('/coverage', (req, res) => {
+      const uuid = req.query.uuid;
+
+      const targetCoverage = coverageData.filter(it => it.runUuid === uuid);
+
       const data = [];
 
       astData.results.forEach(result => {
         const file = result.filePath;
 
-        const fileCoverage = coverageData.filter(it => it.source === file);
+        const fileCoverage = targetCoverage.filter(it =>
+          it.coverage.find(it => it.source === file)
+        );
 
         const cov = {
           file,
@@ -66,14 +76,29 @@ export class CoverageController extends BaseController {
           const start = m.loc.start.line;
           const end = m.loc.end.line;
 
-          const coveredLines = fileCoverage
-            .filter(it => it.originalLine >= start && it.originalLine <= end)
-            .map(it => it.hits)
-            .reduce((a, b) => a + b, 0);
+          fileCoverage.forEach(c => {
+            const coveredLines = c.coverage
+              .filter(it => it.originalLine >= start && it.originalLine <= end)
+              .map(it => it.hits)
+              .reduce((a, b) => a + b, 0);
 
-          cov.methods.push({
-            method: m.name,
-            covered: coveredLines,
+            const method = cov.methods.find(it => it.method === m.name);
+
+            if (method && coveredLines > 0) {
+              method.tests.push(c.testName);
+            } else {
+              const d = {
+                method: m.name,
+                covered: coveredLines,
+                tests: [],
+              };
+
+              if (coveredLines > 0) {
+                d.tests.push(c.testName);
+              }
+
+              cov.methods.push(d);
+            }
           });
         });
 
