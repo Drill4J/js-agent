@@ -1,9 +1,10 @@
-import convertSourceMap from 'convert-source-map';
+import convertSourceMap, { fromBase64 } from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SOURCE_MAP_FOLDER } from '../constants';
 import { BaseController } from './base.controller';
 import { mainScriptNames } from './source.maps.controller';
+import { astData } from './ast.controller';
 
 const filters = [
   'node_modules',
@@ -13,6 +14,8 @@ const filters = [
   '$_lazy_route_resource',
   'environment.ts',
 ];
+
+let coverageData = [];
 
 export class CoverageController extends BaseController {
   public initRoutes() {
@@ -41,7 +44,43 @@ export class CoverageController extends BaseController {
         return res.send(resp);
       }
 
-      res.json(result);
+      coverageData = result;
+
+      res.json({ status: 'coverage data saved' });
+    });
+
+    this.router.get('/coverage', (req, res) => {
+      const data = [];
+
+      astData['results'].forEach(result => {
+        const file = result.filePath;
+
+        const fileCoverage = coverageData.filter(it => it.source === file);
+
+        const cov = {
+          file: file,
+          methods: [],
+        };
+
+        result.result.methods.forEach(m => {
+          const start = m.loc.start.line;
+          const end = m.loc.end.line;
+
+          const coveredLines = fileCoverage
+            .filter(it => it.originalLine >= start && it.originalLine <= end)
+            .map(it => it.hits)
+            .reduce((a, b) => a + b, 0);
+
+          cov.methods.push({
+            method: m.name,
+            covered: coveredLines,
+          });
+        });
+
+        data.push(cov);
+      });
+
+      res.json(data);
     });
   }
 
@@ -112,7 +151,7 @@ export class CoverageController extends BaseController {
     );
 
     const coverage = cov[`${SOURCE_MAP_FOLDER}/${scriptName}`];
-    // const s = coverage.s
+
     const fnMap = coverage.fnMap;
     const f = coverage.f;
 

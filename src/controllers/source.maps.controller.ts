@@ -21,5 +21,9 @@ export class SourceMapsController extends BaseController {
 
       res.json({ status: `Source map saved as ${fileName}` });
     });
+
+    this.router.get('/source-maps', (req, res) => {
+      res.json(mainScriptNames);
+    });
   }
 }
