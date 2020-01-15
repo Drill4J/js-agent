@@ -15,7 +15,7 @@ const filters = [
   'environment.ts',
 ];
 
-let coverageData = [];
+const coverageData = [];
 
 export class CoverageController extends BaseController {
   public initRoutes() {
@@ -45,8 +45,8 @@ export class CoverageController extends BaseController {
       }
 
       coverageData.push({
-        runUuid: runUuid,
-        testName: testName,
+        runUuid,
+        testName,
         coverage: result,
       });
 
@@ -63,8 +63,8 @@ export class CoverageController extends BaseController {
       astData.results.forEach(result => {
         const file = result.filePath;
 
-        const fileCoverage = targetCoverage.filter(it =>
-          it.coverage.find(it => it.source === file)
+        const fileCoverage = targetCoverage.filter(tc =>
+          tc.coverage.find(it => it.source === file)
         );
 
         const cov = {
