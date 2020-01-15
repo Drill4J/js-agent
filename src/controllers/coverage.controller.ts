@@ -53,6 +53,10 @@ export class CoverageController extends BaseController {
       res.json({ status: 'coverage data saved' });
     });
 
+    this.router.get('/coverage/data', (req, res) => {
+      res.json(coverageData);
+    });
+
     this.router.get('/coverage', (req, res) => {
       const uuid = req.query.uuid;
 
@@ -64,7 +68,7 @@ export class CoverageController extends BaseController {
         const file = result.filePath;
 
         const fileCoverage = targetCoverage.filter(tc =>
-          tc.coverage.find(it => it.source === file)
+          tc.coverage.find(it => file.includes(it.source))
         );
 
         const cov = {
