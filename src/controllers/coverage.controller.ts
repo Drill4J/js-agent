@@ -90,7 +90,7 @@ export class CoverageController extends BaseController {
 
             if (method && coveredLines > 0) {
               method.tests.push(c.testName);
-            } else {
+            } else if(!method){
               const d = {
                 method: m.name,
                 covered: coveredLines,
