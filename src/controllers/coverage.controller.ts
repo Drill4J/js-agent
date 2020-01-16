@@ -2,9 +2,10 @@ import convertSourceMap, { fromBase64 } from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SOURCE_MAP_FOLDER } from '../constants';
-import { astData } from './ast.controller';
+import { getAstData, getCoverageData } from '../storage';
 import { BaseController } from './base.controller';
 import { mainScriptNames } from './source.maps.controller';
+import { saveCoverageData } from '../storage';
 
 const filters = [
   'node_modules',
@@ -14,8 +15,6 @@ const filters = [
   '$_lazy_route_resource',
   'environment.ts',
 ];
-
-const coverageData = [];
 
 export class CoverageController extends BaseController {
   public initRoutes() {
@@ -44,7 +43,7 @@ export class CoverageController extends BaseController {
         return res.send(resp);
       }
 
-      coverageData.push({
+      saveCoverageData({
         runUuid,
         testName,
         coverage: result,
@@ -54,17 +53,17 @@ export class CoverageController extends BaseController {
     });
 
     this.router.get('/coverage/data', (req, res) => {
-      res.json(coverageData);
+      res.json(getCoverageData);
     });
 
     this.router.get('/coverage', (req, res) => {
       const uuid = req.query.uuid;
 
-      const targetCoverage = coverageData.filter(it => it.runUuid === uuid);
+      const targetCoverage = getCoverageData().filter(it => it.runUuid === uuid);
 
       const data = [];
 
-      astData.results.forEach(result => {
+      getAstData().results.forEach(result => {
         const file = result.filePath;
 
         const fileCoverage = targetCoverage.filter(tc =>

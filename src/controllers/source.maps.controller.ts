@@ -2,12 +2,13 @@ import fs from 'fs-extra';
 import path from 'path';
 import { SOURCE_MAP_FOLDER } from '../constants';
 import { BaseController } from './base.controller';
+import { Request, Response } from 'express';
 
 export const mainScriptNames: string[] = [];
 
 export class SourceMapsController extends BaseController {
   public initRoutes() {
-    this.router.post('/source-maps', async (req, res) => {
+    this.router.post('/source-maps', async (req: Request, res: Response) => {
       const sourceMap = req.body;
       const scriptName = path.basename(sourceMap.file);
 

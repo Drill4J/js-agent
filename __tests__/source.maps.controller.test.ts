@@ -2,7 +2,7 @@ import request from 'supertest';
 import { app, server } from '../src/index';
 
 beforeEach(() => {
-  return server.close();
+  return server.close(() => console.log('Http server closed.'));
 });
 
 test('should test source maps controller', async () => {
@@ -20,8 +20,4 @@ test('should test source maps controller', async () => {
   expect(res.body).toEqual({
     status: 'Source map saved as ./sourceMaps/test.js.map',
   });
-});
-
-afterEach(() => {
-  return server.close();
 });

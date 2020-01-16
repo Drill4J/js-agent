@@ -2,7 +2,7 @@ import request from 'supertest';
 import { app, server } from '../src/index';
 
 beforeEach(() => {
-  return server.close();
+  return server.close(() => console.log('Http server closed.'));
 });
 
 test('should test ast controller', async () => {

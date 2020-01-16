@@ -7,7 +7,7 @@ function readJsonFile(name: string) {
 }
 
 beforeEach(() => {
-  return server.close();
+  return server.close(() => console.log('Http server closed.'));
 });
 
 const rootFolder = './__tests__/fixtures/todomvc';
