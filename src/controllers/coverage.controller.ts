@@ -89,8 +89,9 @@ export class CoverageController extends BaseController {
             const method = cov.methods.find(it => it.method === m.name);
 
             if (method && coveredLines > 0) {
+              method.covered += coveredLines;
               method.tests.push(c.testName);
-            } else if(!method){
+            } else if (!method) {
               const d = {
                 method: m.name,
                 covered: coveredLines,

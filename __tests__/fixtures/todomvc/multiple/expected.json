@@ -1,0 +1,254 @@
+[
+  {
+    "file": "/js/Application.ts",
+    "methods": []
+  },
+  {
+    "file": "/js/_all.ts",
+    "methods": []
+  },
+  {
+    "file": "/js/controllers/TodoCtrl.ts",
+    "methods": [
+      {
+        "method": "$inject",
+        "covered": 1651,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "constructor",
+        "covered": 1680,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "onPath",
+        "covered": 608,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "onTodos",
+        "covered": 3816,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "addTodo",
+        "covered": 855,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "editTodo",
+        "covered": 96,
+        "tests": [
+          "testCanCancelEditTodo",
+          "testCanEditTodo",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "revertEdits",
+        "covered": 35,
+        "tests": ["testCanCancelEditTodo"]
+      },
+      {
+        "method": "doneEditing",
+        "covered": 336,
+        "tests": [
+          "testCanCancelEditTodo",
+          "testCanEditTodo",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "removeTodo",
+        "covered": 48,
+        "tests": ["testCanDestroyTodo", "testTodoDeletedIfEmptyName"]
+      },
+      {
+        "method": "clearDoneTodos",
+        "covered": 32,
+        "tests": ["testCanClearCompletedTodo"]
+      },
+      {
+        "method": "markAll",
+        "covered": 50,
+        "tests": ["testCanClearCompletedTodo", "testCanToggleAll"]
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoBlur.ts",
+    "methods": [
+      {
+        "method": "todoBlur",
+        "covered": 10344,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoEscape.ts",
+    "methods": [
+      {
+        "method": "todoEscape",
+        "covered": 13382,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoFocus.ts",
+    "methods": [
+      {
+        "method": "todoFocus",
+        "covered": 12110,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "/js/models/TodoItem.ts",
+    "methods": [
+      {
+        "method": "constructor",
+        "covered": 353,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "/js/services/TodoStorage.ts",
+    "methods": [
+      {
+        "method": "get",
+        "covered": 5763,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      },
+      {
+        "method": "put",
+        "covered": 1766,
+        "tests": [
+          "testCanAddTodo",
+          "testCanCancelEditTodo",
+          "testCanClearCompletedTodo",
+          "testCanDestroyTodo",
+          "testCanEditTodo",
+          "testCanNotAddEmptyTodo",
+          "testCanOpenDifferenturl",
+          "testCanSwitchActiveAndCompleted",
+          "testCanToggleAll",
+          "testTodoDeletedIfEmptyName"
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,125 @@
+[
+  {
+    "file": "/js/Application.ts",
+    "methods": []
+  },
+  {
+    "file": "/js/_all.ts",
+    "methods": []
+  },
+  {
+    "file": "/js/controllers/TodoCtrl.ts",
+    "methods": [
+      {
+        "method": "$inject",
+        "covered": 54,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "constructor",
+        "covered": 140,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "onPath",
+        "covered": 38,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "onTodos",
+        "covered": 144,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "addTodo",
+        "covered": 57,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "editTodo",
+        "covered": 0,
+        "tests": []
+      },
+      {
+        "method": "revertEdits",
+        "covered": 0,
+        "tests": []
+      },
+      {
+        "method": "doneEditing",
+        "covered": 0,
+        "tests": []
+      },
+      {
+        "method": "removeTodo",
+        "covered": 0,
+        "tests": []
+      },
+      {
+        "method": "clearDoneTodos",
+        "covered": 0,
+        "tests": []
+      },
+      {
+        "method": "markAll",
+        "covered": 0,
+        "tests": []
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoBlur.ts",
+    "methods": [
+      {
+        "method": "todoBlur",
+        "covered": 340,
+        "tests": ["testCanAddTodo"]
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoEscape.ts",
+    "methods": [
+      {
+        "method": "todoEscape",
+        "covered": 432,
+        "tests": ["testCanAddTodo"]
+      }
+    ]
+  },
+  {
+    "file": "/js/directives/TodoFocus.ts",
+    "methods": [
+      {
+        "method": "todoFocus",
+        "covered": 404,
+        "tests": ["testCanAddTodo"]
+      }
+    ]
+  },
+  {
+    "file": "/js/models/TodoItem.ts",
+    "methods": [
+      {
+        "method": "constructor",
+        "covered": 28,
+        "tests": ["testCanAddTodo"]
+      }
+    ]
+  },
+  {
+    "file": "/js/services/TodoStorage.ts",
+    "methods": [
+      {
+        "method": "get",
+        "covered": 184,
+        "tests": ["testCanAddTodo"]
+      },
+      {
+        "method": "put",
+        "covered": 64,
+        "tests": ["testCanAddTodo"]
+      }
+    ]
+  }
+]
