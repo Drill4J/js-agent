@@ -1,0 +1,13 @@
+.DEFAULT_GOAL := build
+
+VERSION?=latest
+PORT?=8080
+
+build: 
+	docker build -t spirogov/agent-js:${VERSION} .
+
+push:
+	docker push spirogov/agent-js:${VERSION}
+
+start:
+	docker run -p ${PORT}:8080 spirogov/agent-js:${VERSION}

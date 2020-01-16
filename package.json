@@ -6,9 +6,10 @@
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix",
     "build": "tsc -p .",
-    "prestart": "npm run build",
-    "start": "npx nodemon dist/index.js",
-    "test": "jest --coverage --colors"
+    "predev": "npm run build",
+    "dev": "npx nodemon dist/index.js",
+    "test": "jest --coverage --colors",
+    "start": "node ."
   },
   "keywords": [],
   "author": "",

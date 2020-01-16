@@ -3,9 +3,9 @@ import { SourceMapConsumer } from 'source-map';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SOURCE_MAP_FOLDER } from '../constants';
 import { getAstData, getCoverageData } from '../storage';
+import { saveCoverageData } from '../storage';
 import { BaseController } from './base.controller';
 import { mainScriptNames } from './source.maps.controller';
-import { saveCoverageData } from '../storage';
 
 const filters = [
   'node_modules',
@@ -59,7 +59,9 @@ export class CoverageController extends BaseController {
     this.router.get('/coverage', (req, res) => {
       const uuid = req.query.uuid;
 
-      const targetCoverage = getCoverageData().filter(it => it.runUuid === uuid);
+      const targetCoverage = getCoverageData().filter(
+        it => it.runUuid === uuid
+      );
 
       const data = [];
 

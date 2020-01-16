@@ -1,8 +1,8 @@
+import { Request, Response } from 'express';
 import fs from 'fs-extra';
 import path from 'path';
 import { SOURCE_MAP_FOLDER } from '../constants';
 import { BaseController } from './base.controller';
-import { Request, Response } from 'express';
 
 export const mainScriptNames: string[] = [];
 

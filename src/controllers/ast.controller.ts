@@ -1,5 +1,5 @@
+import { getAstData, saveAstData } from '../storage';
 import { BaseController } from './base.controller';
-import { saveAstData, getAstData } from '../storage';
 
 export class AstController extends BaseController {
   public initRoutes() {
