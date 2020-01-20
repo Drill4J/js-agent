@@ -1,6 +1,7 @@
 import request from 'supertest';
-import { app, server } from '../src/index';
+import { server } from '../src/index';
 import { readFileSync } from 'fs';
+import { app } from '../src/app';
 
 function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));
@@ -79,4 +80,21 @@ describe('should test coverage controller', () => {
 
     expect(coverageResponse.body).toEqual(expected);
   });
+});
+
+test('test coverage raw data handler', async () => {
+  const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
+
+  const sourceMapRes = await request(app.app)
+    .post('/source-maps')
+    .send(sourceMap);
+
+  const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
+
+  const covRes = await request(app.app)
+    .post('/coverage')
+    .send(coverage);
+
+  expect(covRes.status).toEqual(200);
+  expect(covRes.body).toEqual({ status: 'coverage data saved' });
 });

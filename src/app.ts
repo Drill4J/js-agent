@@ -1,5 +1,11 @@
+import * as bodyParser from 'body-parser';
 import express from 'express';
 import { Application } from 'express';
+import { SERVER_PORT } from './constants';
+import { AstController } from './controllers/ast.controller';
+import { CoverageController } from './controllers/coverage.controller';
+import { SourceMapsController } from './controllers/source.maps.controller';
+import { StatusControler } from './controllers/status.controller';
 
 export class App {
   public app: Application;
@@ -46,3 +52,18 @@ export class App {
     this.app.set('view engine', 'pug');
   }
 }
+
+export const app = new App({
+  port: SERVER_PORT,
+  controllers: [
+    new StatusControler(),
+    new SourceMapsController(),
+    new AstController(),
+    new CoverageController(),
+  ],
+  middleWares: [
+    bodyParser.json({ limit: '50mb' }),
+    bodyParser.urlencoded({ limit: '50mb', extended: true }),
+    // loggerMiddleware
+  ],
+});

@@ -52,8 +52,8 @@ export class CoverageController extends BaseController {
       res.json({ status: 'coverage data saved' });
     });
 
-    this.router.get('/coverage/data', (req, res) => {
-      res.json(getCoverageData);
+    this.router.get('/coverage/rawData', (req, res) => {
+      res.json(getCoverageData());
     });
 
     this.router.get('/coverage', (req, res) => {
