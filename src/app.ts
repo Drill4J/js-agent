@@ -6,6 +6,7 @@ import { AstController } from './controllers/ast.controller';
 import { CoverageController } from './controllers/coverage.controller';
 import { SourceMapsController } from './controllers/source.maps.controller';
 import { StatusControler } from './controllers/status.controller';
+import { SwaggerControler } from './controllers/swagger.controller';
 
 export class App {
   public app: Application;
@@ -60,6 +61,7 @@ export const app = new App({
     new SourceMapsController(),
     new AstController(),
     new CoverageController(),
+    new SwaggerControler(),
   ],
   middleWares: [
     bodyParser.json({ limit: '50mb' }),
