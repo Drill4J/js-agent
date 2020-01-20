@@ -20,6 +20,7 @@
     "express": "^4.17.1",
     "fs-extra": "^8.1.0",
     "source-map": "^0.7.3",
+    "swagger-jsdoc": "^3.5.0",
     "swagger-ui-express": "^4.1.2",
     "v8-to-istanbul": "^4.0.1"
   },

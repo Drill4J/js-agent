@@ -52,10 +52,34 @@ export class CoverageController extends BaseController {
       res.json({ status: 'coverage data saved' });
     });
 
+    /**
+     * @swagger
+     *
+     * /coverage/rawData:
+     *   get:
+     *     description: Return raw coverage data
+     *     produces:
+     *       - application/json
+     *     responses:
+     *       200:
+     *         description: raw coverage data
+     */
     this.router.get('/coverage/rawData', (req, res) => {
       res.json(getCoverageData());
     });
 
+    /**
+     * @swagger
+     *
+     * /coverage:
+     *   get:
+     *     description: Return processed coverage data
+     *     produces:
+     *       - application/json
+     *     responses:
+     *       200:
+     *         description: processed coverage data
+     */
     this.router.get('/coverage', (req, res) => {
       const uuid = req.query.uuid;
 

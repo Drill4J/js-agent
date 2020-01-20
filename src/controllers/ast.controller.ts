@@ -9,6 +9,18 @@ export class AstController extends BaseController {
       res.json({ status: 'ast data saved' });
     });
 
+    /**
+     * @swagger
+     *
+     * /ast:
+     *   get:
+     *     description: Return ast data
+     *     produces:
+     *       - application/json
+     *     responses:
+     *       200:
+     *         description: ast data
+     */
     this.router.get('/ast', (req, res) => {
       res.json(getAstData());
     });
