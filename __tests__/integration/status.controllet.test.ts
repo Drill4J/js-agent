@@ -1,13 +1,8 @@
 import request from 'supertest';
-import { server } from '../../src/index';
-import { app } from '../../src/app';
-
-beforeEach(() => {
-  return server.close(() => console.log('Http server closed.'));
-});
+import { initApp } from '../util';
 
 test('should test status controller', async () => {
-  const res = await request(app).get('/');
+  const res = await request(initApp()).get('/');
 
   expect(res.status).toEqual(200);
   expect(res.body).toEqual({ status: 'Listening...' });
