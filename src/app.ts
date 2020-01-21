@@ -1,71 +1,10 @@
 import * as bodyParser from 'body-parser';
 import express from 'express';
-import { Application } from 'express';
-import { SERVER_PORT } from './constants';
-import { AstController } from './controllers/ast.controller';
-import { CoverageController } from './controllers/coverage.controller';
-import { SourceMapsController } from './controllers/source.maps.controller';
-import { StatusControler } from './controllers/status.controller';
-import { SwaggerControler } from './controllers/swagger.controller';
 
-export class App {
-  public app: Application;
-  public port: number;
+import * as statusController from './controllers/status';
 
-  constructor(appInit: { port: number; middleWares: any; controllers: any }) {
-    this.app = express();
-    this.port = appInit.port;
+export const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-    this.middlewares(appInit.middleWares);
-    this.routes(appInit.controllers);
-    this.assets();
-    this.template();
-  }
-
-  public listen() {
-    return this.app.listen(this.port, () => {
-      console.log(`App listening on the http://localhost:${this.port}`);
-    });
-  }
-
-  private middlewares(middleWares: {
-    forEach: (arg0: (middleWare: any) => void) => void;
-  }) {
-    middleWares.forEach(middleWare => {
-      this.app.use(middleWare);
-    });
-  }
-
-  private routes(controllers: {
-    forEach: (arg0: (controller: any) => void) => void;
-  }) {
-    controllers.forEach(controller => {
-      this.app.use('/', controller.router);
-    });
-  }
-
-  private assets() {
-    this.app.use(express.static('public'));
-    this.app.use(express.static('views'));
-  }
-
-  private template() {
-    this.app.set('view engine', 'pug');
-  }
-}
-
-export const app = new App({
-  port: SERVER_PORT,
-  controllers: [
-    new StatusControler(),
-    new SourceMapsController(),
-    new AstController(),
-    new CoverageController(),
-    new SwaggerControler(),
-  ],
-  middleWares: [
-    bodyParser.json({ limit: '50mb' }),
-    bodyParser.urlencoded({ limit: '50mb', extended: true }),
-    // loggerMiddleware
-  ],
-});
+app.get('/', statusController.index);
