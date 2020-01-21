@@ -1,7 +1,7 @@
 import request from 'supertest';
-import { server } from '../src/index';
+import { server } from '../../src/index';
 import { readFileSync } from 'fs';
-import { app } from '../src/app';
+import { app } from '../../src/app';
 
 function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));

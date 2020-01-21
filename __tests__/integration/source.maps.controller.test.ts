@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { server } from '../src/index';
-import { app } from '../src/app';
+import { server } from '../../src/index';
+import { app } from '../../src/app';
 
 beforeEach(() => {
   return server.close(() => console.log('Http server closed.'));
