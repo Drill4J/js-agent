@@ -4,6 +4,8 @@ import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { SERVER_PORT } from './constants';
 import * as astController from './controllers/ast';
+import * as coverageController from './controllers/coverage';
+import * as sourceMapsController from './controllers/source.maps';
 import * as statusController from './controllers/status';
 import * as swaggerController from './controllers/swagger';
 import { spec } from './controllers/swagger';
@@ -13,7 +15,7 @@ export class App {
 
   constructor() {
     this.app = express();
-    this.app.use(bodyParser.json());
+    this.app.use(bodyParser.json({ limit: '50mb' }));
     this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
     this.setRoutes();
   }
@@ -54,5 +56,12 @@ export class App {
      */
     this.app.get('/ast', astController.getAst);
     this.app.post('/ast', astController.saveAst);
+
+    this.app.get('/source-maps', sourceMapsController.getSourceMap);
+    this.app.post('/source-maps', sourceMapsController.saveSourceMap);
+
+    this.app.get('/coverage', coverageController.getCoverage);
+    this.app.get('/coverage/rawData', coverageController.getRawCoverage);
+    this.app.post('/coverage', coverageController.saveCoverage);
   }
 }
