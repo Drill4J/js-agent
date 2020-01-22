@@ -79,7 +79,7 @@ test('test coverage raw data handler', async () => {
 
   const client = await request(initApp());
 
-  const sourceMapRes = await client.post('/source-maps').send(sourceMap);
+  await client.post('/source-maps').send(sourceMap);
 
   const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
 
