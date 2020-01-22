@@ -1,10 +1,6 @@
 import request from 'supertest';
 import { server } from '../../src/index';
-import { app } from '../../src/app';
-
-beforeEach(() => {
-  return server.close(() => console.log('Http server closed.'));
-});
+import { initApp } from '../util';
 
 test('should test ast controller', async () => {
   const data = [
@@ -27,7 +23,7 @@ test('should test ast controller', async () => {
     },
   ];
 
-  const res = await request(app.app)
+  const res = await request(initApp())
     .post('/ast')
     .send(data);
 
