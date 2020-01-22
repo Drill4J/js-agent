@@ -13,9 +13,9 @@ export const getAst = (req, res) => {
 export const tree = (req, res) => {
   const ast = getAstData();
   const data = [];
-  ast.results.forEach(r => {
+  ast.forEach(r => {
     const methods = [];
-    r.result.methods.forEach(m => {
+    r.data.methods.forEach(m => {
       methods.push({
         name: m.name,
         params: m.params,
