@@ -1,7 +1,8 @@
 import { getAstData, saveAstData } from '../storage';
+import { AstData } from '../model/ast.data';
 
 export const saveAst = (req, res) => {
-  const data = req.body;
+  const data: AstData = req.body;
   saveAstData(data);
   res.json({ status: 'ast data saved' });
 };
