@@ -56,7 +56,9 @@ export const getCoverage = (req, res) => {
 
   const data = [];
 
-  getAstData().results.forEach(result => {
+  const astData = getAstData()
+
+  astData.forEach(result => {
     const file = result.filePath;
 
     const fileCoverage = targetCoverage.filter(tc =>
@@ -68,7 +70,7 @@ export const getCoverage = (req, res) => {
       methods: [],
     };
 
-    result.result.methods.forEach(m => {
+    result.data.methods.forEach(m => {
       const start = m.loc.start.line;
       const end = m.loc.end.line;
 
