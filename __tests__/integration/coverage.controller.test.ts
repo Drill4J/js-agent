@@ -7,10 +7,6 @@ function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));
 }
 
-// beforeEach(() => {
-//   return server.close(() => console.log('Http server closed.'));
-// });
-
 const rootFolder = './__tests__/fixtures/todomvc';
 
 const cases = [
@@ -41,18 +37,16 @@ describe('should test coverage controller', () => {
   test.each(cases)('given %ps and %p expect %p', async (cov, uuid, exp) => {
     const ast = readJsonFile(`${rootFolder}/ast.json`);
 
-    const res = await request(initApp())
-      .post('/ast')
-      .send(ast);
+    const client = await request(initApp());
+
+    const res = await client.post('/ast').send(ast);
 
     expect(res.status).toEqual(200);
     expect(res.body).toEqual({ status: 'ast data saved' });
 
     const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
 
-    const sourceMapRes = await request(initApp())
-      .post('/source-maps')
-      .send(sourceMap);
+    const sourceMapRes = await client.post('/source-maps').send(sourceMap);
 
     expect(sourceMapRes.status).toEqual(200);
     expect(sourceMapRes.body).toEqual({
@@ -62,15 +56,13 @@ describe('should test coverage controller', () => {
     for (const c of cov) {
       const coverage = readJsonFile(`${rootFolder}/${c}`);
 
-      const covRes = await request(initApp())
-        .post('/coverage')
-        .send(coverage);
+      const covRes = await client.post('/coverage').send(coverage);
 
       expect(covRes.status).toEqual(200);
       expect(covRes.body).toEqual({ status: 'coverage data saved' });
     }
 
-    const coverageResponse = await request(initApp())
+    const coverageResponse = await client
       .get('/coverage')
       .query({ uuid: uuid });
 
@@ -85,15 +77,13 @@ describe('should test coverage controller', () => {
 test('test coverage raw data handler', async () => {
   const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
 
-  const sourceMapRes = await request(initApp())
-    .post('/source-maps')
-    .send(sourceMap);
+  const client = await request(initApp());
+
+  const sourceMapRes = await client.post('/source-maps').send(sourceMap);
 
   const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
 
-  const covRes = await request(initApp())
-    .post('/coverage')
-    .send(coverage);
+  const covRes = await client.post('/coverage').send(coverage);
 
   expect(covRes.status).toEqual(200);
   expect(covRes.body).toEqual({ status: 'coverage data saved' });
