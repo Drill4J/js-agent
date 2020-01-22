@@ -1,15 +1,15 @@
 import request from 'supertest';
-import { server } from '../src/index';
+import { server } from '../../src/index';
 import { readFileSync } from 'fs';
-import { app } from '../src/app';
+import { initApp } from '../util';
 
 function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));
 }
 
-beforeEach(() => {
-  return server.close(() => console.log('Http server closed.'));
-});
+// beforeEach(() => {
+//   return server.close(() => console.log('Http server closed.'));
+// });
 
 const rootFolder = './__tests__/fixtures/todomvc';
 
@@ -41,7 +41,7 @@ describe('should test coverage controller', () => {
   test.each(cases)('given %ps and %p expect %p', async (cov, uuid, exp) => {
     const ast = readJsonFile(`${rootFolder}/ast.json`);
 
-    const res = await request(app.app)
+    const res = await request(initApp())
       .post('/ast')
       .send(ast);
 
@@ -50,7 +50,7 @@ describe('should test coverage controller', () => {
 
     const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
 
-    const sourceMapRes = await request(app.app)
+    const sourceMapRes = await request(initApp())
       .post('/source-maps')
       .send(sourceMap);
 
@@ -62,7 +62,7 @@ describe('should test coverage controller', () => {
     for (const c of cov) {
       const coverage = readJsonFile(`${rootFolder}/${c}`);
 
-      const covRes = await request(app.app)
+      const covRes = await request(initApp())
         .post('/coverage')
         .send(coverage);
 
@@ -70,7 +70,7 @@ describe('should test coverage controller', () => {
       expect(covRes.body).toEqual({ status: 'coverage data saved' });
     }
 
-    const coverageResponse = await request(app.app)
+    const coverageResponse = await request(initApp())
       .get('/coverage')
       .query({ uuid: uuid });
 
@@ -85,13 +85,13 @@ describe('should test coverage controller', () => {
 test('test coverage raw data handler', async () => {
   const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
 
-  const sourceMapRes = await request(app.app)
+  const sourceMapRes = await request(initApp())
     .post('/source-maps')
     .send(sourceMap);
 
   const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
 
-  const covRes = await request(app.app)
+  const covRes = await request(initApp())
     .post('/coverage')
     .send(coverage);
 

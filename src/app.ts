@@ -1,71 +1,67 @@
 import * as bodyParser from 'body-parser';
 import express from 'express';
-import { Application } from 'express';
+
+import swaggerUi from 'swagger-ui-express';
 import { SERVER_PORT } from './constants';
-import { AstController } from './controllers/ast.controller';
-import { CoverageController } from './controllers/coverage.controller';
-import { SourceMapsController } from './controllers/source.maps.controller';
-import { StatusControler } from './controllers/status.controller';
-import { SwaggerControler } from './controllers/swagger.controller';
+import * as astController from './controllers/ast';
+import * as coverageController from './controllers/coverage';
+import * as sourceMapsController from './controllers/source.maps';
+import * as statusController from './controllers/status';
+import * as swaggerController from './controllers/swagger';
+import { spec } from './controllers/swagger';
 
 export class App {
-  public app: Application;
-  public port: number;
+  public app: express.Application;
 
-  constructor(appInit: { port: number; middleWares: any; controllers: any }) {
+  constructor() {
     this.app = express();
-    this.port = appInit.port;
-
-    this.middlewares(appInit.middleWares);
-    this.routes(appInit.controllers);
-    this.assets();
-    this.template();
+    this.app.use(bodyParser.json({ limit: '50mb' }));
+    this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+    this.setRoutes();
   }
 
-  public listen() {
-    return this.app.listen(this.port, () => {
-      console.log(`App listening on the http://localhost:${this.port}`);
+  public start(port: number = SERVER_PORT) {
+    return this.app.listen(port, () => {
+      console.log(
+        '  App is running at http://localhost:%d in %s mode',
+        port,
+        this.app.get('env')
+      );
+      console.log('  Press CTRL-C to stop\n');
     });
   }
 
-  private middlewares(middleWares: {
-    forEach: (arg0: (middleWare: any) => void) => void;
-  }) {
-    middleWares.forEach(middleWare => {
-      this.app.use(middleWare);
-    });
-  }
+  private setRoutes() {
+    this.app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(spec, {
+        explorer: true,
+      })
+    );
+    this.app.get('/api-docs', swaggerController.apiDocs);
 
-  private routes(controllers: {
-    forEach: (arg0: (controller: any) => void) => void;
-  }) {
-    controllers.forEach(controller => {
-      this.app.use('/', controller.router);
-    });
-  }
+    this.app.get('/', statusController.index);
+    /**
+     * @swagger
+     *
+     * /ast:
+     *   get:
+     *     description: Return ast data
+     *     produces:
+     *       - application/json
+     *     responses:
+     *       200:
+     *         description: ast data
+     */
+    this.app.get('/ast', astController.getAst);
+    this.app.post('/ast', astController.saveAst);
 
-  private assets() {
-    this.app.use(express.static('public'));
-    this.app.use(express.static('views'));
-  }
+    this.app.get('/source-maps', sourceMapsController.getSourceMap);
+    this.app.post('/source-maps', sourceMapsController.saveSourceMap);
 
-  private template() {
-    this.app.set('view engine', 'pug');
+    this.app.get('/coverage', coverageController.getCoverage);
+    this.app.get('/coverage/rawData', coverageController.getRawCoverage);
+    this.app.post('/coverage', coverageController.saveCoverage);
   }
 }
-
-export const app = new App({
-  port: SERVER_PORT,
-  controllers: [
-    new StatusControler(),
-    new SourceMapsController(),
-    new AstController(),
-    new CoverageController(),
-    new SwaggerControler(),
-  ],
-  middleWares: [
-    bodyParser.json({ limit: '50mb' }),
-    bodyParser.urlencoded({ limit: '50mb', extended: true }),
-    // loggerMiddleware
-  ],
-});

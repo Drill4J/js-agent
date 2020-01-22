@@ -1,3 +1,5 @@
-import { app } from './app';
+import { App } from './app';
 
-export const server = app.listen();
+const app = new App();
+
+export const server = app.start();
