@@ -3,4 +3,5 @@ export class AstMethod {
   name: string;
   loc: object;
   body: object;
+  statements: number[];
 }
