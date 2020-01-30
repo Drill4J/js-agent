@@ -56,7 +56,7 @@ export const getCoverage = (req, res) => {
 
   const data = [];
 
-  const astData = getAstData()
+  const astData = getAstData();
 
   astData.forEach(result => {
     const file = result.filePath;
@@ -75,24 +75,34 @@ export const getCoverage = (req, res) => {
       const end = m.loc.end.line;
 
       fileCoverage.forEach(c => {
-        const coveredLines = c.coverage
-          .filter(it => it.originalLine >= start && it.originalLine <= end)
-          .map(it => it.hits)
-          .reduce((a, b) => a + b, 0);
+        const totalLines = c.coverage.filter(
+          it =>
+            file.includes(it.source) &&
+            it.originalLine >= start &&
+            it.originalLine <= end
+        );
+
+        const coveredLines = totalLines
+          .filter(it => it.hits === 1)
+          .map(it => it.originalLine);
+
+        const allLines = totalLines.map(it => it.originalLine);
 
         const method = cov.methods.find(it => it.method === m.name);
 
-        if (method && coveredLines > 0) {
-          method.covered += coveredLines;
+        if (method && coveredLines.length > 0) {
+          method.coveredLines = [...new Set([...method.coveredLines, ...coveredLines])];
+          method.lines = [...new Set([...method.lines, ...allLines])];
           method.tests.push(c.testName);
         } else if (!method) {
           const d = {
             method: m.name,
-            covered: coveredLines,
+            lines: [...new Set(allLines)],
+            coveredLines: [...new Set(coveredLines)],
             tests: [],
           };
 
-          if (coveredLines > 0) {
+          if (coveredLines.length > 0) {
             d.tests.push(c.testName);
           }
 

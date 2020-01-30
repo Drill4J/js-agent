@@ -57,6 +57,7 @@ export class App {
     this.app.get('/ast', astController.getAst);
     this.app.post('/ast', astController.saveAst);
     this.app.get('/tree', astController.tree);
+    this.app.get('/ast/diff', astController.astDiff);
 
     this.app.get('/source-maps', sourceMapsController.getSourceMap);
     this.app.post('/source-maps', sourceMapsController.saveSourceMap);
