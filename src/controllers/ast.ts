@@ -43,16 +43,29 @@ export const astDiff = (req, res) => {
     updated: [],
   };
 
-  observableDiff(
+  if (old.length === 0) {
+    res.json(result);
+  }
+
+  /*
+  kind - indicates the kind of change; will be one of the following:
+    N - indicates a newly added property/element
+    D - indicates a property/element was deleted
+    E - indicates a property/element was edited
+    A - indicates a change occurred within an array
+  */
+   observableDiff(
     old,
     latest,
     d => {
       console.log(d);
 
-      if (d.item.kind === 'N' && isObject(d.item.rhs)) {
-        const item = d.item.rhs;
-        result.new.push(item.name);
-      } else if (d.item.kind === 'N' && !isObject(d.item.rhs)) {
+      if (d.item && d.item.kind === 'N' && isObject(d.item.rhs)) {
+        const name = d.item.rhs.name;
+        if (name) {
+          result.new.push(name);
+        }
+      } else if (d.item && d.item.kind === 'N' && !isObject(d.item.rhs)) {
         const method = old[d.path[0]][d.path[1]][d.path[2]][d.path[3]];
         result.updated.push(method.name);
       }
