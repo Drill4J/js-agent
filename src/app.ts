@@ -62,8 +62,40 @@ export class App {
     this.app.get('/source-maps', sourceMapsController.getSourceMap);
     this.app.post('/source-maps', sourceMapsController.saveSourceMap);
 
+    /**
+     * @swagger
+     *
+     * /coverage:
+     *   get:
+     *     description: Return coverage data
+     *     produces:
+     *       - application/json
+     *     responses:
+     *       200:
+     *         description: coverage data
+     */
     this.app.get('/coverage', coverageController.getCoverage);
     this.app.get('/coverage/rawData', coverageController.getRawCoverage);
     this.app.post('/coverage', coverageController.saveCoverage);
+    /**
+     * @swagger
+     *
+     * /affectedTests?uuid={uuid}:
+     *   get:
+     *     description: Return affected tests
+     *     produces:
+     *       - application/json
+     *     parameters:
+     *      - in: query
+     *        name: uuid
+     *        schema:
+     *          type: string
+     *        required: true
+     *        description: Id of the user
+     *     responses:
+     *       200:
+     *         description: affected tests array
+     */
+    this.app.get('/affectedTests', coverageController.getAffectedTests);
   }
 }

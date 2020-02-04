@@ -5,6 +5,26 @@ import {
   getCoverageForBuild,
   processCoverageData,
 } from '../services/coverage.service';
+import { getAstDiff } from '../services/ast.service';
+
+export const getAffectedTests = (req, res) => {
+  const uuid = req.query.uuid;
+
+  const coverage = getCoverageForBuild(uuid);
+  const updated = getAstDiff().updated;
+
+  const methods = [];
+
+  coverage. map(it => methods.push(...it.methods));
+
+  const affectedMethods = methods.filter(it => updated.includes(it.method));
+
+  const affectedTests = [];
+
+  affectedMethods.forEach(it => affectedTests.push(...it.tests));
+
+  res.json(affectedTests);
+};
 
 export const saveCoverage = async (req, res) => {
   const sources = req.body.scriptSources;
