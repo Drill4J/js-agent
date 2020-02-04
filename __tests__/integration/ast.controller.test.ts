@@ -2,6 +2,14 @@ import request from 'supertest';
 import { initApp } from '../util';
 import { readJsonFile } from './coverage.controller.test';
 
+test('should return [] when index is bigger than data range', async () => {
+  const client = request(initApp());
+  const res = await request(initApp()).get('/ast?index=5');
+
+  expect(res.status).toEqual(200);
+  expect(res.body).toEqual([]);
+});
+
 test('should test ast controller', async () => {
   const data = [
     {
