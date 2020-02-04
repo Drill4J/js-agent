@@ -16,5 +16,5 @@ RUN npm run build
 # Bundle app source
 
 
-EXPOSE 3000
+EXPOSE 8080
 CMD [ "npm", "start" ]
