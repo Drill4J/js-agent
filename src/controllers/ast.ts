@@ -10,7 +10,8 @@ export const saveAst = (req, res) => {
 };
 
 export const getAst = (req, res) => {
-  res.json(getAstData());
+  const index = req.query.index;
+  res.json(getAstData(index));
 };
 
 export const tree = (req, res) => {

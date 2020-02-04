@@ -3,7 +3,7 @@ import { server } from '../../src/index';
 import { readFileSync } from 'fs';
 import { initApp } from '../util';
 
-function readJsonFile(name: string) {
+export function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));
 }
 

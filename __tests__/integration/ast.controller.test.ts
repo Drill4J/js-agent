@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { server } from '../../src/index';
 import { initApp } from '../util';
+import { readJsonFile } from './coverage.controller.test';
 
 test('should test ast controller', async () => {
   const data = [
@@ -199,4 +199,24 @@ test('test can get ampty ast diff when only first build', async () => {
     new: [],
     updated: [],
   });
+});
+
+test('test can get ast diff after first build changes', async () => {
+  const client = request(initApp());
+
+  const oldData = readJsonFile(
+    './__tests__/fixtures/todomvc/ast_diff/old.json'
+  );
+
+  const newData = readJsonFile(
+    './__tests__/fixtures/todomvc/ast_diff/new.json'
+  );
+
+  await client.post('/ast').send(oldData);
+  await client.post('/ast').send(newData);
+
+  const res = await client.get('/ast/diff');
+
+  expect(res.status).toEqual(200);
+  expect(res.body).toEqual({ new: ['newMethod'], updated: ['removeTodo'] });
 });
