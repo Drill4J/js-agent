@@ -15,7 +15,7 @@ export const getAffectedTests = (req, res) => {
 
   const methods = [];
 
-  coverage. map(it => methods.push(...it.methods));
+  coverage.map(it => methods.push(...it.methods));
 
   const affectedMethods = methods.filter(it => updated.includes(it.method));
 
@@ -28,7 +28,7 @@ export const getAffectedTests = (req, res) => {
 
 export const saveCoverage = async (req, res) => {
   const sources = req.body.scriptSources;
-  const coverage = req.body.coverage;
+  const coverage = req.body.coverage.filter(it => it.url !== '');
   const testName = req.body.testName;
   const runUuid = req.body.runUuid;
 
@@ -48,7 +48,7 @@ export const saveCoverage = async (req, res) => {
       mainScriptNames,
     };
 
-    res.json(resp);
+    res.status(500).json(resp);
   }
 
   saveCoverageData({
