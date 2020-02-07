@@ -66,5 +66,6 @@ export const getCoverage = (req, res) => {
 };
 
 export const getRawCoverage = (req, res) => {
-  res.json(getCoverageData());
+  const uuid = req.query.uuid;
+  res.json(getCoverageData(uuid));
 };
