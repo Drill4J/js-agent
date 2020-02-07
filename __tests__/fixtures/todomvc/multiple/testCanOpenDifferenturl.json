@@ -1,5 +1,5 @@
 {
-  "testName" : "testCanOpenDifferenturl",
+  "test" : { "name":"testCanOpenDifferenturl", "type": "automated"} ,
   "runUuid" : "aff7f389-56ff-4af4-a347-26a5f15e1a81",
   "coverage" : [ {
     "scriptId" : "13",

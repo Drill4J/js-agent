@@ -69,6 +69,8 @@ describe('should test coverage controller', () => {
 
     const expected = readJsonFile(`${rootFolder}/${exp}`);
 
+    expected.buildId = res.body.buildId;
+
     expect(coverageResponse.body).toEqual(expected);
   });
 });

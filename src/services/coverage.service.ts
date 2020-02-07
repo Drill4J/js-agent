@@ -62,7 +62,7 @@ export function getCoverageForBuild(uuid: string) {
             ...new Set([...method.coveredLines, ...coveredLines]),
           ];
           method.lines = [...new Set([...method.lines, ...allLines])];
-          method.tests.push(c.testName);
+          method.tests.push(c.test);
         } else if (!method) {
           const d = {
             method: m.name,
@@ -72,7 +72,7 @@ export function getCoverageForBuild(uuid: string) {
           };
 
           if (coveredLines.length > 0) {
-            d.tests.push(c.testName);
+            d.tests.push(c.test);
           }
 
           cov.methods.push(d);
@@ -83,7 +83,7 @@ export function getCoverageForBuild(uuid: string) {
     data.push(cov);
   });
 
-  return data;
+  return { buildId: uuid, coverage: data };
 }
 
 export async function processCoverageData(sources, coverage) {

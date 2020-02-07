@@ -1,5 +1,5 @@
 {
-    "testName": "testCanAddTodo",
+    "test": { "name": "testCanAddTodo", "type" : "automated"},
     "runUuid": "6b46ea8e-28e8-4fa0-b535-f1fc95f1fad4",
     "coverage": [
       {
