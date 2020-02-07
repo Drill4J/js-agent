@@ -1,4 +1,4 @@
-import { getCoverageData } from '../storage';
+import { getCoverageData, getAstData } from '../storage';
 import { saveCoverageData } from '../storage';
 import { mainScriptNames } from './source.maps';
 import {
@@ -30,7 +30,7 @@ export const saveCoverage = async (req, res) => {
   const sources = req.body.scriptSources;
   const coverage = req.body.coverage.filter(it => it.url !== '');
   const testName = req.body.testName;
-  const runUuid = req.body.runUuid;
+  const runUuid = getAstData().buildId;
 
   if (mainScriptNames.length === 0) {
     const resp = {
@@ -57,7 +57,7 @@ export const saveCoverage = async (req, res) => {
     coverage: result,
   });
 
-  res.json({ status: 'coverage data saved' });
+  res.json({ status: `Coverage data saved. BuildId ${runUuid}` });
 };
 
 export const getCoverage = (req, res) => {

@@ -2,10 +2,21 @@ import { getAstData, saveAstData } from '../storage';
 import { AstData } from '../model/ast.data';
 import { getAstDiff, getAstTree } from '../services/ast.service';
 
+import { v4 as uuid } from 'uuid';
+
 export const saveAst = (req, res) => {
   const data: AstData = req.body;
-  saveAstData(data);
-  res.json({ status: 'ast data saved' });
+
+  const buildId = uuid();
+
+  const result = {
+    buildId: buildId,
+    data: data,
+  };
+
+  saveAstData(result);
+
+  res.json({ status: `Ast data saved. BuildId ${buildId}` });
 };
 
 export const getAst = (req, res) => {

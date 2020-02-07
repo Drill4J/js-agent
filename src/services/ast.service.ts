@@ -3,8 +3,8 @@ import { observableDiff } from 'deep-diff';
 import { isObject } from 'util';
 
 export function getAstDiff() {
-  const latest = getAstData(1);
-  const old = getAstData(2);
+  const latest = getAstData(1).data;
+  const old = getAstData(2).data;
 
   const result = {
     new: [],
@@ -47,7 +47,7 @@ export function getAstDiff() {
 }
 
 export function getAstTree() {
-  const ast = getAstData();
+  const ast = getAstData().data;
   const data = [];
   ast.forEach(r => {
     const methods = [];

@@ -15,8 +15,8 @@ const filters = [
 ];
 
 export function getCoverageForBuild(uuid: string) {
-  const targetCoverage = getCoverageData().filter(it => it.runUuid === uuid);
-  const astData = getAstData();
+  const targetCoverage = getCoverageData();
+  const astData = getAstData().data;
 
   const data = [];
 
