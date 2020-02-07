@@ -15,12 +15,17 @@ const filters = [
 ];
 
 export function getCoverageForBuild(uuid: string) {
+  const astData = getAstData();
+
+  if (!uuid) {
+    uuid = astData.buildId;
+  }
+
   const targetCoverage = getCoverageData(uuid);
-  const astData = getAstData().data;
 
   const data = [];
 
-  astData.forEach(result => {
+  astData.data.forEach(result => {
     const file = result.filePath;
 
     const fileCoverage = targetCoverage.filter(tc =>
