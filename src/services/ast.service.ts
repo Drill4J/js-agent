@@ -26,8 +26,6 @@ export function getAstDiff() {
     old,
     latest,
     d => {
-      console.log(d);
-
       if (d.item && d.item.kind === 'N' && isObject(d.item.rhs)) {
         const name = d.item.rhs.name;
         if (name) {

@@ -36,7 +36,8 @@ test('should test ast controller', async () => {
     .send(data);
 
   expect(res.status).toEqual(200);
-  expect(res.body).toHaveProperty('status');
+  expect(res.body).toHaveProperty('buildId');
+  expect(res.body.status).toBe('Ast data saved');
 });
 
 test('test can get ast tree', async () => {

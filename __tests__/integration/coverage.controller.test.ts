@@ -63,7 +63,7 @@ describe('should test coverage controller', () => {
 
     const coverageResponse = await client
       .get('/coverage')
-      .query({ uuid: uuid });
+      .query({ uuid: res.body.buildId });
 
     expect(coverageResponse.status).toEqual(200);
 

@@ -15,7 +15,7 @@ const filters = [
 ];
 
 export function getCoverageForBuild(uuid: string) {
-  const targetCoverage = getCoverageData();
+  const targetCoverage = getCoverageData(uuid);
   const astData = getAstData().data;
 
   const data = [];

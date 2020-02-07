@@ -16,7 +16,7 @@ export const saveAst = (req, res) => {
 
   saveAstData(result);
 
-  res.json({ status: `Ast data saved. BuildId ${buildId}` });
+  res.json({ status: `Ast data saved`, buildId: buildId });
 };
 
 export const getAst = (req, res) => {
