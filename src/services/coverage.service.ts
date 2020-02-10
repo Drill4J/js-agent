@@ -4,6 +4,7 @@ import { SOURCE_MAP_FOLDER } from '../constants';
 import { mainScriptNames } from '../controllers/source.maps';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SourceMapConsumer } from 'source-map';
+import * as upath from 'upath';
 
 const filters = [
   'node_modules',
@@ -26,7 +27,7 @@ export function getCoverageForBuild(uuid: string) {
   const data = [];
 
   astData.data.forEach(result => {
-    const file = result.filePath;
+    const file = upath.toUnix(result.filePath);
 
     const fileCoverage = targetCoverage.filter(tc =>
       tc.coverage.find(it => file.includes(it.source))

@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { SOURCE_MAP_FOLDER } from '../constants';
+import * as upath from 'upath';
 
 export const mainScriptNames: string[] = [];
 
@@ -16,7 +17,7 @@ export const saveSourceMap = async (req, res) => {
 
   mainScriptNames.push(scriptName);
 
-  res.json({ status: `Source map saved as ${fileName}` });
+  res.json({ status: `Source map saved as ${upath.toUnix(fileName)}` });
 };
 
 export const getSourceMap = (req, res) => {
