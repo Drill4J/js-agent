@@ -9,6 +9,7 @@ import * as sourceMapsController from './controllers/source.maps';
 import * as statusController from './controllers/status';
 import * as swaggerController from './controllers/swagger';
 import { spec } from './controllers/swagger';
+import cors from 'cors';
 
 export class App {
   public app: express.Application;
@@ -17,6 +18,7 @@ export class App {
     this.app = express();
     this.app.use(bodyParser.json({ limit: '50mb' }));
     this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+    this.app.use(cors());
     this.setRoutes();
   }
 
