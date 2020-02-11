@@ -1,6 +1,7 @@
 import * as bodyParser from 'body-parser';
 import express from 'express';
 
+import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { SERVER_PORT } from './constants';
 import * as astController from './controllers/ast';
@@ -9,6 +10,7 @@ import * as sourceMapsController from './controllers/source.maps';
 import * as statusController from './controllers/status';
 import * as swaggerController from './controllers/swagger';
 import { spec } from './controllers/swagger';
+import { loggerMiddleware } from './middleware/logger';
 
 export class App {
   public app: express.Application;
@@ -17,6 +19,8 @@ export class App {
     this.app = express();
     this.app.use(bodyParser.json({ limit: '50mb' }));
     this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+    this.app.use(cors());
+    this.app.use(loggerMiddleware);
     this.setRoutes();
   }
 

@@ -1,7 +1,7 @@
 export class AstMethod {
-  params: string[];
-  name: string;
-  loc: object;
-  body: object;
-  statements: number[];
+  public params: string[];
+  public name: string;
+  public loc: object;
+  public body: object;
+  public statements: number[];
 }
