@@ -18,6 +18,10 @@ const filters = [
 export function getCoverageForBuild(uuid: string) {
   const astData = getAstData();
 
+  if (!astData.data) {
+    return {};
+  }
+
   if (!uuid) {
     uuid = astData.buildId;
   }

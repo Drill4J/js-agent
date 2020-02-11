@@ -34,6 +34,14 @@ const cases = [
 ];
 
 describe('should test coverage controller', () => {
+  test('test empty data', async () => {
+    const client = await request(initApp());
+
+    const coverageResponse = await client.get('/coverage');
+
+    expect(coverageResponse.status).toEqual(200);
+  });
+
   test.each(cases)('given %ps and %p expect %p', async (cov, uuid, exp) => {
     const ast = readJsonFile(`${rootFolder}/ast.json`);
 
@@ -73,19 +81,19 @@ describe('should test coverage controller', () => {
 
     expect(coverageResponse.body).toEqual(expected);
   });
-});
 
-test('test coverage raw data handler', async () => {
-  const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
+  test('test coverage raw data handler', async () => {
+    const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
 
-  const client = await request(initApp());
+    const client = await request(initApp());
 
-  await client.post('/source-maps').send(sourceMap);
+    await client.post('/source-maps').send(sourceMap);
 
-  const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
+    const coverage = readJsonFile(`${rootFolder}/multiple/testCanAddTodo.json`);
 
-  const covRes = await client.post('/coverage').send(coverage);
+    const covRes = await client.post('/coverage').send(coverage);
 
-  expect(covRes.status).toEqual(200);
-  expect(covRes.body).toHaveProperty('status');
+    expect(covRes.status).toEqual(200);
+    expect(covRes.body).toHaveProperty('status');
+  });
 });
