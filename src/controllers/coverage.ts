@@ -1,11 +1,11 @@
-import { getCoverageData, getAstData } from '../storage';
-import { saveCoverageData } from '../storage';
-import { mainScriptNames } from './source.maps';
+import { getAstDiff } from '../services/ast.service';
 import {
   getCoverageForBuild,
   processCoverageData,
 } from '../services/coverage.service';
-import { getAstDiff } from '../services/ast.service';
+import { getAstData, getCoverageData } from '../storage';
+import { saveCoverageData } from '../storage';
+import { mainScriptNames } from './source.maps';
 
 export const getAffectedTests = (req, res) => {
   const uuid = req.query.uuid;

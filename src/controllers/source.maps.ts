@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { SOURCE_MAP_FOLDER } from '../constants';
 import * as upath from 'upath';
+import { SOURCE_MAP_FOLDER } from '../constants';
 
 export const mainScriptNames: string[] = [];
 

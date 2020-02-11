@@ -1,6 +1,6 @@
-import { AstMethod } from "./ast.method";
+import { AstMethod } from './ast.method';
 
 export class AstData {
-  filePath: string;
-  data: { methods: AstMethod[] }
+  public filePath: string;
+  public data: { methods: AstMethod[] };
 }

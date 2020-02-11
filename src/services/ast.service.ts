@@ -1,6 +1,6 @@
-import { getAstData } from '../storage';
 import { observableDiff } from 'deep-diff';
 import { isObject } from 'util';
+import { getAstData } from '../storage';
 
 export function getAstDiff() {
   const latest = getAstData(1).data;
@@ -58,7 +58,7 @@ export function getAstTree() {
 
     data.push({
       fileName: r.filePath,
-      methods: methods,
+      methods,
     });
   });
 

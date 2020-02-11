@@ -1,10 +1,10 @@
-import { getCoverageData, getAstData } from '../storage';
 import convertSourceMap from 'convert-source-map';
-import { SOURCE_MAP_FOLDER } from '../constants';
-import { mainScriptNames } from '../controllers/source.maps';
-import v8toIstanbul from 'v8-to-istanbul';
 import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
+import v8toIstanbul from 'v8-to-istanbul';
+import { SOURCE_MAP_FOLDER } from '../constants';
+import { mainScriptNames } from '../controllers/source.maps';
+import { getAstData, getCoverageData } from '../storage';
 
 const filters = [
   'node_modules',

@@ -1,4 +1,4 @@
-let astData: any = [];
+const astData: any = [];
 const coverageData = [];
 
 export function saveAstData(data) {

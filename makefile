@@ -3,7 +3,10 @@
 VERSION?=latest
 PORT?=8080
 
-build: 
+compile:
+	npm run build
+
+build: compile
 	docker build -t spirogov/agent-js:${VERSION} .
 
 push:
