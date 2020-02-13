@@ -96,4 +96,95 @@ describe('should test coverage controller', () => {
     expect(covRes.status).toEqual(200);
     expect(covRes.body).toHaveProperty('status');
   });
+
+  test('test can get risks', async () => {
+    const ast = readJsonFile(`${rootFolder}/ast.json`);
+
+    const client = await request(initApp());
+
+    const res = await client.post('/ast').send(ast);
+
+    expect(res.status).toEqual(200);
+
+    const sourceMap = readJsonFile(`${rootFolder}/Application.js.map`);
+
+    const sourceMapRes = await client.post('/source-maps').send(sourceMap);
+
+    expect(sourceMapRes.status).toEqual(200);
+    expect(sourceMapRes.body).toEqual({
+      status: 'Source map saved as ./sourceMaps/Application.js.map',
+    });
+
+    const coverage = readJsonFile(`${rootFolder}/single/coverage.json`);
+
+    const covRes = await client.post('/coverage').send(coverage);
+
+    expect(covRes.status).toEqual(200);
+    expect(covRes.body).toHaveProperty('status');
+
+    const coverageResponse = await client
+      .get('/coverage')
+      .query({ uuid: res.body.buildId });
+
+    expect(coverageResponse.status).toEqual(200);
+
+    const risks = await client.get('/risks');
+
+    expect(risks.body).toEqual([
+      {
+        coveredLines: [],
+        lines: [],
+        method: '$inject',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [58, 59, 60, 61, 62, 63],
+        method: 'onTodos',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [75, 76, 78, 79, 80],
+        method: 'editTodo',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [82, 83, 84, 85],
+        method: 'revertEdits',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
+        method: 'doneEditing',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [101, 102, 103],
+        method: 'removeTodo',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [105, 106, 107],
+        method: 'clearDoneTodos',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [109, 110, 111],
+        method: 'markAll',
+        tests: [],
+      },
+      {
+        coveredLines: [],
+        lines: [17, 18, 19],
+        method: 'put',
+        tests: [],
+      },
+    ]);
+  });
 });

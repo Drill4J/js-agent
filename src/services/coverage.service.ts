@@ -299,3 +299,13 @@ function getMappingsForFunction(
     return false;
   });
 }
+
+export function getBuildRisks(uuid) {
+  const coverage = getCoverageForBuild(uuid);
+
+  const methods = [];
+
+  coverage.coverage.map(it => methods.push(...it.methods));
+
+  return methods.filter(it => it.tests.length === 0);
+}

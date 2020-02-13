@@ -101,5 +101,7 @@ export class App {
      *         description: affected tests array
      */
     this.app.get('/affectedTests', coverageController.getAffectedTests);
+
+    this.app.get('/risks', coverageController.getRisks);
   }
 }

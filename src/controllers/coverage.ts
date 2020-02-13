@@ -2,6 +2,7 @@ import { getAstDiff } from '../services/ast.service';
 import {
   getCoverageForBuild,
   processCoverageData,
+  getBuildRisks,
 } from '../services/coverage.service';
 import { getAstData, getCoverageData } from '../storage';
 import { saveCoverageData } from '../storage';
@@ -68,4 +69,9 @@ export const getCoverage = (req, res) => {
 export const getRawCoverage = (req, res) => {
   const uuid = req.query.uuid;
   res.json(getCoverageData(uuid));
+};
+
+export const getRisks = (req, res) => {
+  const uuid = req.query.uuid;
+  res.json(getBuildRisks(uuid));
 };
