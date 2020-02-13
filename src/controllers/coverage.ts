@@ -1,8 +1,8 @@
 import { getAstDiff } from '../services/ast.service';
 import {
+  getBuildRisks,
   getCoverageForBuild,
   processCoverageData,
-  getBuildRisks,
 } from '../services/coverage.service';
 import { getAstData, getCoverageData } from '../storage';
 import { saveCoverageData } from '../storage';
