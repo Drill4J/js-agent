@@ -15,6 +15,11 @@ const filters = [
   'environment.ts',
 ];
 
+function transformPath(path) {
+  const result = path.replace(/^(?:\.\.\/)+/, '');
+  return result;
+}
+
 export function getCoverageForBuild(uuid: string) {
   const astData = getAstData();
 
@@ -34,7 +39,7 @@ export function getCoverageForBuild(uuid: string) {
     const file = upath.toUnix(result.filePath);
 
     const fileCoverage = targetCoverage.filter(tc =>
-      tc.coverage.find(it => file.includes(it.source))
+      tc.coverage.find(it => file.includes(transformPath(it.source)))
     );
 
     const cov = {
@@ -49,7 +54,7 @@ export function getCoverageForBuild(uuid: string) {
       fileCoverage.forEach(c => {
         const totalLines = c.coverage.filter(
           it =>
-            file.includes(it.source) &&
+            file.includes(transformPath(it.source)) &&
             it.originalLine >= start &&
             it.originalLine <= end
         );
@@ -156,7 +161,7 @@ async function cover(
     v8coverage
   );
 
-  const coverage = cov[`${SOURCE_MAP_FOLDER}/${scriptName}`];
+  const coverage = cov[Object.keys(cov)[0]];
 
   const fnMap = coverage.fnMap;
   const f = coverage.f;
@@ -178,7 +183,8 @@ async function applyCoverage(
   });
   await converter.load();
   converter.applyCoverage(coverage);
-  return converter.toIstanbul();
+  const result = converter.toIstanbul();
+  return result;
 }
 
 function convertFunctionCoverage(fnMap: object, f: any) {
@@ -292,4 +298,14 @@ function getMappingsForFunction(
 
     return false;
   });
+}
+
+export function getBuildRisks(uuid) {
+  const coverage = getCoverageForBuild(uuid);
+
+  const methods = [];
+
+  coverage.coverage.map(it => methods.push(...it.methods));
+
+  return methods.filter(it => it.tests.length === 0);
 }
