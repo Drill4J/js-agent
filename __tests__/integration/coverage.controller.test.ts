@@ -1,7 +1,12 @@
 import request from 'supertest';
-import { server } from '../../src/index';
 import { readFileSync } from 'fs';
 import { initApp } from '../util';
+import { cleanAstData, cleanCoverageData } from '../../src/storage';
+
+beforeEach(() => {
+  cleanAstData();
+  cleanCoverageData();
+});
 
 export function readJsonFile(name: string) {
   return JSON.parse(readFileSync(name, 'utf-8'));
@@ -71,13 +76,11 @@ describe('should test coverage controller', () => {
 
     const coverageResponse = await client
       .get('/coverage')
-      .query({ uuid: res.body.buildId });
+      .query({ branch: ast.branch });
 
     expect(coverageResponse.status).toEqual(200);
 
     const expected = readJsonFile(`${rootFolder}/${exp}`);
-
-    expected.buildId = res.body.buildId;
 
     expect(coverageResponse.body).toEqual(expected);
   });
@@ -124,11 +127,11 @@ describe('should test coverage controller', () => {
 
     const coverageResponse = await client
       .get('/coverage')
-      .query({ uuid: res.body.buildId });
+      .query({ branch: ast.branch });
 
     expect(coverageResponse.status).toEqual(200);
 
-    const risks = await client.get('/risks');
+    const risks = await client.get('/risks').query({ branch: ast.branch });
 
     expect(risks.body).toEqual([
       {
