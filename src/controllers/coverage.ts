@@ -9,10 +9,10 @@ import { saveCoverageData } from '../storage';
 import { mainScriptNames } from './source.maps';
 
 export const getAffectedTests = (req, res) => {
-  const uuid = req.query.uuid;
+  const branch = req.query.branch;
 
-  const coverage = getCoverageForBuild(uuid);
-  const updated = getAstDiff().updated;
+  const coverage = getCoverageForBuild(branch);
+  const updated = getAstDiff(branch).updated;
 
   const methods = [];
 
@@ -31,7 +31,7 @@ export const saveCoverage = async (req, res) => {
   const sources = req.body.scriptSources;
   const coverage = req.body.coverage.filter(it => it.url !== '');
   const test = req.body.test;
-  const runUuid = getAstData().buildId;
+  const branch = req.body.branch;
 
   if (mainScriptNames.length === 0) {
     const resp = {
@@ -53,17 +53,17 @@ export const saveCoverage = async (req, res) => {
   }
 
   saveCoverageData({
-    runUuid,
+    branch,
     test,
     coverage: result,
   });
 
-  res.json({ status: `Coverage data saved. BuildId ${runUuid}` });
+  res.json({ status: `Coverage data saved. BuildId ${branch}` });
 };
 
 export const getCoverage = (req, res) => {
-  const uuid = req.query.uuid;
-  res.json(getCoverageForBuild(uuid));
+  const branch = req.query.branch;
+  res.json(getCoverageForBuild(branch));
 };
 
 export const getRawCoverage = (req, res) => {
@@ -72,6 +72,6 @@ export const getRawCoverage = (req, res) => {
 };
 
 export const getRisks = (req, res) => {
-  const uuid = req.query.uuid;
-  res.json(getBuildRisks(uuid));
+  const branch = req.query.branch;
+  res.json(getBuildRisks(branch));
 };

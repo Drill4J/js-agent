@@ -5,13 +5,14 @@ import { getAstData, saveAstData } from '../storage';
 import { v4 as uuid } from 'uuid';
 
 export const saveAst = (req, res) => {
-  const data: AstData = req.body;
+  const request: AstData = req.body;
 
   const buildId = uuid();
 
   const result = {
     buildId,
-    data,
+    branch: request.branch,
+    data: request.data,
   };
 
   saveAstData(result);
@@ -20,14 +21,16 @@ export const saveAst = (req, res) => {
 };
 
 export const getAst = (req, res) => {
-  const index = req.query.index;
-  res.json(getAstData(index));
+  const branch = req.query.branch;
+  res.json(getAstData(branch));
 };
 
 export const tree = (req, res) => {
-  res.json(getAstTree());
+  const branch = req.query.branch;
+  res.json(getAstTree(branch));
 };
 
 export const astDiff = (req, res) => {
-  res.json(getAstDiff());
+  const branch = req.query.branch;
+  res.json(getAstDiff(branch));
 };

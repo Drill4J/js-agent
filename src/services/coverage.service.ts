@@ -20,18 +20,14 @@ function transformPath(path) {
   return result;
 }
 
-export function getCoverageForBuild(uuid: string) {
-  const astData = getAstData();
+export function getCoverageForBuild(branch: string) {
+  const astData = getAstData(branch);
 
   if (!astData.data) {
     return {};
   }
 
-  if (!uuid) {
-    uuid = astData.buildId;
-  }
-
-  const targetCoverage = getCoverageData(uuid);
+  const targetCoverage = getCoverageData(branch);
 
   const data = [];
 
@@ -72,7 +68,10 @@ export function getCoverageForBuild(uuid: string) {
             ...new Set([...method.coveredLines, ...coveredLines]),
           ];
           method.lines = [...new Set([...method.lines, ...allLines])];
-          method.tests.push(c.test);
+          const test = method.tests.find(it => it.name === c.test.name);
+          if (!test) {
+            method.tests.push(c.test);
+          }
         } else if (!method) {
           const d = {
             method: m.name,
@@ -93,7 +92,7 @@ export function getCoverageForBuild(uuid: string) {
     data.push(cov);
   });
 
-  return { buildId: uuid, coverage: data };
+  return { branch: branch, coverage: data };
 }
 
 export async function processCoverageData(sources, coverage) {
@@ -300,8 +299,8 @@ function getMappingsForFunction(
   });
 }
 
-export function getBuildRisks(uuid) {
-  const coverage = getCoverageForBuild(uuid);
+export function getBuildRisks(branch) {
+  const coverage = getCoverageForBuild(branch);
 
   const methods = [];
 
