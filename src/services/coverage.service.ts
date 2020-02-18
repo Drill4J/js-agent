@@ -92,7 +92,7 @@ export function getCoverageForBuild(branch: string) {
     data.push(cov);
   });
 
-  return { branch: branch, coverage: data };
+  return { branch, coverage: data };
 }
 
 export async function processCoverageData(sources, coverage) {
