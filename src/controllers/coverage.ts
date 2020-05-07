@@ -31,7 +31,7 @@ export const saveCoverage = async (req, res) => {
   const sources = req.body.scriptSources;
   const coverage = req.body.coverage.filter(it => it.url !== '');
   const test = req.body.test;
-  const branch = req.body.branch;
+  const branch = req.body.branch || 'master';
 
   if (mainScriptNames.length === 0) {
     const resp = {
