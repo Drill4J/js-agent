@@ -1,7 +1,7 @@
 import * as bodyParser from 'body-parser';
+import cors from 'cors';
 import express from 'express';
 
-import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { SERVER_PORT } from './constants';
 import * as astController from './controllers/ast';
@@ -10,10 +10,13 @@ import * as sourceMapsController from './controllers/source.maps';
 import * as statusController from './controllers/status';
 import * as swaggerController from './controllers/swagger';
 import { spec } from './controllers/swagger';
+import * as pluginController from './controllers/plugin';
 import { loggerMiddleware } from './middleware/logger';
 
 export class App {
   public app: express.Application;
+
+  public ast: any;
 
   constructor() {
     this.app = express();
@@ -24,12 +27,12 @@ export class App {
     this.setRoutes();
   }
 
-  public start(port: number = SERVER_PORT) {
+  public start(port: number = SERVER_PORT): Express.Application {
     return this.app.listen(port, () => {
       console.log(
         '  App is running at http://localhost:%d in %s mode',
         port,
-        this.app.get('env')
+        this.app.get('env'),
       );
       console.log('  Press CTRL-C to stop\n');
     });
@@ -41,7 +44,7 @@ export class App {
       swaggerUi.serve,
       swaggerUi.setup(spec, {
         explorer: true,
-      })
+      }),
     );
     this.app.get('/api-docs', swaggerController.apiDocs);
 
@@ -103,5 +106,9 @@ export class App {
     this.app.get('/affectedTests', coverageController.getAffectedTests);
 
     this.app.get('/risks', coverageController.getRisks);
+
+    this.app.post('/start-session', pluginController.startSession);
+
+    this.app.post('/finish-session', pluginController.finishSession);
   }
 }

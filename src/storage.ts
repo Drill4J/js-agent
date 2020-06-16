@@ -1,5 +1,6 @@
 const astData: any = [];
 const coverageData = [];
+const sessionId: string[] = [];
 
 export function saveAstData(data) {
   astData.push(data);
@@ -13,7 +14,7 @@ export function cleanCoverageData() {
   coverageData.length = 0;
 }
 
-export function getAstData(branch: string = 'master') {
+export function getAstData(branch = 'master') {
   const result = astData.filter(it => it.branch === branch);
   if (!result || result.length < 1) {
     return [];
@@ -28,4 +29,12 @@ export function saveCoverageData(data) {
 
 export function getCoverageData(branch) {
   return coverageData.filter(it => it.branch === branch);
+}
+
+export function saveSessionId(currentSessionId: string) {
+  sessionId.push(currentSessionId);
+}
+
+export function getSessionId() {
+  return sessionId.pop();
 }
