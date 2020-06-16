@@ -1,4 +1,5 @@
 /* eslint-disable import/no-unresolved */
+import * as upath from 'upath';
 import { observableDiff } from 'deep-diff';
 import { isObject } from 'util';
 import { AstEntity } from '@drill4j/test2code-types';
@@ -93,19 +94,22 @@ export function getAstTree(branch: string) {
 
 export function getFormattedAstTree(branch?: string): AstEntity[] {
   const { data }: Ast = getAstData(branch);
-  return data.map(({ filePath, data: { methods = [] } }) => ({
-    path: filePath.substr(1, filePath.lastIndexOf('/') - 1),
-    name: filePath.substr(filePath.lastIndexOf('/') + 1),
-    methods: methods.map(
-      ({
-        name = '', params = [], returnType = 'void', loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
-      }) => ({
-        name,
-        params,
-        returnType,
-        probes: new Array(end - start).fill(0),
-        count: end - start,
-      }),
-    ),
-  }));
+  return data.map(({ filePath, data: { methods = [] } }) => {
+    const unixFilePath = upath.toUnix(filePath);
+    return {
+      path: unixFilePath.substr(1, unixFilePath.lastIndexOf('/') - 1),
+      name: unixFilePath.substr(unixFilePath.lastIndexOf('/') + 1),
+      methods: methods.map(
+        ({
+          name = '', params = [], returnType = 'void', loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
+        }) => ({
+          name,
+          params,
+          returnType,
+          probes: new Array(end - start).fill(0),
+          count: end - start,
+        }),
+      ),
+    };
+  });
 }

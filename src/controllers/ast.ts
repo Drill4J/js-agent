@@ -4,7 +4,6 @@ import { agentSocket } from '../services/agent.service';
 import { getAstData, saveAstData } from '../storage';
 import { AstData } from '../types/ast-data';
 
-
 export const saveAst = ({ body }, res) => {
   const request: AstData = body;
 
@@ -18,7 +17,6 @@ export const saveAst = ({ body }, res) => {
 
   saveAstData(result);
   agentSocket.init();
-
 
   res.json({ status: 'Ast data saved', buildId });
 };
