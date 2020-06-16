@@ -1,3 +1,4 @@
+/* eslint-disable */
 import convertSourceMap from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
@@ -35,8 +36,7 @@ export function getCoverageForBuild(branch: string) {
     const file = upath.toUnix(result.filePath);
 
     const fileCoverage = targetCoverage.filter(tc =>
-      tc.coverage.find(it => file.includes(transformPath(it.source)))
-    );
+      tc.coverage.find(it => file.includes(transformPath(it.source))));
 
     const cov = {
       file,
@@ -44,15 +44,15 @@ export function getCoverageForBuild(branch: string) {
     };
 
     result.data.methods.forEach(m => {
-      const start = m.loc.start.line;
-      const end = m.loc.end.line;
+      const start = m?.loc?.start.line;
+      const end = m?.loc?.end.line;
 
       fileCoverage.forEach(c => {
         const totalLines = c.coverage.filter(
           it =>
             file.includes(transformPath(it.source)) &&
             it.originalLine >= start &&
-            it.originalLine <= end
+            it.originalLine <= end,
         );
 
         const coveredLines = totalLines
@@ -78,6 +78,7 @@ export function getCoverageForBuild(branch: string) {
             lines: [...new Set(allLines)],
             coveredLines: [...new Set(coveredLines)],
             tests: [],
+            probes: new Array(end - start).fill(0).map((_, i) => i + start)
           };
 
           if (coveredLines.length > 0) {
@@ -92,11 +93,11 @@ export function getCoverageForBuild(branch: string) {
     data.push(cov);
   });
 
-  return { branch: branch, coverage: data };
+  return { branch, coverage: data };
 }
 
 export async function processCoverageData(sources, coverage) {
-  return await processCoverage(sources, coverage);
+  return processCoverage(sources, coverage);
 }
 
 async function processCoverage(sources: any, coverage: any) {
@@ -105,7 +106,7 @@ async function processCoverage(sources: any, coverage: any) {
   const result = [];
 
   for (const element of coverage) {
-    const url = element.url;
+    const { url } = element;
     const scriptName = url.substring(url.lastIndexOf('/') + 1);
 
     if (!url) {
@@ -151,19 +152,19 @@ async function cover(
   scriptName: string,
   rawSource: any,
   sourceMap: any,
-  v8coverage: any
+  v8coverage: any,
 ) {
   const cov = await applyCoverage(
     `${SOURCE_MAP_FOLDER}/${scriptName}`,
     rawSource,
     sourceMap,
-    v8coverage
+    v8coverage,
   );
 
   const coverage = cov[Object.keys(cov)[0]];
 
-  const fnMap = coverage.fnMap;
-  const f = coverage.f;
+  const { fnMap } = coverage;
+  const { f } = coverage;
 
   const func = convertFunctionCoverage(fnMap, f);
 
@@ -174,7 +175,7 @@ async function applyCoverage(
   path: string,
   rawSource: any,
   sourceMap: any,
-  coverage: any
+  coverage: any,
 ) {
   const converter = v8toIstanbul(path, undefined, {
     source: rawSource,
@@ -192,8 +193,8 @@ function convertFunctionCoverage(fnMap: object, f: any) {
     return {
       name,
       hits,
-      start: decl.start,
-      end: decl.end,
+      start: decl?.start,
+      end: decl?.end,
     };
   });
 }
@@ -244,8 +245,8 @@ function getFileName(codeMappings: any, jsFunction: any) {
 
   mappings = codeMappings.filter(
     (it: any) =>
-      it.generatedLine === jsFunction.start.line &&
-      it.generatedColumn === jsFunction.start.column
+      it.generatedLine === jsFunction?.start?.line &&
+      it.generatedColumn === jsFunction?.start?.column,
   );
 
   if (mappings.length > 0) {
@@ -255,7 +256,7 @@ function getFileName(codeMappings: any, jsFunction: any) {
   mappings = codeMappings.filter(
     (it: any) =>
       it.generatedColumn === it.originalColumn &&
-      it.generatedLine === jsFunction.start.line
+      it.generatedLine === jsFunction?.start?.line,
   );
   if (mappings.length < 1) {
     return null;
@@ -267,18 +268,16 @@ function getFileName(codeMappings: any, jsFunction: any) {
 function getMappingsForFunction(
   fileName: string,
   codeMappings: any,
-  jsFunction: any
+  jsFunction: any,
 ) {
-  const firstLine = jsFunction.start;
-  const lastLine = jsFunction.end;
+  const firstLine = jsFunction?.start;
+  const lastLine = jsFunction?.end;
 
-  const fileMappings = codeMappings.filter((m: any) => {
-    return (
-      m.source === fileName &&
+  const fileMappings = codeMappings.filter((m: any) => (
+    m.source === fileName &&
       m.generatedLine >= firstLine.line &&
       m.generatedLine <= lastLine.line
-    );
-  });
+  ));
 
   return fileMappings.filter((m: any) => {
     const line = m.generatedLine;

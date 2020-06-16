@@ -1,0 +1,69 @@
+{
+  "branch": "master",
+  "coverage": [
+    { "file": "/js/Application.ts", "methods": [] },
+    { "file": "/js/_all.ts", "methods": [] },
+    {
+      "file": "/js/controllers/TodoCtrl.ts",
+      "methods": [
+        { "method": "$inject", "lines": [], "coveredLines": [], "tests": [] },
+        {
+          "method": "constructor",
+          "lines": [],
+          "coveredLines": [],
+          "tests": []
+        },
+        { "method": "onPath", "lines": [], "coveredLines": [], "tests": [] },
+        {
+          "method": "onTodos",
+          "lines": [58, 59, 60, 61, 62, 63],
+          "coveredLines": [58, 59, 60, 61, 62, 63],
+          "tests": [{ "name": "Test", "type": "manual" }]
+        },
+        { "method": "addTodo", "lines": [], "coveredLines": [], "tests": [] },
+        { "method": "editTodo", "lines": [], "coveredLines": [], "tests": [] },
+        {
+          "method": "revertEdits",
+          "lines": [],
+          "coveredLines": [],
+          "tests": []
+        },
+        {
+          "method": "doneEditing",
+          "lines": [],
+          "coveredLines": [],
+          "tests": []
+        },
+        {
+          "method": "removeTodo",
+          "lines": [],
+          "coveredLines": [],
+          "tests": []
+        },
+        {
+          "method": "clearDoneTodos",
+          "lines": [],
+          "coveredLines": [],
+          "tests": []
+        },
+        { "method": "markAll", "lines": [], "coveredLines": [], "tests": [] }
+      ]
+    },
+    { "file": "/js/directives/TodoBlur.ts", "methods": [] },
+    { "file": "/js/directives/TodoEscape.ts", "methods": [] },
+    { "file": "/js/directives/TodoFocus.ts", "methods": [] },
+    { "file": "/js/models/TodoItem.ts", "methods": [] },
+    {
+      "file": "/js/services/TodoStorage.ts",
+      "methods": [
+        { "method": "get", "lines": [], "coveredLines": [], "tests": [] },
+        {
+          "method": "put",
+          "lines": [17, 18, 19],
+          "coveredLines": [17, 18, 19],
+          "tests": [{ "name": "Test", "type": "manual" }]
+        }
+      ]
+    }
+  ]
+}
