@@ -1,11 +1,12 @@
-import { AstData } from '../model/ast.data';
-import { getAstDiff, getAstTree } from '../services/ast.service';
-import { getAstData, saveAstData } from '../storage';
-
 import { v4 as uuid } from 'uuid';
+import { getAstDiff, getAstTree } from '../services/ast.service';
+import { agentSocket } from '../services/agent.service';
+import { getAstData, saveAstData } from '../storage';
+import { AstData } from '../types/ast-data';
 
-export const saveAst = (req, res) => {
-  const request: AstData = req.body;
+
+export const saveAst = ({ body }, res) => {
+  const request: AstData = body;
 
   const buildId = uuid();
 
@@ -16,21 +17,20 @@ export const saveAst = (req, res) => {
   };
 
   saveAstData(result);
+  agentSocket.init();
 
-  res.json({ status: `Ast data saved`, buildId });
+
+  res.json({ status: 'Ast data saved', buildId });
 };
 
-export const getAst = (req, res) => {
-  const branch = req.query.branch;
+export const getAst = ({ query: { branch } }, res) => {
   res.json(getAstData(branch));
 };
 
-export const tree = (req, res) => {
-  const branch = req.query.branch;
+export const tree = ({ query: { branch } }, res) => {
   res.json(getAstTree(branch));
 };
 
-export const astDiff = (req, res) => {
-  const branch = req.query.branch;
+export const astDiff = ({ query: { branch } }, res) => {
   res.json(getAstDiff(branch));
 };

@@ -230,11 +230,11 @@ test('test can get ast diff after first build changes', async () => {
   const client = request(initApp());
 
   const oldData = readJsonFile(
-    './__tests__/fixtures/todomvc/ast_diff/old.json'
+    './__tests__/fixtures/todomvc/ast_diff/old.json',
   );
 
   const newData = readJsonFile(
-    './__tests__/fixtures/todomvc/ast_diff/new.json'
+    './__tests__/fixtures/todomvc/ast_diff/new.json',
   );
 
   await client.post('/ast').send(oldData);

@@ -4,15 +4,16 @@ import {
   getCoverageForBuild,
   processCoverageData,
 } from '../services/coverage.service';
-import { getAstData, getCoverageData } from '../storage';
-import { saveCoverageData } from '../storage';
+import { getCoverageData, saveCoverageData } from '../storage';
+import { sendCoverageToDrill } from '../services/plugin.service';
+
 import { mainScriptNames } from './source.maps';
 
 export const getAffectedTests = (req, res) => {
-  const branch = req.query.branch;
+  const { branch } = req.query;
 
   const coverage = getCoverageForBuild(branch);
-  const updated = getAstDiff(branch).updated;
+  const { updated } = getAstDiff(branch);
 
   const methods = [];
 
@@ -28,10 +29,12 @@ export const getAffectedTests = (req, res) => {
 };
 
 export const saveCoverage = async (req, res) => {
-  const sources = req.body.scriptSources;
-  const coverage = req.body.coverage.filter(it => it.url !== '');
-  const test = req.body.test;
-  const branch = req.body.branch || 'master';
+  const {
+    body: {
+      coverage: requestCoverage = [], test, branch = 'master', scriptSources: sources,
+    },
+  } = req;
+  const coverage = requestCoverage.filter(({ url }) => url !== '');
 
   if (mainScriptNames.length === 0) {
     const resp = {
@@ -52,26 +55,28 @@ export const saveCoverage = async (req, res) => {
     res.status(500).json(resp);
   }
 
-  saveCoverageData({
+  await saveCoverageData({
     branch,
     test,
     coverage: result,
   });
 
-  res.json({ status: `Coverage data saved. BuildId ${branch}` });
+  await sendCoverageToDrill('test');
+
+  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000);
 };
 
 export const getCoverage = (req, res) => {
-  const branch = req.query.branch;
+  const { branch } = req.query;
   res.json(getCoverageForBuild(branch));
 };
 
 export const getRawCoverage = (req, res) => {
-  const uuid = req.query.uuid;
+  const { uuid } = req.query;
   res.json(getCoverageData(uuid));
 };
 
 export const getRisks = (req, res) => {
-  const branch = req.query.branch;
+  const { branch } = req.query;
   res.json(getBuildRisks(branch));
 };

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { initApp } from '../util';
