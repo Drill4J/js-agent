@@ -3,17 +3,16 @@ import {
   getBuildRisks,
   getCoverageForBuild,
   processCoverageData,
+  getCoverageData,
 } from '../services/coverage.service';
-import { getCoverageData, saveCoverageData } from '../storage';
 import { sendCoverageToDrill } from '../services/plugin.service';
+import storage from '../storage';
 
-import { mainScriptNames } from './source.maps';
-
-export const getAffectedTests = (req, res) => {
+export const getAffectedTests = async (req, res): Promise<any> => {
   const { branch } = req.query;
 
-  const coverage = getCoverageForBuild(branch);
-  const { updated } = getAstDiff(branch);
+  const coverage = await getCoverageForBuild(branch);
+  const { updated } = await getAstDiff(branch);
 
   const methods = [];
 
@@ -28,55 +27,40 @@ export const getAffectedTests = (req, res) => {
   res.json(affectedTests);
 };
 
-export const saveCoverage = async (req, res) => {
+export const saveCoverage = async (req, res): Promise<any> => {
   const {
     body: {
       coverage: requestCoverage = [], test, branch = 'master', scriptSources: sources,
     },
   } = req;
   const coverage = requestCoverage.filter(({ url }) => url !== '');
+  const coverageData = await processCoverageData(sources, coverage);
 
-  if (mainScriptNames.length === 0) {
-    const resp = {
-      status: 'Error during coverage processing. Add source maps at first',
-    };
-
-    res.status(500).json(resp);
-  }
-
-  const result = await processCoverageData(sources, coverage);
-
-  if (!result) {
-    const resp = {
-      status: 'Error during coverage processing',
-      mainScriptNames,
-    };
-
-    res.status(500).json(resp);
-  }
-
-  await saveCoverageData({
+  await storage.saveCoverage({
     branch,
     test,
-    coverage: result,
+    data: coverageData,
   });
 
-  await sendCoverageToDrill('test');
+  await sendCoverageToDrill(test.name);
 
-  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000);
+  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000); // TODO why setTimeout is used here?
 };
 
-export const getCoverage = (req, res) => {
+export const getCoverage = async (req, res): Promise<any> => {
   const { branch } = req.query;
-  res.json(getCoverageForBuild(branch));
+  const data = await getCoverageForBuild(branch);
+  res.json(data);
 };
 
-export const getRawCoverage = (req, res) => {
+export const getRawCoverage = async (req, res): Promise<any> => {
   const { uuid } = req.query;
-  res.json(getCoverageData(uuid));
+  const data = await getCoverageData(uuid);
+  res.json(data);
 };
 
-export const getRisks = (req, res) => {
+export const getRisks = async (req, res): Promise<any> => {
   const { branch } = req.query;
-  res.json(getBuildRisks(branch));
+  const data = await getBuildRisks(branch);
+  res.json(data);
 };

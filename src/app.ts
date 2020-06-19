@@ -1,7 +1,6 @@
 import * as bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
-
 import swaggerUi from 'swagger-ui-express';
 import { SERVER_PORT } from './constants';
 import * as astController from './controllers/ast';
@@ -27,14 +26,17 @@ export class App {
     this.setRoutes();
   }
 
-  public start(port: number = SERVER_PORT): Express.Application {
-    return this.app.listen(port, () => {
-      console.log(
-        '  App is running at http://localhost:%d in %s mode',
-        port,
-        this.app.get('env'),
-      );
-      console.log('  Press CTRL-C to stop\n');
+  public async start(port: number = SERVER_PORT): Promise<Express.Application> {
+    return new Promise((resolve, reject) => { // TODO reject
+      this.app.listen(port, () => {
+        console.log(
+          '  App is running at http://localhost:%d in %s mode',
+          port,
+          this.app.get('env'),
+        );
+        console.log('  Press CTRL-C to stop\n');
+        resolve(this.app);
+      });
     });
   }
 
