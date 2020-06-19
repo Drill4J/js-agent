@@ -15,8 +15,6 @@ import { loggerMiddleware } from './middleware/logger';
 export class App {
   public app: express.Application;
 
-  public ast: any;
-
   constructor() {
     this.app = express();
     this.app.use(bodyParser.json({ limit: '50mb' }));

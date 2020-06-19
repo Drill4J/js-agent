@@ -44,7 +44,7 @@ export const saveCoverage = async (req, res): Promise<any> => {
 
   await sendCoverageToDrill(test.name);
 
-  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000); // TODO why setTimeout is used here?
+  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000);
 };
 
 export const getCoverage = async (req, res): Promise<any> => {
