@@ -121,7 +121,7 @@ class Storage {
 
   private async upsertToDb(collection, data, query): Promise<void> {
     await new Promise((resolve, reject) => {
-      this.db.collection(collection).update(query, data, { upsert: true }, (err, result) => {
+      this.db.collection(collection).updateOne(query, { $set: data }, { upsert: true }, (err, result) => {
         if (err) {
           reject(err);
           return;

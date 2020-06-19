@@ -15,7 +15,7 @@ const DRILL_AGENT_CONFIG = {
 class AgentSocket {
   public connection: WebSocket;
 
-  public init(astEntities, needSync = 'true') {
+  public init(astEntities, needSync = true) {
     console.log('AgentSocket init...');
 
     this.connection = new WebSocket(

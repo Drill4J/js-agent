@@ -10,7 +10,7 @@ async function start(): Promise<void> {
   await app.start();
   const astTree = await getAst();
   if (astTree && astTree.data) {
-    await agentSocket.init(astTree.data, 'false');
+    await agentSocket.init(astTree.data, false);
   }
 }
 
