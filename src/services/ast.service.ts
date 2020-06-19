@@ -3,11 +3,12 @@ import * as upath from 'upath';
 import { observableDiff } from 'deep-diff';
 import { isObject } from 'util';
 import { AstEntity } from '@drill4j/test2code-types';
-import { getAstData } from '../storage';
+import storage from '../storage';
 
 interface Ast {
   branch: string;
   data: AstData[];
+  originalData: AstData[];
 }
 
 interface AstData {
@@ -31,9 +32,9 @@ interface Location {
   column: number;
 }
 
-export function getAstDiff(branch: string) {
-  const latest = getAstData(branch).data;
-  const old = getAstData('master').data;
+export async function getAstDiff(branch: string): Promise<any> {
+  const { originalData: latest }: Ast = await storage.getAst(branch);
+  const { originalData: old }: Ast = await storage.getAst('master');
 
   const result = {
     new: [],
@@ -71,34 +72,14 @@ export function getAstDiff(branch: string) {
   return result;
 }
 
-export function getAstTree(branch: string) {
-  const ast = getAstData(branch).data;
-  const data = [];
-  ast.forEach(r => {
-    const methods = [];
-    r.data.methods.forEach(m => {
-      methods.push({
-        name: m.name,
-        params: m.params,
-      });
-    });
-
-    data.push({
-      fileName: r.filePath,
-      methods,
-    });
-  });
-
-  return data;
-}
-
-export function getFormattedAstTree(branch?: string): AstEntity[] {
-  const { data }: Ast = getAstData(branch);
-  return data.map(({ filePath, data: { methods = [] } }) => {
+export function formatAst(astTreeData): AstEntity[] {
+  return astTreeData.map(({ filePath, data: { methods = [] } }) => {
     const unixFilePath = upath.toUnix(filePath);
+    const unixPath = unixFilePath.substr(1, unixFilePath.lastIndexOf('/') - 1);
+    const unixName = unixFilePath.substr(unixFilePath.lastIndexOf('/') + 1);
     return {
-      path: unixFilePath.substr(1, unixFilePath.lastIndexOf('/') - 1),
-      name: unixFilePath.substr(unixFilePath.lastIndexOf('/') + 1),
+      path: unixPath,
+      name: unixName,
       methods: methods.map(
         ({
           name = '', params = [], returnType = 'void', loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
@@ -112,4 +93,13 @@ export function getFormattedAstTree(branch?: string): AstEntity[] {
       ),
     };
   });
+}
+
+export async function getAst(branch = 'master'): Promise<any> {
+  const data = await storage.getAst(branch);
+  return data;
+}
+
+export async function saveAst(data): Promise<any> {
+  await storage.saveAst(data);
 }

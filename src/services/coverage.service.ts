@@ -4,8 +4,8 @@ import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
 import v8toIstanbul from 'v8-to-istanbul';
 import { SOURCE_MAP_FOLDER } from '../constants';
-import { mainScriptNames } from '../controllers/source.maps';
-import { getAstData, getCoverageData } from '../storage';
+import { getAst } from './ast.service';
+import storage from '../storage';
 
 const filters = [
   'node_modules',
@@ -21,22 +21,27 @@ function transformPath(path) {
   return result;
 }
 
-export function getCoverageForBuild(branch: string) {
-  const astData = getAstData(branch);
+export async function getCoverageData(branch) {
+  const data = await storage.getCoverage(branch);
+  return data;
+}
 
-  if (!astData.data) {
+export async function getCoverageForBuild(branch: string) {
+  const astTree = await getAst(branch);
+  if (!astTree || !astTree.data || !astTree.originalData) {
     return {};
   }
+  const { originalData: astData } = astTree
 
-  const targetCoverage = getCoverageData(branch);
+  const targetCoverage = await storage.getCoverage(branch);
 
   const data = [];
 
-  astData.data.forEach(result => {
+  astData.forEach(result => {
     const file = upath.toUnix(result.filePath);
 
     const fileCoverage = targetCoverage.filter(tc =>
-      tc.coverage.find(it => file.includes(transformPath(it.source))));
+      tc.data.find(it => file.includes(transformPath(it.source))));
 
     const cov = {
       file,
@@ -48,7 +53,7 @@ export function getCoverageForBuild(branch: string) {
       const end = m?.loc?.end.line;
 
       fileCoverage.forEach(c => {
-        const totalLines = c.coverage.filter(
+        const totalLines = c.data.filter(
           it =>
             file.includes(transformPath(it.source)) &&
             it.originalLine >= start &&
@@ -96,14 +101,14 @@ export function getCoverageForBuild(branch: string) {
   return { branch, coverage: data };
 }
 
-export async function processCoverageData(sources, coverage) {
-  return processCoverage(sources, coverage);
-}
-
-async function processCoverage(sources: any, coverage: any) {
-  console.error(`Use script filters ${JSON.stringify(mainScriptNames)}`);
-
+export async function processCoverageData(sources: any, coverage: any) {
   const result = [];
+
+  const mainScriptNames = await storage.getMainScriptNames();
+  if (!Array.isArray(mainScriptNames) || mainScriptNames.length == 0) {
+    throw new Error('Script names not found. You are probably missing source maps?'); //TODO extend error and dispatch it in cetralized error handler
+  }
+  console.log(`Using script filters ${mainScriptNames}`);
 
   for (const element of coverage) {
     const { url } = element;
@@ -275,8 +280,8 @@ function getMappingsForFunction(
 
   const fileMappings = codeMappings.filter((m: any) => (
     m.source === fileName &&
-      m.generatedLine >= firstLine.line &&
-      m.generatedLine <= lastLine.line
+    m.generatedLine >= firstLine.line &&
+    m.generatedLine <= lastLine.line
   ));
 
   return fileMappings.filter((m: any) => {
@@ -298,8 +303,8 @@ function getMappingsForFunction(
   });
 }
 
-export function getBuildRisks(branch) {
-  const coverage = getCoverageForBuild(branch);
+export async function getBuildRisks(branch) {
+  const coverage = await getCoverageForBuild(branch);
 
   const methods = [];
 

@@ -1,34 +1,40 @@
 import { v4 as uuid } from 'uuid';
-import { getAstDiff, getAstTree } from '../services/ast.service';
+import sizeof from 'sizeof';
+import * as astService from '../services/ast.service';
 import { agentSocket } from '../services/agent.service';
-import { getAstData, saveAstData } from '../storage';
 import { AstData } from '../types/ast-data';
 
-export const saveAst = ({ body }, res) => {
+export const saveAst = async ({ body }, res): Promise<any> => {
   const request: AstData = body;
 
   const buildId = uuid();
 
-  const result = {
+  console.log('AstController: saveAst: ast tree size:', sizeof.sizeof(request.data, true));
+
+  const ast = {
     buildId,
     branch: request.branch,
-    data: request.data,
+    data: astService.formatAst(request.data),
+    originalData: request.data,
   };
 
-  saveAstData(result);
-  agentSocket.init();
+  await astService.saveAst(ast);
+  agentSocket.init(ast.data);
 
   res.json({ status: 'Ast data saved', buildId });
 };
 
-export const getAst = ({ query: { branch } }, res) => {
-  res.json(getAstData(branch));
+export const getAst = async ({ query: { branch } }, res): Promise<any> => {
+  const data = await astService.getAst(branch);
+  res.json(data);
 };
 
-export const tree = ({ query: { branch } }, res) => {
-  res.json(getAstTree(branch));
+export const tree = async ({ query: { branch } }, res): Promise<any> => {
+  const data = await astService.getAst(branch);
+  res.json(data);
 };
 
-export const astDiff = ({ query: { branch } }, res) => {
-  res.json(getAstDiff(branch));
+export const astDiff = async ({ query: { branch } }, res): Promise<any> => {
+  const data = await astService.getAstDiff(branch);
+  res.json(data);
 };

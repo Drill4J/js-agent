@@ -2,11 +2,11 @@
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { initApp } from '../util';
-import { cleanAstData, cleanCoverageData } from '../../src/storage';
+import storage from '../../src/storage';
 
-beforeEach(() => {
-  cleanAstData();
-  cleanCoverageData();
+beforeEach(async () => {
+  await storage.cleanAst();
+  await storage.cleanCoverageData();
 });
 
 export function readJsonFile(name: string) {

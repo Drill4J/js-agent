@@ -24,6 +24,8 @@
     "deep-diff": "^1.0.2",
     "express": "^4.17.1",
     "fs-extra": "^8.1.0",
+    "mongodb": "^3.5.9",
+    "sizeof": "^1.0.0",
     "source-map": "^0.7.3",
     "supertest": "^4.0.2",
     "swagger-jsdoc": "^3.5.0",

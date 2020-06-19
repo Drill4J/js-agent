@@ -1,10 +1,10 @@
 import request from 'supertest';
 import { initApp } from '../util';
 import { readJsonFile } from './coverage.controller.test';
-import { cleanAstData } from '../../src/storage';
+import storage from '../../src/storage'; // TODO import service instead?
 
-beforeEach(() => {
-  cleanAstData();
+beforeEach(async () => {
+  await storage.cleanAst();
 });
 
 test('should return [] when wrong branch name', async () => {
