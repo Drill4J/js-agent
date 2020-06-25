@@ -18,11 +18,18 @@ export async function sendCoverageToDrill(testName: string): Promise<void> {
 }
 
 function convertLineToProbeCoverage(testName, file, methods = []) {
-  const p = methods.reduce((acc, { probes, coveredLines }) => [...acc, ...probes.map(probe => coveredLines.includes(probe))], []);
+  const probes = methods.reduce((fileProbes, method) => {
+    const methodProbes = method.probes.reduce((acc, probe) => {
+      acc.push(method.coveredLines.indexOf(probe) > -1);
+      return acc;
+    }, []);
+    return [...fileProbes, ...methodProbes];
+  }, []);
+
   return {
     id: 0,
     className: file.slice(1, file.length),
-    probes: p,
+    probes,
     testName,
   };
 }

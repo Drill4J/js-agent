@@ -1,17 +1,12 @@
 import { getAstDiff } from '../services/ast.service';
-import {
-  getBuildRisks,
-  getCoverageForBuild,
-  processCoverageData,
-  getCoverageData,
-} from '../services/coverage.service';
+import * as coverageService from '../services/coverage.service';
 import { sendCoverageToDrill } from '../services/plugin.service';
 import storage from '../storage';
 
 export const getAffectedTests = async (req, res): Promise<any> => {
   const { branch } = req.query;
 
-  const coverage = await getCoverageForBuild(branch);
+  const coverage = await coverageService.getCoverageForBuild(branch);
   const { updated } = await getAstDiff(branch);
 
   const methods = [];
@@ -34,7 +29,7 @@ export const saveCoverage = async (req, res): Promise<any> => {
     },
   } = req;
   const coverage = requestCoverage.filter(({ url }) => url !== '');
-  const coverageData = await processCoverageData(sources, coverage);
+  const coverageData = await coverageService.processCoverageData(sources, coverage);
 
   await storage.saveCoverage({
     branch,
@@ -49,18 +44,18 @@ export const saveCoverage = async (req, res): Promise<any> => {
 
 export const getCoverage = async (req, res): Promise<any> => {
   const { branch } = req.query;
-  const data = await getCoverageForBuild(branch);
+  const data = await coverageService.getCoverageForBuild(branch);
   res.json(data);
 };
 
 export const getRawCoverage = async (req, res): Promise<any> => {
   const { uuid } = req.query;
-  const data = await getCoverageData(uuid);
+  const data = await coverageService.getRawCoverage(uuid);
   res.json(data);
 };
 
 export const getRisks = async (req, res): Promise<any> => {
   const { branch } = req.query;
-  const data = await getBuildRisks(branch);
+  const data = await coverageService.getBuildRisks(branch);
   res.json(data);
 };

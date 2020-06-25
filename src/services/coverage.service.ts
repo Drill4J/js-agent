@@ -21,7 +21,7 @@ function transformPath(path) {
   return result;
 }
 
-export async function getCoverageData(branch) {
+export async function getRawCoverage(branch = 'master') {
   const data = await storage.getCoverage(branch);
   return data;
 }
@@ -33,35 +33,39 @@ export async function getCoverageForBuild(branch: string) {
   }
   const { originalData: astData } = astTree
 
-  const targetCoverage = await storage.getCoverage(branch);
+  const scopeCoverages = await this.getRawCoverage(branch);
 
-  const data = [];
+  const data = astData.map(file => {
+    const filePath = upath.toUnix(file.filePath);
 
-  astData.forEach(result => {
-    const file = upath.toUnix(result.filePath);
-
-    const fileCoverage = targetCoverage.filter(tc =>
-      tc.data.find(it => file.includes(transformPath(it.source))));
+    const fileCoverages = scopeCoverages
+      .map(x => ({
+        branch: x.branch,
+        test: x.test,
+        data: x.data.filter(method => filePath.includes(transformPath(method.source)))
+      }))
+      .filter(x => x.data.length > 0);
 
     const cov = {
-      file,
+      file: filePath,
       methods: [],
     };
 
-    result.data.methods.forEach(m => {
+    file.data.methods.forEach(m => {
       const start = m?.loc?.start.line;
       const end = m?.loc?.end.line;
+      const statements = m?.statements;
 
-      fileCoverage.forEach(c => {
+      fileCoverages.forEach(c => {
         const totalLines = c.data.filter(
           it =>
-            file.includes(transformPath(it.source)) &&
+            filePath.includes(transformPath(it.source)) &&
             it.originalLine >= start &&
             it.originalLine <= end,
         );
 
         const coveredLines = totalLines
-          .filter(it => it.hits === 1)
+          .filter(it => it.hits === 1) // TODO hits >== 1?
           .map(it => it.originalLine);
 
         const allLines = totalLines.map(it => it.originalLine);
@@ -83,7 +87,7 @@ export async function getCoverageForBuild(branch: string) {
             lines: [...new Set(allLines)],
             coveredLines: [...new Set(coveredLines)],
             tests: [],
-            probes: new Array(end - start).fill(0).map((_, i) => i + start)
+            probes: [start, ...statements, end].sort((a, b) => (a - b))
           };
 
           if (coveredLines.length > 0) {
@@ -95,7 +99,7 @@ export async function getCoverageForBuild(branch: string) {
       });
     });
 
-    data.push(cov);
+    return cov;
   });
 
   return { branch, coverage: data };

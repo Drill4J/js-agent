@@ -33,8 +33,8 @@ interface Location {
 }
 
 export async function getAstDiff(branch: string): Promise<any> {
-  const { originalData: latest }: Ast = await storage.getAst(branch);
-  const { originalData: old }: Ast = await storage.getAst('master');
+  const { originalData: latest }: Ast = await this.getAst(branch);
+  const { originalData: old }: Ast = await this.getAst('master');
 
   const result = {
     new: [],
@@ -82,14 +82,21 @@ export function formatAst(astTreeData): AstEntity[] {
       name: unixName,
       methods: methods.map(
         ({
-          name = '', params = [], returnType = 'void', loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
-        }) => ({
-          name,
-          params,
-          returnType,
-          probes: new Array(end - start).fill(0),
-          count: end - start,
-        }),
+          name = '',
+          params = [],
+          statements = [],
+          returnType = 'void',
+          loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
+        }) => {
+          const probes = [start, ...statements, end].sort((a, b) => (a - b));
+          return {
+            name,
+            params,
+            returnType,
+            probes,
+            count: probes.length,
+          };
+        },
       ),
     };
   });
