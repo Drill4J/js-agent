@@ -27,7 +27,7 @@ class Storage {
     await this.upsertToDb('ast', data, { branch: data.branch });
   }
 
-  public async getAst(branch = 'master'): Promise<any> {
+  public async getAst(branch): Promise<any> {
     const asts = await this.getFromDb('ast', { branch });
     return asts && asts[0];
   }
@@ -44,7 +44,7 @@ class Storage {
     await this.upsertToDb('coverage', data, { branch: data.branch });
   }
 
-  public async getCoverage(branch = 'master'): Promise<any[]> {
+  public async getCoverage(branch): Promise<any[]> {
     const coverages = await this.getFromDb('coverage', { branch });
     return coverages;
   }
