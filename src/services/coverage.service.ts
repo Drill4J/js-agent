@@ -1,11 +1,13 @@
-/* eslint-disable */
+import v8toIstanbul from 'v8-to-istanbul';
 import convertSourceMap from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
-import v8toIstanbul from 'v8-to-istanbul';
-import { SOURCE_MAP_FOLDER } from '../constants';
-import { getAst } from './ast.service';
+
+import * as pluginService from './plugin.service';
+import { getAst, validateAst } from './ast.service';
 import storage from '../storage';
+
+const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps'; // TODO that constant is used twice (see controllers/source.map.ts)
 
 const filters = [
   'node_modules',
@@ -21,96 +23,121 @@ function transformPath(path) {
   return result;
 }
 
-export async function getRawCoverage(branch = 'master') {
+export async function getScopeTests(branch = 'master') {
   const data = await storage.getCoverage(branch);
   return data;
 }
 
 export async function getCoverageForBuild(branch: string) {
   const astTree = await getAst(branch);
-  if (!astTree || !astTree.data || !astTree.originalData) {
-    return {};
-  }
-  const { originalData: astData } = astTree
+  validateAst(astTree, branch);
 
-  const scopeCoverages = await this.getRawCoverage(branch);
+  const { data: files } = astTree;
 
-  const data = astData.map(file => {
-    const filePath = upath.toUnix(file.filePath);
+  const scopeTests = await this.getScopeTests(branch);
 
-    const fileCoverages = scopeCoverages
-      .map(x => ({
-        branch: x.branch,
-        test: x.test,
-        data: x.data.filter(method => filePath.includes(transformPath(method.source)))
-      }))
-      .filter(x => x.data.length > 0);
-
-    const cov = {
+  const data = files.map(file => {
+    // TODO it was split before in formatAst method. Think of a better way to store file's path & name
+    const filePath = upath.toUnix(upath.join(file.path, file.name));
+    const fileAccumulatedCoverage = {
       file: filePath,
       methods: [],
     };
+    const fileTests = getFileTests(filePath, scopeTests);
 
-    file.data.methods.forEach(m => {
-      const start = m?.loc?.start.line;
-      const end = m?.loc?.end.line;
-      const statements = m?.statements;
+    if (fileTests.length === 0) {
+      return fileAccumulatedCoverage; // TODO returning the same variable twice is misleading, refactor
+    }
 
-      fileCoverages.forEach(c => {
-        const totalLines = c.data.filter(
-          it =>
-            filePath.includes(transformPath(it.source)) &&
-            it.originalLine >= start &&
-            it.originalLine <= end,
-        );
+    file.methods.forEach(astMethod => {
+      // TODO "method" is not guaranteed to be an actual method, it could be a class member, e.g. a static property
+      // think of a way to deal with that (or just change naming everywhere?)
+      fileTests.forEach(fileTest => {
+        const linesCoveredByTest = getLinesCoveredByTest(astMethod, filePath, fileTest.data);
+        if (linesCoveredByTest.length === 0) return;
 
-        const coveredLines = totalLines
-          .filter(it => it.hits === 1) // TODO hits >== 1?
-          .map(it => it.originalLine);
+        const index = fileAccumulatedCoverage.methods.findIndex(x => x.method === astMethod.name);
+        const isMethodIncluded = index > -1;
 
-        const allLines = totalLines.map(it => it.originalLine);
+        if (isMethodIncluded) {
+          const method = fileAccumulatedCoverage.methods[index];
 
-        const method = cov.methods.find(it => it.method === m.name);
+          method.coveredLines = [...new Set([...method.coveredLines, ...linesCoveredByTest])];
 
-        if (method && coveredLines.length > 0) {
-          method.coveredLines = [
-            ...new Set([...method.coveredLines, ...coveredLines]),
-          ];
-          method.lines = [...new Set([...method.lines, ...allLines])];
-          const test = method.tests.find(it => it.name === c.test.name);
-          if (!test) {
-            method.tests.push(c.test);
+          const isTestAbsent = method.tests.findIndex(x => x.name === fileTest.test.name) === -1;
+          if (isTestAbsent) {
+            method.tests.push(fileTest.test);
           }
-        } else if (!method) {
-          const d = {
-            method: m.name,
-            lines: [...new Set(allLines)],
-            coveredLines: [...new Set(coveredLines)],
-            tests: [],
-            probes: [start, ...statements, end].sort((a, b) => (a - b))
-          };
-
-          if (coveredLines.length > 0) {
-            d.tests.push(c.test);
-          }
-
-          cov.methods.push(d);
+          return;
         }
+
+        const newMethod = {
+          method: astMethod.name,
+          probes: astMethod.probes,
+          coveredLines: linesCoveredByTest,
+          tests: [fileTest.test],
+        };
+
+        fileAccumulatedCoverage.methods.push(newMethod);
       });
     });
 
-    return cov;
+    return fileAccumulatedCoverage;
   });
 
   return { branch, coverage: data };
 }
 
-export async function processCoverageData(sources: any, coverage: any) {
+function getFileTests(filePath, scopeTests) {
+  const result = scopeTests
+    .map(x => ({
+      branch: x.branch,
+      test: x.test,
+      data: x.data.filter(method => filePath.includes(transformPath(method.source))),
+    }))
+    .filter(x => x.data.length > 0);
+  return result;
+}
+
+function getLinesCoveredByTest(astMethod, filePath, lineCoverage) {
+  const totalLines = lineCoverage.filter(
+    it =>
+      filePath.includes(transformPath(it.source)) &&
+      it.originalLine >= astMethod.start &&
+      it.originalLine <= astMethod.end,
+  );
+  if (totalLines.length === 0) return [];
+
+  const coveredLines = totalLines
+    .filter(it => it.hits === 1) // TODO hits >== 1?
+    .map(it => it.originalLine);
+
+  const uniqueCoveredLines = [...new Set(coveredLines)];
+  return uniqueCoveredLines;
+}
+
+export async function processTestResults(test, branch, sources, coverage) {
+  const coverageData = await processCoverageData(sources, coverage);
+
+  await storage.saveCoverage({
+    branch,
+    test,
+    data: coverageData,
+  });
+
+  const { coverage: data = [] } = await this.getCoverageForBuild('master');
+
+  // TODO appending test name does not make any sense. Either single test data is sent or all in-one-go
+  await pluginService.sendCoverageToDrill(test.name, data);
+}
+
+async function processCoverageData(sources: any, coverage: any) {
   const result = [];
 
   const mainScriptNames = await storage.getMainScriptNames();
-  if (!Array.isArray(mainScriptNames) || mainScriptNames.length == 0) {
-    throw new Error('Script names not found. You are probably missing source maps?'); //TODO extend error and dispatch it in cetralized error handler
+  if (!Array.isArray(mainScriptNames) || mainScriptNames.length === 0) {
+    // TODO extend error and dispatch it in cetralized error handler
+    throw new Error('Script names not found. You are probably missing source maps?');
   }
   console.log(`Using script filters ${mainScriptNames}`);
 
@@ -123,7 +150,7 @@ export async function processCoverageData(sources: any, coverage: any) {
     }
 
     if (!scriptName || !mainScriptNames.some(it => it.includes(scriptName))) {
-      console.error(`Script was filtered ${scriptName}`);
+      console.warn(`Script was filtered ${scriptName}`);
       continue;
     }
 
@@ -154,7 +181,7 @@ export async function processCoverageData(sources: any, coverage: any) {
 }
 
 function convertRawSourceMap(source: any) {
-  return convertSourceMap.fromMapFileSource(source, SOURCE_MAP_FOLDER);
+  return convertSourceMap.fromMapFileSource(source, sourceMapFolder);
 }
 
 async function cover(
@@ -164,7 +191,7 @@ async function cover(
   v8coverage: any,
 ) {
   const cov = await applyCoverage(
-    `${SOURCE_MAP_FOLDER}/${scriptName}`,
+    `${sourceMapFolder}/${scriptName}`,
     rawSource,
     sourceMap,
     v8coverage,
@@ -177,7 +204,7 @@ async function cover(
 
   const func = convertFunctionCoverage(fnMap, f);
 
-  return await applyCoverageToSourceMap(sourceMap, func);
+  return applyCoverageToSourceMap(sourceMap, func);
 }
 
 async function applyCoverage(
@@ -196,7 +223,7 @@ async function applyCoverage(
   return result;
 }
 
-function convertFunctionCoverage(fnMap: object, f: any) {
+function convertFunctionCoverage(fnMap: unknown, f: any) { // TODO git rid of unknown type
   return Object.entries(fnMap).map(([k, { name, decl }]) => {
     const hits = f[k];
     return {

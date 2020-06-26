@@ -2,7 +2,6 @@ import * as bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { SERVER_PORT } from './constants';
 import * as astController from './controllers/ast';
 import * as coverageController from './controllers/coverage';
 import * as sourceMapsController from './controllers/source.maps';
@@ -12,10 +11,17 @@ import { spec } from './controllers/swagger';
 import * as pluginController from './controllers/plugin';
 import { loggerMiddleware } from './middleware/logger';
 
+interface AppConfig {
+  port: number
+}
+
 export class App {
   public app: express.Application;
 
-  constructor() {
+  private config: AppConfig;
+
+  constructor(config: AppConfig) {
+    this.config = config;
     this.app = express();
     this.app.use(bodyParser.json({ limit: '50mb' }));
     this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -24,12 +30,12 @@ export class App {
     this.setRoutes();
   }
 
-  public async start(port: number = SERVER_PORT): Promise<Express.Application> {
+  public async start(): Promise<Express.Application> {
     return new Promise((resolve, reject) => { // TODO reject
-      this.app.listen(port, () => {
+      this.app.listen(this.config.port, () => {
         console.log(
           '  App is running at http://localhost:%d in %s mode',
-          port,
+          this.config.port,
           this.app.get('env'),
         );
         console.log('  Press CTRL-C to stop\n');
@@ -82,8 +88,8 @@ export class App {
      *         description: coverage data
      */
     this.app.get('/coverage', coverageController.getCoverage);
-    this.app.get('/coverage/rawData', coverageController.getRawCoverage);
-    this.app.post('/coverage', coverageController.saveCoverage);
+    this.app.get('/coverage/rawData', coverageController.getScopeTests);
+    this.app.post('/coverage', coverageController.saveTestResults);
     /**
      * @swagger
      *

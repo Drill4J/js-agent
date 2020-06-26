@@ -6,7 +6,7 @@ import { getAst } from './services/ast.service';
 async function start(): Promise<void> {
   console.log('Starting...');
   await storage.init();
-  const app = new App();
+  const app = new App({ port: Number(process.env.APP_PORT) || 8080 });
   await app.start();
   const astTree = await getAst();
   if (astTree && astTree.data) {

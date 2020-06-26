@@ -15,7 +15,15 @@
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
-      ]
+      ],
+      "env": {
+        "DRILL_ADMIN_PROTOCOL": "ws",
+        "DRILL_ADMIN_HOST": "194.67.92.202:8090",
+        "TEST_2_CODE_PLUGINID": "test2code",
+        "MONGO_HOST": "localhost:27017",
+        "MONGO_DBNAME": "js-agent",
+        "SOURCE_MAP_FOLDER": "./sourceMaps",
+      }
     },
     {
       "type": "node",

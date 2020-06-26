@@ -1,14 +1,13 @@
-/* eslint-disable import/no-unresolved */
 import * as upath from 'upath';
 import { observableDiff } from 'deep-diff';
 import { isObject } from 'util';
+/* eslint-disable import/no-unresolved */ // TODO configure local module resolution (for development purposes)
 import { AstEntity } from '@drill4j/test2code-types';
 import storage from '../storage';
 
 interface Ast {
   branch: string;
   data: AstData[];
-  originalData: AstData[];
 }
 
 interface AstData {
@@ -33,8 +32,8 @@ interface Location {
 }
 
 export async function getAstDiff(branch: string): Promise<any> {
-  const { originalData: latest }: Ast = await this.getAst(branch);
-  const { originalData: old }: Ast = await this.getAst('master');
+  const { data: latest }: Ast = await this.getAst(branch);
+  const { data: old }: Ast = await this.getAst('master');
 
   const result = {
     new: [],
@@ -95,6 +94,9 @@ export function formatAst(astTreeData): AstEntity[] {
             returnType,
             probes,
             count: probes.length,
+            start,
+            statements,
+            end,
           };
         },
       ),
@@ -103,8 +105,17 @@ export function formatAst(astTreeData): AstEntity[] {
 }
 
 export async function getAst(branch = 'master'): Promise<any> {
-  const data = await storage.getAst(branch);
-  return data;
+  const ast = await storage.getAst(branch);
+  return ast;
+}
+
+export function validateAst(ast, branch) { // TODO describe AST
+  const isAstInvalid = !ast
+    || !Array.isArray(ast.data)
+    || ast.data.length === 0;
+  if (isAstInvalid) {
+    throw new Error(`AST missing, malformed, or contains no elements! branch: ${branch}`);
+  }
 }
 
 export async function saveAst(data): Promise<any> {
