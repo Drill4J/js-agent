@@ -15,11 +15,23 @@ export const saveAst = async ({ body }, res): Promise<any> => {
     buildId,
     branch: request.branch,
     data: astService.formatAst(request.data),
-    originalData: request.data,
   };
 
   await astService.saveAst(ast);
-  agentSocket.init(ast.data);
+
+  // TODO omits excessive properties. It's ugly but required. Move it elsewhere, perhaps
+  const formattedAst = ast.data.map(file => ({
+    path: file.path,
+    name: file.name,
+    methods: file.methods.map(x => ({
+      name: x.name,
+      params: x.params,
+      returnType: x.returnType,
+      probes: x.probes,
+      count: x.count,
+    })),
+  }));
+  agentSocket.init(formattedAst);
 
   res.json({ status: 'Ast data saved', buildId });
 };

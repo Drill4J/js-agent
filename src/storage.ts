@@ -1,12 +1,11 @@
 import { MongoClient } from 'mongodb';
-import { MONGO_HOST, MONGO_DBNAME } from './constants';
 
 export interface StorageSettings {
   host: string,
   dbname: string,
 }
 
-class Storage {
+export class Storage {
   private settings: StorageSettings;
 
   private db: any;
@@ -41,7 +40,7 @@ class Storage {
   // #region Coverage
 
   public async saveCoverage(data) {
-    await this.upsertToDb('coverage', data, { branch: data.branch });
+    await this.saveToDb('coverage', data);
   }
 
   public async getCoverage(branch): Promise<any[]> {
@@ -89,7 +88,7 @@ class Storage {
 
   // #region db interaction // TODO abstract db interaction
   private async connect() {
-    const mongoClient = new MongoClient(this.settings.host, { useUnifiedTopology: true });
+    const mongoClient = new MongoClient(`mongodb://${this.settings.host}`, { useUnifiedTopology: true });
 
     return new Promise((resolve, reject) => {
       mongoClient.connect((err, client): void => {
@@ -158,5 +157,5 @@ class Storage {
   // #endregion
 }
 
-const storage = new Storage(MONGO_HOST, MONGO_DBNAME);
+const storage = new Storage(process.env.MONGO_HOST, process.env.MONGO_DBNAME);
 export default storage;
