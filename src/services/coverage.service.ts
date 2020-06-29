@@ -54,7 +54,6 @@ export async function getCoverageForBuild(branch: string) {
       // think of a way to deal with that (or just change naming everywhere?)
       fileTests.forEach(fileTest => {
         const linesCoveredByTest = getLinesCoveredByTest(astMethod, filePath, fileTest.data);
-        if (linesCoveredByTest.length === 0) return;
 
         const index = fileAccumulatedCoverage.methods.findIndex(x => x.method === astMethod.name);
         const isMethodIncluded = index > -1;
