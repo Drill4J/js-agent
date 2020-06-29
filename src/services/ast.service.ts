@@ -5,6 +5,7 @@ import { isObject } from 'util';
 import { AstEntity } from '@drill4j/test2code-types';
 import storage from '../storage';
 
+// TODO move type definitions to d.ts
 interface Ast {
   branch: string;
   data: AstData[];
@@ -29,46 +30,6 @@ interface AstMethod {
 interface Location {
   line: number;
   column: number;
-}
-
-export async function getAstDiff(branch: string): Promise<any> {
-  const { data: latest }: Ast = await this.getAst(branch);
-  const { data: old }: Ast = await this.getAst('master');
-
-  const result = {
-    new: [],
-    updated: [],
-  };
-
-  if (!old || old.length === 0) {
-    return result;
-  }
-
-  /*
-  kind - indicates the kind of change; will be one of the following:
-    N - indicates a newly added property/element
-    D - indicates a property/element was deleted
-    E - indicates a property/element was edited
-    A - indicates a change occurred within an array
-  */
-  observableDiff(
-    old,
-    latest,
-    d => {
-      if (d.item && d.item.kind === 'N' && isObject(d.item.rhs)) {
-        const { name } = d.item.rhs;
-        if (name) {
-          result.new.push(name);
-        }
-      } else if (d.item && d.item.kind === 'N' && !isObject(d.item.rhs)) {
-        const method = old[d.path[0]][d.path[1]][d.path[2]][d.path[3]];
-        result.updated.push(method.name);
-      }
-    },
-    (path, key) => key === 'loc',
-  );
-
-  return result;
 }
 
 export function formatAst(astTreeData): AstEntity[] {
