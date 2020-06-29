@@ -332,13 +332,3 @@ function getMappingsForFunction(
     return false;
   });
 }
-
-export async function getBuildRisks(branch) {
-  const coverage = await getCoverageForBuild(branch);
-
-  const methods = [];
-
-  coverage.coverage.map(it => methods.push(...it.methods));
-
-  return methods.filter(it => it.tests.length === 0);
-}
