@@ -2,36 +2,30 @@ import WebSocket from 'ws';
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
 import { AstEntity } from '@drill4j/test2code-types';
 
-export class AgentSocket {
-  private Transport: SocketTransport;
+export class AgentService {
+  private SocketTransport: SocketTransport;
 
-  private connectionConfig: ConnectionConfig;
-
-  private agentConfig: AgentConfig;
-
-  private pluginConfig: PluginConfig;
+  private config: Config;
 
   private connection: Connection;
 
-  constructor(transport: SocketTransport, connectionConfig: ConnectionConfig, agentConfig: AgentConfig, pluginConfig: PluginConfig) {
-    this.Transport = transport;
-    this.connectionConfig = connectionConfig;
-    this.agentConfig = agentConfig;
-    this.pluginConfig = pluginConfig;
+  constructor(transport: SocketTransport, config: Config) {
+    this.SocketTransport = transport;
+    this.config = config;
   }
 
   // TODO should probably move both astEntities and needSync to this.*something*Config in case any of these can be swapped on-the-fly
   public init(astEntities: AstEntity[], needSync = true): void {
-    console.log('AgentSocket init...');
-    const url = `${this.connectionConfig.protocol}://${this.connectionConfig.host}/agent/attach`;
+    console.log('AgentService init...');
+    const url = `${this.config.connection.protocol}://${this.config.connection.host}/agent/attach`;
     const options = {
       headers: {
-        AgentConfig: JSON.stringify(this.agentConfig),
+        AgentConfig: JSON.stringify(this.config.agent),
         needSync, // TODO make sure that needSync='false' affects ONLY new scope creation and does not break anything
       },
     };
     // TODO what if we already have an open connection, should we re-use it or gracefully shutdown?
-    this.connection = new this.Transport(url, options);
+    this.connection = new this.SocketTransport(url, options);
     this.initHandlers(astEntities, needSync);
   }
 
@@ -58,24 +52,24 @@ export class AgentSocket {
           message: '',
           init: true,
         };
-        this.sendToPlugin(this.pluginConfig.id, initInfo);
+        this.sendToPlugin(this.config.plugin.id, initInfo);
         if (needSync) {
-          this.sendToPlugin(this.pluginConfig.id, {
+          this.sendToPlugin(this.config.plugin.id, {
             type: 'INIT_DATA_PART',
             astEntities,
           });
         }
-        this.sendToPlugin(this.pluginConfig.id, { type: 'INITIALIZED', msg: '' });
+        this.sendToPlugin(this.config.plugin.id, { type: 'INITIALIZED', msg: '' });
         this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
       }
     });
 
     this.connection.on('open', () => {
-      console.log('AgentSocket established connection!');
+      console.log('AgentService established connection!');
     });
 
     this.connection.on('close', () => {
-      console.error('AgentSocket lost connection!');
+      console.error('AgentService lost connection!');
     });
   }
 
@@ -93,41 +87,42 @@ export class AgentSocket {
   }
 }
 
-const agentConfig = {
-  id: process.env.AGENT_ID || 'Drill JS agent',
-  instanceId: process.env.AGENT_INSTANCE_ID || '', // TODO what is that for and how it should be configured
-  buildVersion: process.env.AGENT_BUILD_VERSION || '0.1.0', // TODO what is that for and how it should be configured
-  serviceGroupId: process.env.AGENT_SERVICE_GROUP_ID || '', // TODO what is that for and how it should be configured
-  agentType: process.env.AGENT_TYPE || 'NODEJS',
+const config = {
+  agent: {
+    id: process.env.AGENT_ID || 'Drill JS agent',
+    instanceId: process.env.AGENT_INSTANCE_ID || '', // TODO what is that for and how it should be configured
+    buildVersion: process.env.AGENT_BUILD_VERSION || '0.1.0', // TODO what is that for and how it should be configured
+    serviceGroupId: process.env.AGENT_SERVICE_GROUP_ID || '', // TODO what is that for and how it should be configured
+    agentType: process.env.AGENT_TYPE || 'NODEJS',
+  },
+  plugin: {
+    id: process.env.PLUGIN_ID || 'test2code',
+  },
+  connection: {
+    protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
+    host: process.env.DRILL_ADMIN_HOST,
+  },
 };
 
-const pluginConfig = {
-  id: process.env.PLUGIN_ID || 'test2code',
-};
+export const agentService = new AgentService(WebSocket, config);
 
-const connectionConfig = {
-  protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
-  host: process.env.DRILL_ADMIN_HOST,
-};
+// TODO configure d.ts resolution and move types to either individual files or module
 
-export const agentSocket = new AgentSocket(WebSocket, connectionConfig, agentConfig, pluginConfig);
-
-// TODO configure d.ts resolution and either types move to individual files or module
-interface AgentConfig {
-  id: string,
-  instanceId: string,
-  buildVersion: string,
-  serviceGroupId: string,
-  agentType: string
-}
-
-interface PluginConfig {
-  id: string,
-}
-
-interface ConnectionConfig {
-  protocol: string,
-  host: string,
+interface Config {
+  agent: {
+    id: string,
+    instanceId: string,
+    buildVersion: string,
+    serviceGroupId: string,
+    agentType: string
+  },
+  plugin: {
+    id: string,
+  },
+  connection: {
+    protocol: string,
+    host: string,
+  }
 }
 
 interface Connection {

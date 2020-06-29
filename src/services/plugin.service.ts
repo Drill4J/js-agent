@@ -1,4 +1,4 @@
-import { agentSocket } from './agent.service';
+import { agentService } from './agent.service';
 import storage from '../storage';
 
 export async function sendCoverageToDrill(testName: string, coverage): Promise<void> {
@@ -7,7 +7,7 @@ export async function sendCoverageToDrill(testName: string, coverage): Promise<v
   const formatted = coverage.map(({ file, methods = [] }) =>
     convertLineToProbeCoverage(testName, file, methods)).filter(({ probes }) => probes.length);
 
-  await agentSocket.sendToPlugin(process.env.TEST_2_CODE_PLUGINID, {
+  await agentService.sendToPlugin(process.env.TEST_2_CODE_PLUGINID, {
     type: 'COVERAGE_DATA_PART',
     sessionId,
     data: formatted,

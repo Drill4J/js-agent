@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import sizeof from 'sizeof';
 import * as astService from '../services/ast.service';
-import { agentSocket } from '../services/agent.service';
+import { agentService } from '../services/agent.service';
 import { AstData } from '../types/ast-data';
 
 export const saveAst = async ({ body }, res): Promise<any> => {
@@ -19,7 +19,7 @@ export const saveAst = async ({ body }, res): Promise<any> => {
 
   await astService.saveAst(ast);
 
-  // TODO omits excessive properties. It's ugly but required. Move it elsewhere, perhaps
+  // TODO omits excessive properties. It's ugly but required. Move it elsewhere
   const formattedAst = ast.data.map(file => ({
     path: file.path,
     name: file.name,
@@ -31,7 +31,7 @@ export const saveAst = async ({ body }, res): Promise<any> => {
       count: x.count,
     })),
   }));
-  agentSocket.init(formattedAst);
+  agentService.init(formattedAst);
 
   res.json({ status: 'Ast data saved', buildId });
 };
