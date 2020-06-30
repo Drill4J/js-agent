@@ -12,7 +12,7 @@ export async function startSession({ body: { sessionId = '' } = {} }: Request, r
     ts: 0,
   });
 
-  res.json({ status: 200, message: 'Session started' });
+  res.json({ status: 200 });
 }
 
 export async function finishSession({ body: { sessionId = '' } = {} }: Request, res: Response): Promise<void> {
@@ -24,5 +24,5 @@ export async function finishSession({ body: { sessionId = '' } = {} }: Request, 
     ts: 0,
   });
 
-  res.json({ status: 200, message: 'Session finished' });
+  res.json({ status: 200 });
 }

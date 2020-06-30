@@ -8,7 +8,6 @@ import { spec } from './controllers/swagger';
 
 import * as astController from './controllers/ast';
 import * as coverageController from './controllers/coverage';
-import * as sourceMapsController from './controllers/source.maps';
 import * as pluginController from './controllers/plugin';
 
 import { loggerMiddleware } from './middleware/logger';
@@ -62,14 +61,13 @@ export class App {
     this.app.get('/api-docs', swaggerController.apiDocs);
 
     this.app.get('/', (req, res) => {
-      res.json({ message: 'JS middleware API. Use /api-docs to view routes description.' });
+      res.json({ status: 200, message: 'JS middleware API. Use /api-docs to view routes description.' });
     });
 
     // TODO swagger docs
     this.app.post('/ast', astController.saveAst);
 
-    this.app.get('/source-maps', sourceMapsController.getSourceMap);
-    this.app.post('/source-maps', sourceMapsController.saveSourceMap);
+    this.app.post('/source-maps', coverageController.saveSourceMap);
 
     this.app.post('/coverage', coverageController.saveTestResults);
 
