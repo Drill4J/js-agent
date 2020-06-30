@@ -1,14 +1,21 @@
 import * as coverageService from '../services/coverage.service';
+import * as pluginService from '../services/plugin.service';
 
 export const saveTestResults = async (req, res): Promise<any> => {
   const {
     body: {
-      coverage: requestCoverage = [], test, branch = 'master', scriptSources: sources,
+      coverage, test, branch = 'master', scriptSources: sources,
     },
   } = req;
-  const coverage = requestCoverage.filter(({ url }) => url !== '');
 
-  await coverageService.processTestResults(test, branch, sources, coverage);
+  const data = await coverageService.processTestResults(test, branch, sources, coverage);
+  await pluginService.sendTestResults(data);
 
-  setTimeout(() => res.json({ status: `Coverage data saved. BuildId ${branch}` }), 2000);
+  res.json({ status: 200 });
 };
+
+export async function saveSourceMap(req, res): Promise<any> {
+  const data = req.body;
+  await coverageService.saveSourceMap(data);
+  res.json({ status: 200 });
+}

@@ -2,12 +2,15 @@ import v8toIstanbul from 'v8-to-istanbul';
 import convertSourceMap from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
+import fsExtra from 'fs-extra';
 
-import * as pluginService from './plugin.service';
-import { getAst, validateAst } from './ast.service';
+/* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
+import { ExecClassData } from '@drill4j/test2code-types';
+
+import * as astService from './ast.service';
 import storage from '../storage';
 
-const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps'; // TODO that constant is used twice (see controllers/source.map.ts)
+const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
 const filters = [
   'node_modules',
@@ -18,87 +21,48 @@ const filters = [
   'environment.ts',
 ];
 
-function transformPath(path) {
-  const result = path.replace(/^(?:\.\.\/)+/, '');
-  return result;
+export async function saveSourceMap(sourceMap) {
+  const scriptName = upath.basename(sourceMap.file);
+  const fileName = `${sourceMapFolder}${upath.sep}${scriptName}.map`;
+  await fsExtra.ensureDir(`${sourceMapFolder}`);
+  await fsExtra.writeJSON(fileName, sourceMap);
+
+  // TODO fix: that solution will break in either case of scriptName change on-the-fly or multiple script names
+  await storage.addMainScriptName(scriptName);
 }
 
-export async function getScopeTests(branch = 'master') {
-  const data = await storage.getCoverage(branch);
-  return data;
+export async function mapCoverageToFiles(test: any, coverage: any, files: any): Promise<ExecClassData[]> {
+  const data = files.map((file) => mapCoverageToFile(coverage, file));
+
+  return concatFileProbes(test.name, data);
 }
 
-export async function getCoverageForBuild(branch: string) {
-  const astTree = await getAst(branch);
-  validateAst(astTree, branch);
+function mapCoverageToFile(coverage, file) {
+  const { filePath } = file;
 
-  const { data: files } = astTree;
+  const result = {
+    file: filePath,
+    methods: [],
+  };
 
-  const scopeTests = await this.getScopeTests(branch);
+  result.methods = file.methods.map(astMethod => {
+    // TODO "method" is not guaranteed to be an actual method, it could be a class member, e.g. a static property
+    // think of a way to deal with that (or just change naming everywhere?)
+    const linesCoveredByTest = getLinesCoveredByTest(coverage, astMethod, filePath);
 
-  const data = files.map(file => {
-    // TODO it was split before in formatAst method. Think of a better way to store file's path & name
-    const filePath = upath.toUnix(upath.join(file.path, file.name));
-    const fileAccumulatedCoverage = {
-      file: filePath,
-      methods: [],
+    const newMethod = {
+      method: astMethod.name,
+      probes: astMethod.probes,
+      coveredLines: linesCoveredByTest,
     };
-    const fileTests = getFileTests(filePath, scopeTests);
 
-    if (fileTests.length === 0) {
-      return fileAccumulatedCoverage; // TODO returning the same variable twice is misleading, refactor
-    }
-
-    file.methods.forEach(astMethod => {
-      // TODO "method" is not guaranteed to be an actual method, it could be a class member, e.g. a static property
-      // think of a way to deal with that (or just change naming everywhere?)
-      fileTests.forEach(fileTest => {
-        const linesCoveredByTest = getLinesCoveredByTest(astMethod, filePath, fileTest.data);
-
-        const index = fileAccumulatedCoverage.methods.findIndex(x => x.method === astMethod.name);
-        const isMethodIncluded = index > -1;
-
-        if (isMethodIncluded) {
-          const method = fileAccumulatedCoverage.methods[index];
-
-          method.coveredLines = [...new Set([...method.coveredLines, ...linesCoveredByTest])];
-
-          const isTestAbsent = method.tests.findIndex(x => x.name === fileTest.test.name) === -1;
-          if (isTestAbsent) {
-            method.tests.push(fileTest.test);
-          }
-          return;
-        }
-
-        const newMethod = {
-          method: astMethod.name,
-          probes: astMethod.probes,
-          coveredLines: linesCoveredByTest,
-          tests: [fileTest.test],
-        };
-
-        fileAccumulatedCoverage.methods.push(newMethod);
-      });
-    });
-
-    return fileAccumulatedCoverage;
+    return newMethod;
   });
 
-  return { branch, coverage: data };
-}
-
-function getFileTests(filePath, scopeTests) {
-  const result = scopeTests
-    .map(x => ({
-      branch: x.branch,
-      test: x.test,
-      data: x.data.filter(method => filePath.includes(transformPath(method.source))),
-    }))
-    .filter(x => x.data.length > 0);
   return result;
 }
 
-function getLinesCoveredByTest(astMethod, filePath, lineCoverage) {
+function getLinesCoveredByTest(lineCoverage, astMethod, filePath) {
   const totalLines = lineCoverage.filter(
     it =>
       filePath.includes(transformPath(it.source)) &&
@@ -115,22 +79,52 @@ function getLinesCoveredByTest(astMethod, filePath, lineCoverage) {
   return uniqueCoveredLines;
 }
 
-export async function processTestResults(test, branch, sources, coverage) {
-  const coverageData = await processCoverageData(sources, coverage);
-
-  await storage.saveCoverage({
-    branch,
-    test,
-    data: coverageData,
-  });
-
-  const { coverage: data = [] } = await this.getCoverageForBuild('master');
-
-  // TODO appending test name does not make any sense. Either single test data is sent or all in-one-go
-  await pluginService.sendCoverageToDrill(test.name, data);
+function transformPath(path) {
+  const result = path.replace(/^(?:\.\.\/)+/, '');
+  return result;
 }
 
-async function processCoverageData(sources: any, coverage: any) {
+function concatFileProbes(testName, coverage) {
+  const data = coverage
+    .map(({ file, methods = [] }) => {
+      const probes = concatMethodsProbes(methods);
+
+      const className = upath.toUnix(file);
+      return {
+        id: 0,
+        className: className.substring(1, className.length),
+        probes,
+        testName,
+      };
+    })
+    .filter(({ probes }) => probes.length);
+
+  return data;
+}
+
+function concatMethodsProbes(methods) {
+  const data = methods.reduce((fileProbes, method) => {
+    const methodProbes = method.probes.reduce((acc, probe) => {
+      acc.push(method.coveredLines.indexOf(probe) > -1);
+      return acc;
+    }, []);
+    return [...fileProbes, ...methodProbes];
+  }, []);
+  return data;
+}
+
+export async function processTestResults(test, branch, sources, rawCoverage) {
+  const coverage = await convertCoverage(sources, rawCoverage);
+
+  const astTree = await astService.getAst(branch);
+  astService.validateAst(astTree, branch);
+
+  const data = await mapCoverageToFiles(test, coverage, astTree.data);
+
+  return data;
+}
+
+async function convertCoverage(sources: any, coverage: any) {
   const result = [];
 
   const mainScriptNames = await storage.getMainScriptNames();
@@ -142,11 +136,11 @@ async function processCoverageData(sources: any, coverage: any) {
 
   for (const element of coverage) {
     const { url } = element;
-    const scriptName = url.substring(url.lastIndexOf('/') + 1);
-
     if (!url) {
       continue;
     }
+
+    const scriptName = url.substring(url.lastIndexOf('/') + 1);
 
     if (!scriptName || !mainScriptNames.some(it => it.includes(scriptName))) {
       console.warn(`Script was filtered ${scriptName}`);
@@ -189,7 +183,7 @@ async function cover(
   sourceMap: any,
   v8coverage: any,
 ) {
-  const cov = await applyCoverage(
+  const cov = await convertFromV8ToIstanbul(
     `${sourceMapFolder}/${scriptName}`,
     rawSource,
     sourceMap,
@@ -206,7 +200,7 @@ async function cover(
   return applyCoverageToSourceMap(sourceMap, func);
 }
 
-async function applyCoverage(
+async function convertFromV8ToIstanbul(
   path: string,
   rawSource: any,
   sourceMap: any,
