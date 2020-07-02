@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
-import { AstEntity } from '@drill4j/test2code-types';
+import { AstEntity, InitActiveScope, InitScopePayload } from '@drill4j/test2code-types';
 
 export class AgentService {
   private SocketTransport: SocketTransport;
@@ -9,24 +9,48 @@ export class AgentService {
 
   private connection: Connection;
 
+  private astEntities: AstEntity[];
+
+  private needSync: boolean;
+
+  // TODO could've used ScopeSummary from @drill4j/test2code-types, but INIT_ACTIVE_SCOPE actual payoad lacks required "started" property
+  private activeScope: Scope;
+
   constructor(transport: SocketTransport, config: Config) {
     this.SocketTransport = transport;
     this.config = config;
   }
 
-  // TODO should probably move both astEntities and needSync to this.*something*Config in case any of these can be swapped on-the-fly
   public init(astEntities: AstEntity[], needSync = true): void {
     console.log('AgentService init...');
+    this.astEntities = astEntities;
+    this.needSync = needSync;
+    this.initConnection();
+  }
+
+  private initConnection() {
     const url = `${this.config.connection.protocol}://${this.config.connection.host}/agent/attach`;
     const options = {
       headers: {
         AgentConfig: JSON.stringify(this.config.agent),
-        needSync, // TODO make sure that needSync='false' affects ONLY new scope creation and does not break anything
+        needSync: this.needSync, // TODO make sure that needSync='false' affects ONLY new scope creation and does not break anything
       },
     };
     // TODO what if we already have an open connection, should we re-use it or gracefully shutdown?
     this.connection = new this.SocketTransport(url, options);
-    this.initHandlers(astEntities, needSync);
+
+    if (process.env.DEBUG_AGENT_SERVICE_CONNECTION === 'true') {
+      this.connection._on = this.connection.on;
+      this.connection.on = (event, handler) => {
+        const wrappedHandler = (...args) => {
+          console.log('AgentService EVENT', event, args);
+          handler.apply(this, args);
+        };
+        this.connection._on(event, wrappedHandler);
+      };
+    }
+
+    this.initHandlers();
   }
 
   public sendToPlugin(pluginId: string, msg: unknown): void {
@@ -40,29 +64,8 @@ export class AgentService {
     this.send(data);
   }
 
-  private initHandlers(astEntities: AstEntity[], needSync: boolean) {
-    this.connection.on('message', async (message: string) => {
-      const { destination } = JSON.parse(message);
-      this.sendDeliveryConfirmation(destination);
-
-      if (destination === '/agent/load') {
-        const initInfo = {
-          type: 'INIT',
-          classesCount: 0, // TODO is it ok to just set 0 here?
-          message: '',
-          init: true,
-        };
-        this.sendToPlugin(this.config.plugin.id, initInfo);
-        if (needSync) {
-          this.sendToPlugin(this.config.plugin.id, {
-            type: 'INIT_DATA_PART',
-            astEntities,
-          });
-        }
-        this.sendToPlugin(this.config.plugin.id, { type: 'INITIALIZED', msg: '' });
-        this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
-      }
-    });
+  private initHandlers() {
+    this.connection.on('message', (message) => this.handleMessage(String(message)));
 
     this.connection.on('open', () => {
       console.log('AgentService established connection!');
@@ -71,6 +74,92 @@ export class AgentService {
     this.connection.on('close', () => {
       console.error('AgentService lost connection!');
     });
+  }
+
+  private setActiveScope(payload: InitScopePayload) {
+    const { id, name } = payload;
+    this.activeScope = {
+      id,
+      name,
+    };
+    // storage.deleteSessions({activeScope: { id }}]});
+  }
+
+  private handleMessage(rawMessage: string) {
+    const data = this.parse(rawMessage);
+    if (!data) return;
+
+    const { destination } = data;
+    this.sendDeliveryConfirmation(destination);
+
+    if (destination === '/agent/load') {
+      this.initTest2Code();
+      // TODO why this particular confirmation requires manual formatting? (and not just sendDeliveryConfirmation(destination) like others)
+      this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
+      return;
+    }
+    if (destination === '/plugin/action') {
+      this.handlePluginAction(data.text);
+      return;
+    }
+    console.log(`received message for unknown destination.\n  Destination: ${destination}\n  Message: ${JSON.stringify(data)}`);
+  }
+
+  private handlePluginAction(rawAction: string) {
+    const data = this.parse(rawAction);
+    if (!data) return;
+
+    const { id, message } = data;
+    if (id === 'test2code') {
+      this.handleTest2CodeAction(message);
+      return;
+    }
+    console.log(`receieved message for unknown plugin.\n  Plugin id: ${id}\n  Message: ${JSON.stringify(message)}`);
+  }
+
+  private initTest2Code() {
+    const initInfo = {
+      type: 'INIT',
+      classesCount: 0, // TODO is it ok to just set 0 here?
+      message: '',
+      init: true,
+    };
+    this.sendToPlugin(this.config.plugin.id, initInfo);
+
+    if (this.needSync) {
+      this.sendToPlugin(this.config.plugin.id, {
+        type: 'INIT_DATA_PART',
+        astEntities: this.astEntities,
+      });
+    }
+
+    // TODO should wait response for INIT or INIT_DATA_PART first ?
+    this.sendToPlugin(this.config.plugin.id, { type: 'INITIALIZED', msg: '' });
+  }
+
+  private handleTest2CodeAction(rawAction: string) {
+    const action = this.parse(rawAction);
+
+    if (this.isInitActiveScopeAction(action)) {
+      console.log('init active scope', action.payload);
+      this.setActiveScope(action.payload);
+      return;
+    }
+    console.log(`test2code: received unknown action.\n  Action: ${JSON.stringify(action)}`);
+  }
+
+  isInitActiveScopeAction(action: InitActiveScope): action is InitActiveScope {
+    return (action as InitActiveScope).type === 'INIT_ACTIVE_SCOPE';
+  }
+
+  private parse(message): any | void {
+    let data;
+    try {
+      data = JSON.parse(message);
+    } catch (e) {
+      console.log(`received malformed message.\n  Error: ${e}\n  Original message: ${message}`);
+    }
+    return data;
   }
 
   private send(data: DataPackage | ConfirmationPackage): void {
@@ -125,8 +214,14 @@ interface Config {
   }
 }
 
+interface Scope {
+  id: string,
+  name: string,
+}
+
 interface Connection {
   on(event: string, handler: Handler): unknown;
+  _on?(event: string, handler: Handler): unknown;
   send(data: string): unknown; // TODO set data type to Package
 }
 
