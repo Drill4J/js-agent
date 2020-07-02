@@ -23,6 +23,7 @@
         "MONGO_HOST": "localhost:27017",
         "MONGO_DBNAME": "js-agent",
         "SOURCE_MAP_FOLDER": "./sourceMaps",
+        "DEBUG_AGENT_SERVICE_CONNECTION": "true"
       }
     },
     {
