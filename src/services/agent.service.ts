@@ -1,6 +1,17 @@
 import WebSocket from 'ws';
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
-import { AstEntity, InitActiveScope, InitScopePayload } from '@drill4j/test2code-types';
+import {
+  // Models
+  AstEntity,
+  InitScopePayload,
+  // Actions
+  InitActiveScope,
+  // Messages
+  InitInfo,
+  InitDataPart,
+  Initialized,
+  ScopeInitialized,
+} from '@drill4j/test2code-types';
 
 export class AgentService {
   private SocketTransport: SocketTransport;
@@ -13,7 +24,7 @@ export class AgentService {
 
   private needSync: boolean;
 
-  // TODO could've used ScopeSummary from @drill4j/test2code-types, but INIT_ACTIVE_SCOPE actual payoad lacks required "started" property
+  // TODO typings for InitScopePayload, ScopeInitialized are provided, but there is no typing for Scope object itself
   private activeScope: Scope;
 
   constructor(transport: SocketTransport, config: Config) {
@@ -77,12 +88,20 @@ export class AgentService {
   }
 
   private setActiveScope(payload: InitScopePayload) {
-    const { id, name } = payload;
+    const { id, name, prevId } = payload;
     this.activeScope = {
       id,
       name,
+      prevId,
+      ts: Date.now(),
     };
     // storage.deleteSessions({activeScope: { id }}]});
+
+    const scopeInitializedMessage: ScopeInitialized = {
+      type: 'SCOPE_INITIALIZED',
+      ...this.activeScope,
+    };
+    this.sendToPlugin(this.config.plugin.id, scopeInitializedMessage);
   }
 
   private handleMessage(rawMessage: string) {
@@ -93,9 +112,13 @@ export class AgentService {
     this.sendDeliveryConfirmation(destination);
 
     if (destination === '/agent/load') {
-      this.initTest2Code();
-      // TODO why this particular confirmation requires manual formatting? (and not just sendDeliveryConfirmation(destination) like others)
+      // HACK for non-Java agent implementation / sends signal to Java backend to load test2code plugin
       this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
+      return;
+    }
+    if (destination === '/plugin/togglePlugin') {
+      // this.plugins[pluginId].toggle();
+      this.initTest2Code();
       return;
     }
     if (destination === '/plugin/action') {
@@ -118,23 +141,35 @@ export class AgentService {
   }
 
   private initTest2Code() {
-    const initInfo = {
+    // starts test2code initialization (gotta send InitDataPart message to complete it)
+    const initInfoMessage: InitInfo = {
       type: 'INIT',
-      classesCount: 0, // TODO is it ok to just set 0 here?
-      message: '',
+      // classesCount - legacy parameter from Java agent implementation, expected to send actuall class count
+      // js introduces lots of differences such as:
+      //  - multiple classes per file
+      //  - functions instead of classes
+      // it is set to 0 for the time being
+      classesCount: 0,
+      message: `Initializing plugin ${this.config.plugin.id}`,
       init: true,
     };
-    this.sendToPlugin(this.config.plugin.id, initInfo);
+    this.sendToPlugin(this.config.plugin.id, initInfoMessage);
 
+    // sends AST (if needed)
     if (this.needSync) {
-      this.sendToPlugin(this.config.plugin.id, {
+      // non-Java agent AST initialization
+      // it is workaround due to legacy reasons
+      // it differs from Java agent's implementation (you won't find INIT_DATA_PART in java agent sourcecode)
+      const initDataPartMessage: InitDataPart = {
         type: 'INIT_DATA_PART',
         astEntities: this.astEntities,
-      });
+      };
+      this.sendToPlugin(this.config.plugin.id, initDataPartMessage);
     }
 
-    // TODO should wait response for INIT or INIT_DATA_PART first ?
-    this.sendToPlugin(this.config.plugin.id, { type: 'INITIALIZED', msg: '' });
+    // "launches" test2code plugin with AST & params prepared beforehand
+    const initializedMessage: Initialized = { type: 'INITIALIZED', msg: '' };
+    this.sendToPlugin(this.config.plugin.id, initializedMessage);
   }
 
   private handleTest2CodeAction(rawAction: string) {
@@ -217,6 +252,8 @@ interface Config {
 interface Scope {
   id: string,
   name: string,
+  prevId: string,
+  ts: number,
 }
 
 interface Connection {
