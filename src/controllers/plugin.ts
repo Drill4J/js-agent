@@ -8,7 +8,8 @@ import {
 import { agentService } from '../services/agent.service';
 import storage from '../storage';
 
-export async function startSession({ body: { sessionId = '' } = {} }: Request, res: Response): Promise<void> {
+export async function startSession(req: Request, res: Response): Promise<void> {
+  const { sessionId } = req.body;
   await storage.saveSessionId(sessionId);
 
   const sessionStartedMessage: SessionStarted = {
@@ -19,10 +20,11 @@ export async function startSession({ body: { sessionId = '' } = {} }: Request, r
   };
 
   agentService.sendToPlugin(process.env.TEST_2_CODE_PLUGINID, sessionStartedMessage);
-  res.json({ status: 200 });
+  res.json({ status: 200, data: { sessionId } });
 }
 
-export async function finishSession({ body: { sessionId = '' } = {} }: Request, res: Response): Promise<void> {
+export async function finishSession(req: Request, res: Response): Promise<void> {
+  const { sessionId } = req.body;
   await storage.cleanSession(sessionId); // TODO we might want to implement sessionService in case if we need to keep old sessions
 
   const sessionFinishedMessage: SessionFinished = {
@@ -32,5 +34,5 @@ export async function finishSession({ body: { sessionId = '' } = {} }: Request, 
   };
   agentService.sendToPlugin(process.env.TEST_2_CODE_PLUGINID, sessionFinishedMessage);
 
-  res.json({ status: 200 });
+  res.json({ status: 200, data: { sessionId } });
 }

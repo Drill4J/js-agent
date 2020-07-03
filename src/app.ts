@@ -6,11 +6,12 @@ import swaggerUi from 'swagger-ui-express';
 import * as swaggerController from './controllers/swagger';
 import { spec } from './controllers/swagger';
 
-import * as astController from './controllers/ast';
-import * as coverageController from './controllers/coverage';
-import * as pluginController from './controllers/plugin';
+import loggerMiddleware from './middleware/logger';
+import populateReqWithAgent from './middleware/populate.req.with.agent';
+import ensureAgentRegistration from './middleware/ensure.agent.registration';
+import responseHandler from './middleware/response.handler';
 
-import { loggerMiddleware } from './middleware/logger';
+import { AgentHub, Agent } from './services/agent.hub';
 
 interface AppConfig {
   port: number,
@@ -20,12 +21,30 @@ interface AppConfig {
   }
 }
 
+declare module 'express-serve-static-core' {
+  export interface Request {
+    drillCtx?: {
+      agent?: Agent // TODO agent should not be optional
+    }
+  }
+}
+
 export class App {
   public app: express.Application;
 
   private config: AppConfig;
 
-  constructor(config: AppConfig) {
+  private agentHub: AgentHub;
+
+  private middleware: any;
+
+  constructor(config: AppConfig, agentHub: AgentHub) {
+    this.middleware = {
+      ensureAgentRegistration: ensureAgentRegistration.bind(this),
+      populateReqWithAgent: populateReqWithAgent.bind(this),
+    };
+
+    this.agentHub = agentHub;
     this.config = config;
     this.app = express();
     this.app.use(bodyParser.json({
@@ -64,14 +83,29 @@ export class App {
       res.json({ status: 200, message: 'JS middleware API. Use /api-docs to view routes description.' });
     });
 
-    // TODO swagger docs
-    this.app.post('/ast', astController.saveAst);
+    this.app.use(responseHandler);
 
-    this.app.post('/source-maps', coverageController.saveSourceMap);
+    this.app.post('/ast',
+      this.middleware.ensureAgentRegistration,
+      this.middleware.populateReqWithAgent,
+      (req) => {
+        req.drillCtx.agent.updateAst(req.body.data);
+      });
 
-    this.app.post('/coverage', coverageController.saveTestResults);
+    this.app.use(this.middleware.populateReqWithAgent);
 
-    this.app.post('/start-session', pluginController.startSession);
-    this.app.post('/finish-session', pluginController.finishSession);
+    this.app.post('/source-maps', (req) => req.drillCtx.agent.updateSourceMaps(req.body.data));
+    // this.app.post('/coverage', (req) => req.drillCtx.agent.saveTestResults(req.body.data));
+    // this.app.post('/start-session', (req) => req.drillCtx.agent.startSession(req.body.data));
+    // this.app.post('/finish-session', (req) => req.drillCtx.agent.finishSession(req.body.data));
+
+    // this.app.post('/ast', astController.saveAst);
+
+    // this.app.post('/source-maps', coverageController.saveSourceMap);
+
+    // this.app.post('/coverage', coverageController.saveTestResults);
+
+    // this.app.post('/start-session', pluginController.startSession);
+    // this.app.post('/finish-session', pluginController.finishSession);
   }
 }

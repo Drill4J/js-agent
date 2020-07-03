@@ -22,6 +22,7 @@ const filters = [
 ];
 
 export async function saveSourceMap(sourceMap) {
+  // TODO fix: anything besides valid sourceMap with .file property breaks this code
   const scriptName = upath.basename(sourceMap.file);
   const fileName = `${sourceMapFolder}${upath.sep}${scriptName}.map`;
   await fsExtra.ensureDir(`${sourceMapFolder}`);

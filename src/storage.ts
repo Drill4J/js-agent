@@ -130,9 +130,18 @@ export class Storage {
     });
   }
 
+  public async findAll(collection, query = {}) {
+    const data: any = await this.getFromDb(collection, query);
+    return data;
+  }
+
+  public async save(collection, data) {
+    return this.saveToDb(collection, data);
+  }
+
   private async getFromDb(collection, query = {}): Promise<any> {
-    const data = await new Promise((resolve, reject) => {
-      this.db.collection(collection).find(query).toArray((err, result) => {
+    const data: any[] = await new Promise((resolve, reject) => {
+      this.db.collection(collection).find(query, { _id: 0 }).toArray((err, result) => {
         if (err) {
           reject(err);
           return;
@@ -140,7 +149,12 @@ export class Storage {
         resolve(result);
       });
     });
-    return data;
+    // TODO dirty hack because projection doesnt work for whatever reason
+    // does not mean much, mongo will get scrapped anyway
+    return data.map(x => {
+      const { _id, ...document } = x;
+      return document;
+    });
   }
 
   private async removeFromDb(collection, query = {}): Promise<void> {
