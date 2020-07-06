@@ -8,10 +8,11 @@ import { spec } from './controllers/swagger';
 
 import loggerMiddleware from './middleware/logger';
 import populateReqWithAgent from './middleware/populate.req.with.agent';
+import populateReqWithTest2Code from './middleware/populate.req.with.test2code';
 import ensureAgentRegistration from './middleware/ensure.agent.registration';
 import responseHandler from './middleware/response.handler';
 
-import { AgentHub, Agent } from './services/agent.hub';
+import { AgentHub, Agent, Plugin } from './services/agent.hub';
 
 interface AppConfig {
   port: number,
@@ -24,7 +25,8 @@ interface AppConfig {
 declare module 'express-serve-static-core' {
   export interface Request {
     drillCtx?: {
-      agent?: Agent // TODO agent should not be optional
+      agent?: Agent // TODO agent should not be optional,
+      plugin?: Plugin
     }
   }
 }
@@ -88,24 +90,46 @@ export class App {
     this.app.post('/ast',
       this.middleware.ensureAgentRegistration,
       this.middleware.populateReqWithAgent,
+      populateReqWithTest2Code,
       (req) => {
-        req.drillCtx.agent.updateAst(req.body.data);
+        const { plugin } = req.drillCtx;
+        if (plugin.isTest2CodePlugin()) {
+          plugin.updateAst(req.body.data);
+        }
       });
 
     this.app.use(this.middleware.populateReqWithAgent);
+    this.app.use(populateReqWithTest2Code);
 
-    this.app.post('/source-maps', (req) => req.drillCtx.agent.updateSourceMaps(req.body.data));
-    // this.app.post('/coverage', (req) => req.drillCtx.agent.saveTestResults(req.body.data));
-    // this.app.post('/start-session', (req) => req.drillCtx.agent.startSession(req.body.data));
-    // this.app.post('/finish-session', (req) => req.drillCtx.agent.finishSession(req.body.data));
+    this.app.post('/source-maps', (req) => {
+      const { plugin } = req.drillCtx;
+      if (plugin.isTest2CodePlugin()) {
+        plugin.updateSourceMaps(req.body);
+      }
+    });
 
-    // this.app.post('/ast', astController.saveAst);
+    this.app.post('/start-session', (req) => {
+      const { plugin } = req.drillCtx;
+      if (plugin.isTest2CodePlugin()) {
+        const { sessionId } = req.body;
+        plugin.startSession(sessionId);
+      }
+    });
 
-    // this.app.post('/source-maps', coverageController.saveSourceMap);
+    this.app.post('/coverage', (req) => {
+      const { plugin } = req.drillCtx;
+      if (plugin.isTest2CodePlugin()) {
+        // const { sessionId, data } = req.body;
+        plugin.processCoverage(req.body);
+      }
+    });
 
-    // this.app.post('/coverage', coverageController.saveTestResults);
-
-    // this.app.post('/start-session', pluginController.startSession);
-    // this.app.post('/finish-session', pluginController.finishSession);
+    this.app.post('/finish-session', (req) => {
+      const { plugin } = req.drillCtx;
+      if (plugin.isTest2CodePlugin()) {
+        const { sessionId } = req.body;
+        plugin.finishSession(sessionId);
+      }
+    });
   }
 }

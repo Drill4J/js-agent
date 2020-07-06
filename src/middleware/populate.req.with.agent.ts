@@ -5,7 +5,7 @@ export default async function (req, res, next: any): Promise<void> {
 
   const agentHub = (this.agentHub as AgentHub);
 
-  const agentExists = await agentHub.doesAgentExist(agentId);
+  const agentExists = await agentHub.doesAgentExist(agentId); // TODO might move that to getAgentInstance method with a check inside
   if (!agentExists) {
     throw new Error(`Agent with id ${agentId} does not exist`);
   }

@@ -21,7 +21,7 @@ const filters = [
   'environment.ts',
 ];
 
-export async function saveSourceMap(sourceMap) {
+export async function saveSourceMap(agentId, sourceMap) {
   // TODO fix: anything besides valid sourceMap with .file property breaks this code
   const scriptName = upath.basename(sourceMap.file);
   const fileName = `${sourceMapFolder}${upath.sep}${scriptName}.map`;
@@ -114,13 +114,17 @@ function concatMethodsProbes(methods) {
   return data;
 }
 
-export async function processTestResults(test, branch, sources, rawCoverage) {
+export async function processTestResults(agentId, ast, rawData) {
+  const {
+    coverage: rawCoverage,
+    test,
+    branch = 'master',
+    scriptSources: sources,
+  } = rawData;
+
   const coverage = await convertCoverage(sources, rawCoverage);
 
-  const astTree = await astService.getAst(branch);
-  astService.validateAst(astTree, branch);
-
-  const data = await mapCoverageToFiles(test, coverage, astTree.data);
+  const data = await mapCoverageToFiles(test, coverage, ast);
 
   return data;
 }

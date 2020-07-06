@@ -57,6 +57,24 @@ export function formatAst(astTreeData) {
   }));
 }
 
+export function formatForBackend(data) {
+  return data.map(file => {
+    const path = upath.dirname(file.filePath);
+    const name = upath.basename(file.filePath);
+    return {
+      path: path.substring(1, path.length),
+      name,
+      methods: file.methods.map(x => ({
+        name: x.name,
+        params: x.params,
+        returnType: x.returnType,
+        probes: x.probes,
+        count: x.count,
+      })),
+    };
+  });
+}
+
 export async function getAst(branch = 'master'): Promise<any> {
   const ast = await storage.getAst(branch);
   return ast;
@@ -72,5 +90,5 @@ export function validateAst(ast, branch) { // TODO describe AST
 }
 
 export async function saveAst(data): Promise<any> {
-  await storage.saveAst(data);
+  // await storage.saveAst(data);
 }
