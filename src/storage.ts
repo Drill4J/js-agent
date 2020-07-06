@@ -22,12 +22,12 @@ export class Storage {
   }
 
   // #region AST
-  public async saveAst(data) {
-    await this.upsertToDb('ast', data, { branch: data.branch });
+  public async saveAst(agentId, data) {
+    await this.upsertToDb('ast', { agentId, data }, { agentId });
   }
 
-  public async getAst(branch): Promise<any> {
-    const asts = await this.getFromDb('ast', { branch });
+  public async getAst(agentId): Promise<any> {
+    const asts = await this.getFromDb('ast', { agentId });
     return asts && asts[0];
   }
 
@@ -55,19 +55,23 @@ export class Storage {
   // #endregion
 
   // #region sessionId
-  public async saveSessionId(sessionId: string) {
-    await this.saveToDb('session', { sessionId });
+  public async saveSession(agentId: string, id: string) {
+    await this.saveToDb('session', { agentId, id }); // TODO type session
   }
 
-  public async getSessionId(): Promise<string | undefined> {
-    const sessions = await this.getFromDb('session');
+  public async getSession(agentId): Promise<any | undefined> {
+    const sessions = await this.getFromDb('session', { agentId });
 
     // TODO fix: might return wrong session in case there are > 1 session stored
-    return sessions && sessions[0] && sessions[0].sessionId;
+    return sessions && sessions[0];
   }
 
-  public async cleanSession(sessionId: string) {
-    await this.removeFromDb('session', { sessionId });
+  public async removeSession(agentId: string, id: string) {
+    await this.removeFromDb('session', { agentId, id });
+  }
+
+  public async cleanSession(agentId: string) {
+    await this.removeFromDb('session', { agentId });
   }
   // #endregion
 
@@ -107,8 +111,9 @@ export class Storage {
   }
 
   private async saveToDb(collection, data): Promise<void> {
+    const shallowCopy = { ...data }; // prevents mongodb from adding unwanted _id property to the original data object
     await new Promise((resolve, reject) => {
-      this.db.collection(collection).insertOne(data, (err, result) => {
+      this.db.collection(collection).insertOne(shallowCopy, (err, result) => {
         if (err) {
           reject(err);
           return;

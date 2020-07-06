@@ -20,7 +20,7 @@ async function start(): Promise<void> {
     },
   };
   const agentHub = new AgentHub(agentsDataStorage, Websocket, agentHubConfig);
-  await agentHub.ready;
+  await agentHub.initializing;
 
   const app = new App(
     { port: Number(process.env.APP_PORT) || 8080 },
