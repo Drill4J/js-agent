@@ -12,7 +12,11 @@ import populateReqWithTest2Code from './middleware/populate.req.with.test2code';
 import ensureAgentRegistration from './middleware/ensure.agent.registration';
 import responseHandler from './middleware/response.handler';
 
-import { AgentHub, Agent, Plugin } from './services/agent.hub';
+import {
+  AgentHub,
+  Agent,
+  Test2CodePlugin,
+} from './services/agent.hub';
 
 interface AppConfig {
   port: number,
@@ -26,7 +30,9 @@ declare module 'express-serve-static-core' {
   export interface Request {
     drillCtx?: {
       agent?: Agent // TODO agent should not be optional,
-      plugin?: Plugin
+      plugins?: {
+        test2Code: Test2CodePlugin
+      }
     }
   }
 }
@@ -91,45 +97,15 @@ export class App {
       this.middleware.ensureAgentRegistration,
       this.middleware.populateReqWithAgent,
       populateReqWithTest2Code,
-      (req) => {
-        const { plugin } = req.drillCtx;
-        if (plugin.isTest2CodePlugin()) {
-          plugin.updateAst(req.body.data);
-        }
-      });
+      (req) => req.drillCtx.plugins.test2Code.updateAst(req.body.data));
 
+    // TODO might be better to merge agent & plugin context population (the latter will fail in absense of the former)
     this.app.use(this.middleware.populateReqWithAgent);
     this.app.use(populateReqWithTest2Code);
 
-    this.app.post('/source-maps', (req) => {
-      const { plugin } = req.drillCtx;
-      if (plugin.isTest2CodePlugin()) {
-        plugin.updateSourceMaps(req.body);
-      }
-    });
-
-    this.app.post('/start-session', (req) => {
-      const { plugin } = req.drillCtx;
-      if (plugin.isTest2CodePlugin()) {
-        const { sessionId } = req.body;
-        plugin.startSession(sessionId);
-      }
-    });
-
-    this.app.post('/coverage', (req) => {
-      const { plugin } = req.drillCtx;
-      if (plugin.isTest2CodePlugin()) {
-        // const { sessionId, data } = req.body;
-        plugin.processCoverage(req.body);
-      }
-    });
-
-    this.app.post('/finish-session', (req) => {
-      const { plugin } = req.drillCtx;
-      if (plugin.isTest2CodePlugin()) {
-        const { sessionId } = req.body;
-        plugin.finishSession(sessionId);
-      }
-    });
+    this.app.post('/source-maps', (req) => req.drillCtx.plugins.test2Code.updateSourceMaps(req.body));
+    this.app.post('/start-session', (req) => req.drillCtx.plugins.test2Code.startSession(req.body.sessionId));
+    this.app.post('/finish-session', (req) => req.drillCtx.plugins.test2Code.finishSession(req.body.sessionId));
+    this.app.post('/coverage', (req) => req.drillCtx.plugins.test2Code.processCoverage(String(req.query.sessionId), req.body));
   }
 }

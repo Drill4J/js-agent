@@ -17,6 +17,7 @@ import {
   ScopeSummary,
 } from '@drill4j/test2code-types';
 
+// TODO abstract ast processor, coverage processor and storage provider
 import * as astService from './ast.service';
 import * as coverageService from './coverage.service';
 import storage from '../storage';
@@ -64,13 +65,13 @@ export class AgentHub {
       },
     };
 
-    const agent = new Agent(agentData, this.AgentConnectionProvider, agentConfig, true); // TODO figure out needSync
+    const agent = new Agent(agentData, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
     this.agents[agent.id] = agent;
     await agent.initializing;
   }
 
   public async registerAgent(agentData: AgentData): Promise<void> {
-    console.log('AgentHub registerAgent', agentData);
+    console.log('\nAgentHub registerAgent', agentData);
     // TODO what if agent already registered?
     await this.agentsDataStorage.registerAgent(agentData);
     await this.startAgent(agentData, true);
@@ -103,7 +104,7 @@ export class AgentsDataStorage {
   }
 
   public async registerAgent(agentData: AgentData): Promise<void> {
-    console.log('AgentsDataStorage registerAgent', agentData);
+    console.log('\nAgentsDataStorage registerAgent', agentData);
     await this.storageInstance.save('agents', agentData);
   }
 }
@@ -165,9 +166,20 @@ export class Agent {
 
       this.connection = new this.ConnectionProvider(url, options);
 
+      if (process.env.DEBUG_AGENT_SERVICE_CONNECTION === 'true') {
+        this.connection._on = this.connection.on;
+        this.connection.on = (event, handler) => {
+          const wrappedHandler = (...args) => {
+            console.log(`\nEvent: ${event}\n   Agent: ${this.id}\n   Arguments:\n   ${args}`);
+            handler.apply(this, args);
+          };
+          this.connection._on(event, wrappedHandler);
+        };
+      }
+
       const connectionEstablished = new Promise((resolve, reject) => {
         this.connection.on('open', () => {
-          console.log(`agent ${this.id} established connection!`);
+          console.log(`\nagent ${this.id} established connection!`);
           resolve();
         });
         const connectionTimeout = parseInt(process.env.AGENT_ESTABLISH_CONNECTON_TIMEOUT_MS, 10) || 10000;
@@ -175,25 +187,15 @@ export class Agent {
       });
 
       this.connection.on('error', (...args) => {
-        console.log('error', args);
+        console.log('\nerror', args);
       });
 
       this.connection.on('close', (reasonCode, description) => {
-        console.log(`agent ${this.id} connections closed.\n   Reason ${reasonCode}\n    Description ${description}!`);
+        console.log(`\nagent ${this.id} connections closed.\n   Reason ${reasonCode}\n    Description ${description}!`);
       });
 
       this.connection.on('message', (message) => this.handleMessage(String(message)));
 
-      if (process.env.DEBUG_AGENT_SERVICE_CONNECTION === 'true') {
-        this.connection._on = this.connection.on;
-        this.connection.on = (event, handler) => {
-          const wrappedHandler = (...args) => {
-            console.log(`agent ${this.id}.on('`, event, ')\n   Arguments:', args);
-            handler.apply(this, args);
-          };
-          this.connection._on(event, wrappedHandler);
-        };
-      }
       await connectionEstablished;
     } catch (e) {
       throw new Error(`agent ${this.id} failed to establish connection!\n   Error: ${e.message}\n   Stack: ${e.stack}`);
@@ -219,11 +221,11 @@ export class Agent {
     }
     if (destination === '/plugin/action') {
       const { message: { id, message: action } } = data;
-      const plugin = this.plugins[id];
+      const plugin = this.ensurePluginInstance(id);
       plugin.handleAction(action);
       return;
     }
-    console.log(`received message for unknown destination.\n  Destination: ${destination}\n  Message: ${JSON.stringify(data)}`);
+    console.log(`\nreceived message for unknown destination.\n  Destination: ${destination}\n  Message: ${JSON.stringify(data)}`);
   }
 
   private send(data: DataPackage | ConfirmationPackage): void {
@@ -243,14 +245,18 @@ export class Agent {
     if (this.plugins[pluginId]) {
       return this.plugins[pluginId];
     }
+    return this.instantiatePlugin(pluginId);
+  }
 
+  private instantiatePlugin(pluginId: string): Plugin {
     const plugin = new this.config.availablePlugins[pluginId](pluginId, this.id, this.connection);
     this.plugins[pluginId] = plugin;
     return plugin;
   }
 
   public async togglePlugin(pluginId: string): Promise<void> {
-    await this.plugins[pluginId].init();
+    const plugin = this.ensurePluginInstance(pluginId);
+    await plugin.init();
   }
 }
 
@@ -302,13 +308,11 @@ export class Plugin {
   }
 }
 
-class Test2CodePlugin extends Plugin {
-  private ast: AstEntity[];
-
+export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
 
   public async init() {
-    console.log('Test2Code init...');
+    console.log('\nTest2Code init...');
     // this.initialized = true;
     // starts test2code initialization (gotta send InitDataPart message to complete it)
     const initInfoMessage: InitInfo = {
@@ -324,32 +328,37 @@ class Test2CodePlugin extends Plugin {
     };
     super.send(initInfoMessage);
 
-    // sends AST (if needed)
-    // if (this.needSync) {
-    // non-Java agent AST initialization
-    // it is workaround due to legacy reasons
-    // it differs from Java agent's implementation (you won't find INIT_DATA_PART in java agent sourcecode)
+    const ast = await this.getAst();
+    // sends AST
+    //    non-Java agent AST initialization
+    //    it is workaround due to legacy reasons
+    //    it differs from Java agent's implementation (you won't find INIT_DATA_PART in java agent sourcecode)
     const initDataPartMessage: InitDataPart = {
       type: 'INIT_DATA_PART',
-      astEntities: astService.formatForBackend(this.ast), // TODO not safe
+      astEntities: astService.formatForBackend(ast),
     };
     super.send(initDataPartMessage);
-    // }
 
     // "launches" test2code plugin with AST & params prepared beforehand
     const initializedMessage: Initialized = { type: 'INITIALIZED', msg: '' };
     super.send(initializedMessage);
 
-    console.log('Test2Code initiated!');
+    // TODO memorize "agentId - initiated plugin" to define if
+    console.log('\nTest2Code initiated!');
   }
 
   public handleAction(action) {
     if (this.isInitActiveScopeAction(action)) {
-      console.log('init active scope', action.payload);
+      console.log('\ninit active scope', action.payload);
       this.setActiveScope(action.payload);
       return;
     }
-    console.log(`test2code: received unknown action.\n  Action: ${JSON.stringify(action)}`);
+    console.log(`\ntest2code: received unknown action.\n  Action: ${JSON.stringify(action)}`);
+  }
+
+  private async getAst() {
+    const ast = await storage.getAst(this.agentId);
+    return ast && ast.data;
   }
 
   private setActiveScope(payload: InitScopePayload) {
@@ -360,8 +369,7 @@ class Test2CodePlugin extends Plugin {
       prevId,
       ts: Date.now(),
     };
-    // storage.deleteSessions({activeScope: { id }}]});
-    console.error('!!!TODO setActiveScope - implement delete sessions');
+    storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
 
     const scopeInitializedMessage: ScopeInitialized = {
       type: 'SCOPE_INITIALIZED',
@@ -375,17 +383,18 @@ class Test2CodePlugin extends Plugin {
   }
 
   public async updateAst(rawAst: unknown[]): Promise<void> {
-    console.log(`plugin ${this.id} updateAst`, rawAst);
+    console.log(`\nplugin ${this.id} updateAst`, rawAst);
 
     const ast = await astService.formatAst(rawAst); // TODO abstract AST processor
     await storage.saveAst(this.agentId, ast); // TODO abstract storage
-    this.ast = ast;
+
+    // TODO send INIT_DATA_PART if ast were updated during runtime? (and not at initialization)
   }
 
   public async updateSourceMaps(sourceMap): Promise<void> {
     // await coverage
     await coverageService.saveSourceMap(this.agentId, sourceMap);
-    console.log(`agent ${this.id} plugin ${this.id} updateSourceMaps`);
+    console.log(`\nagent ${this.id} plugin ${this.id} updateSourceMaps`);
   }
 
   public async startSession(sessionId): Promise<void> {
@@ -402,6 +411,7 @@ class Test2CodePlugin extends Plugin {
   }
 
   public async finishSession(sessionId): Promise<void> {
+    await this.ensureActiveSession(sessionId);
     await storage.removeSession(this.agentId, sessionId);
 
     const sessionFinishedMessage: SessionFinished = {
@@ -413,14 +423,21 @@ class Test2CodePlugin extends Plugin {
     super.send(sessionFinishedMessage);
   }
 
-  public async processCoverage(rawData): Promise<any> {
-    // TODO check if session exists and still active
-    const session = await storage.getSession(this.agentId); // TODO support multiple sessions
-    const { id: sessionId } = session;
+  public async processCoverage(sessionId: string, rawData): Promise<any> {
+    // TODO coverage will be lost if no respective active session found. Is it ok, or we want to preserve it somehow?
+    await this.ensureActiveSession(sessionId);
     const astTree = await storage.getAst(this.agentId);
     const { data: ast } = astTree;
     const data = await coverageService.processTestResults(this.agentId, ast, rawData);
     await this.sendTestResults(sessionId, data);
+  }
+
+  private async ensureActiveSession(sessionId): Promise<any> {
+    const session = await storage.getSession(this.agentId, sessionId);
+    if (!session) {
+      throw new Error(`Session with id ${sessionId} not found!`);
+    }
+    return session;
   }
 
   async sendTestResults(sessionId, data) {
@@ -455,7 +472,7 @@ function parseJsonRecursive(rawMessage, l = 0) {
     }
     return result;
   } catch (e) {
-    console.log(`received malformed JSON.\n  Error: ${e}\n  Original message: ${rawMessage}`);
+    console.log(`\nreceived malformed JSON.\n  Error: ${e}\n  Original message: ${rawMessage}`);
   }
   throw new Error('Failed to parse');
 }
