@@ -59,8 +59,8 @@ export class Storage {
     await this.saveToDb('session', { agentId, id }); // TODO type session
   }
 
-  public async getSession(agentId): Promise<any | undefined> {
-    const sessions = await this.getFromDb('session', { agentId });
+  public async getSession(agentId: string, id: string): Promise<any | undefined> {
+    const sessions = await this.getFromDb('session', { agentId, id });
 
     // TODO fix: might return wrong session in case there are > 1 session stored
     return sessions && sessions[0];
@@ -68,6 +68,10 @@ export class Storage {
 
   public async removeSession(agentId: string, id: string) {
     await this.removeFromDb('session', { agentId, id });
+  }
+
+  public async deleteSessions(agentId: string) {
+    await this.removeFromDb('session', { agentId });
   }
 
   public async cleanSession(agentId: string) {
