@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+coverage
+sourceMaps
+.git
+#ignore folder with deprecated tests for now (due to huge size)
+__tests__

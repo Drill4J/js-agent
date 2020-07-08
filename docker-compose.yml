@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  mongo:
+    image: mongo:3.4
+    hostname: mongo
+    ports:
+      - "27017:27017"
+
+  jsagent:
+    build: "./"
+    hostname: jsagent
+    ports:
+      - "8404:8080"
+    environment:
+      WAIT_HOSTS: mongo:27017
+      DRILL_ADMIN_PRTOCOL: "ws"
+      DRILL_ADMIN_HOST: "194.67.92.202:8090"
+      MONGO_HOST: "mongo:27017"
+      MONGO_DBNAME: "js-agent"
+
+  todo-mvc-app:
+    build: "../todomvc/"
+    environment:
+      WAIT_HOSTS: jsagent:8080
+      JS_AGENT_API_HOST: jsagent:8080

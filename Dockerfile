@@ -1,20 +1,29 @@
-FROM node:12
+FROM node:14.5.0-alpine3.12
 
 # Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
+# Install dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied where available (npm@5+)
 COPY package*.json ./
-
 RUN npm install
-# If you are building your code for production
-# RUN npm ci --only=production
+
+# Bundle app source
 COPY . .
 RUN npm run build
-# Bundle app source
 
+# Setup process.env
+ENV DRILL_ADMIN_PROTOCOL=$DRILL_ADMIN_PROTOCOL
+ENV DRILL_ADMIN_HOST=$DRILL_ADMIN_HOST
+ENV MONGO_HOST=$DRILL_ADMIN_HOST
+ENV MONGO_DBNAME=$DRILL_ADMIN_HOST
+ENV TEST_2_CODE_PLUGINID test2code
+ENV SOURCE_MAP_FOLDER ./sourceMaps
 
+# Setup wait utility
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
+RUN chmod +x /wait
+
+# Launch
 EXPOSE 8080
-CMD [ "npm", "start" ]
+CMD /wait && npm start
