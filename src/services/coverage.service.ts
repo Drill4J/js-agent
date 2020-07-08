@@ -7,7 +7,6 @@ import fsExtra from 'fs-extra';
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
 import { ExecClassData } from '@drill4j/test2code-types';
 
-import * as astService from './ast.service';
 import storage from '../storage';
 
 const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';

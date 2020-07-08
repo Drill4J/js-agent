@@ -1,8 +1,6 @@
 import Websocket from 'ws';
 import { App } from './app';
 import storage from './storage';
-import { agentService } from './services/agent.service';
-import { getAst } from './services/ast.service';
 import { AgentHub, AgentsDataStorage, AgentHubConfig } from './services/agent.hub';
 
 async function start(): Promise<void> {
@@ -27,10 +25,6 @@ async function start(): Promise<void> {
     agentHub,
   );
   await app.start();
-  // const astTree = await getAst();
-  // if (astTree && astTree.data) {
-  //   await agentService.init(astTree.data, false);
-  // }
 }
 
 export default start();

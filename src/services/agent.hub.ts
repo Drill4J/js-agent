@@ -125,8 +125,6 @@ export class Agent {
 
   private plugins: Plugins = {};
 
-  private messageParseFunction: MessageParseFunction;
-
   public id: string;
 
   public initialized: boolean;
@@ -256,6 +254,9 @@ export class Agent {
 
   public async togglePlugin(pluginId: string): Promise<void> {
     const plugin = this.ensurePluginInstance(pluginId);
+    // Note that currently plugin.init() is called only once, only during registration process.
+    // Startup after middleware reboot does not require repeated plugin.init() call
+    // because plugin is already "initiated" at drill backend.
     await plugin.init();
   }
 }
@@ -458,15 +459,18 @@ interface Message {
   message: any, // TODO type it
 }
 
+// TODO would be much better to stringify JSON only ONCE, instead of multiple netsted levels. Suggest backend API enhancement
 function parseJsonRecursive(rawMessage, l = 0) {
-  if (l > 3) {
+  if (l > 3) { // magic number due to unknown number of nested messages
     throw new Error(`Max recursive parse depth reached.\n   Not-parsed content: ${rawMessage}`);
   }
   try {
     const result = JSON.parse(rawMessage);
+    // check both fields due to naming inconsistency on different message levels
     const content = result.text || result.message;
     const isContentJSON = content && (content[0] === '{' || content[0] === '[');
     if (isContentJSON) {
+      // note that parsed data either from .text or .message gets assigned to "message" field
       result.message = parseJsonRecursive(content, l + 1);
       delete result.text;
     }
@@ -548,6 +552,9 @@ interface ConfirmationPackage extends Package {
 interface DataPackage extends Package {
   text: string,
 }
+
+// TODO describe logger provider
+
 // interface AgentHubConfig {
 //   LoggerProvider: (prefix: string) => {
 //     const test = function test(params:string) {}; return test;
