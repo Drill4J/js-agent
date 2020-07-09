@@ -2,14 +2,18 @@ import Websocket from 'ws';
 import { App } from './app';
 import storage from './storage';
 import { AgentHub, AgentsDataStorage, AgentHubConfig } from './services/agent.hub';
+import LoggerProvider from './util/logger'; // TODO path aliases
+
+const startupLogger = LoggerProvider.getLogger('drill', 'startup');
 
 async function start(): Promise<void> {
-  console.log('Starting...');
+  startupLogger.info('starting');
 
   await storage.init();
 
   const agentsDataStorage = new AgentsDataStorage(storage);
   const agentHubConfig: AgentHubConfig = {
+    loggerProvider: LoggerProvider,
     agent: {
       connection: {
         protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
@@ -21,7 +25,10 @@ async function start(): Promise<void> {
   await agentHub.initializing;
 
   const app = new App(
-    { port: Number(process.env.APP_PORT) || 8080 },
+    {
+      port: Number(process.env.APP_PORT) || 8080,
+      loggerProvider: LoggerProvider,
+    },
     agentHub,
   );
   await app.start();

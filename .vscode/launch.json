@@ -16,6 +16,8 @@
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ],
+      // Capture "std" instead of "console"
+      "outputCapture": "std",
       "env": {
         "DRILL_ADMIN_PROTOCOL": "ws",
         "DRILL_ADMIN_HOST": "194.67.92.202:8090",
@@ -23,7 +25,11 @@
         "MONGO_HOST": "localhost:27017",
         "MONGO_DBNAME": "js-agent",
         "SOURCE_MAP_FOLDER": "./sourceMaps",
-        "DEBUG_AGENT_SERVICE_CONNECTION": "true"
+        "DEBUG_AGENT_SERVICE_CONNECTION": "true",
+        "DEBUG": "drill:*",
+        "DEBUG_COLORS": "true",
+        "FORCE_COLOR": "3", // required in order for chalk to work within vscode
+        "DEBUG_LOG_LEVEL": "2" // (0-3 by default)
       }
     },
     {
