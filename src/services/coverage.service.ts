@@ -8,6 +8,9 @@ import fsExtra from 'fs-extra';
 import { ExecClassData } from '@drill4j/test2code-types';
 
 import storage from '../storage';
+import LoggerProvider from '../util/logger';
+
+const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
 const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
@@ -136,7 +139,7 @@ async function convertCoverage(sources: any, coverage: any) {
     // TODO extend error and dispatch it in cetralized error handler
     throw new Error('Script names not found. You are probably missing source maps?');
   }
-  console.log(`Using script filters ${mainScriptNames}`);
+  logger.silly(`using script filters ${mainScriptNames}`);
 
   for (const element of coverage) {
     const { url } = element;
@@ -147,7 +150,7 @@ async function convertCoverage(sources: any, coverage: any) {
     const scriptName = url.substring(url.lastIndexOf('/') + 1);
 
     if (!scriptName || !mainScriptNames.some(it => it.includes(scriptName))) {
-      console.warn(`Script was filtered ${scriptName}`);
+      logger.silly(`Script was filtered ${scriptName}`);
       continue;
     }
 
@@ -166,10 +169,10 @@ async function convertCoverage(sources: any, coverage: any) {
       !sourceMap.sourcemap ||
       !sourceMap.sourcemap.file.includes(scriptName)
     ) {
-      console.error(`There is no source map for ${scriptName}`);
+      logger.error(`there is no source map for ${scriptName}`);
       continue;
     }
-    console.log(`Script was processed ${scriptName}`);
+    logger.debug(`script was processed ${scriptName}`);
     const cov = await cover(scriptName, rawSource, sourceMap, v8coverage);
     result.push(...cov);
   }

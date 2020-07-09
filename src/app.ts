@@ -12,6 +12,8 @@ import populateReqWithTest2Code from './middleware/populate.req.with.test2code';
 import ensureAgentRegistration from './middleware/ensure.agent.registration';
 import responseHandler from './middleware/response.handler';
 
+import { ILoggerProvider, ILogger } from './util/logger';
+
 import {
   AgentHub,
   Agent,
@@ -23,7 +25,8 @@ interface AppConfig {
   body?: {
     json?: { limit: string, }
     urlencoded?: { limit: string, }
-  }
+  },
+  loggerProvider: ILoggerProvider
 }
 
 declare module 'express-serve-static-core' {
@@ -46,6 +49,8 @@ export class App {
 
   private middleware: any;
 
+  private logger: ILogger;
+
   constructor(config: AppConfig, agentHub: AgentHub) {
     this.middleware = {
       ensureAgentRegistration: ensureAgentRegistration.bind(this),
@@ -54,6 +59,7 @@ export class App {
 
     this.agentHub = agentHub;
     this.config = config;
+    this.logger = this.config.loggerProvider.getLogger('drill', 'webserver');
     this.app = express();
     this.app.use(bodyParser.json({
       limit: this.config.body?.json?.limit || '50mb',
@@ -63,15 +69,14 @@ export class App {
       extended: true,
     }));
     this.app.use(cors());
-    this.app.use(loggerMiddleware);
+    this.app.use(loggerMiddleware(this.logger));
     this.setRoutes();
   }
 
   public async start(): Promise<Express.Application> {
     return new Promise((resolve, reject) => { // TODO reject
       this.app.listen(this.config.port, () => {
-        console.log(`   App is running at http://localhost:${this.config.port} in ${this.app.get('env')} mode
-        \n Press CTRL-C to stop \n`);
+        this.logger.info(`running at http://localhost:${this.config.port} in ${this.app.get('env')} mode\n press CTRL-C to stop`);
         resolve(this.app);
       });
     });
