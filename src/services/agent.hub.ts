@@ -454,11 +454,17 @@ export class Test2CodePlugin extends Plugin {
     super.send(sessionStartedMessage);
   }
 
-  public async finishSession(sessionId): Promise<void> {
-    this.logger.debug('finish session', sessionId);
+  public async finishSession(sessionId: string, rawData): Promise<void> {
+    this.logger.debug('process coverage and finish session', sessionId);
     await this.ensureActiveSession(sessionId);
-    await storage.removeSession(this.agentId, sessionId);
 
+    const astTree = await storage.getAst(this.agentId);
+    const { data: ast } = astTree;
+
+    const data = await coverageService.processTestResults(this.agentId, ast, rawData);
+    await this.sendTestResults(sessionId, data);
+
+    await storage.removeSession(this.agentId, sessionId);
     const sessionFinishedMessage: SessionFinished = {
       type: 'SESSION_FINISHED',
       sessionId,
@@ -466,17 +472,6 @@ export class Test2CodePlugin extends Plugin {
     };
 
     super.send(sessionFinishedMessage);
-  }
-
-  public async processCoverage(sessionId: string, rawData): Promise<any> {
-    this.logger.debug('process coverage', sessionId);
-
-    // TODO coverage will be lost if no respective active session found. Is it ok, or we want to preserve it somehow?
-    await this.ensureActiveSession(sessionId);
-    const astTree = await storage.getAst(this.agentId);
-    const { data: ast } = astTree;
-    const data = await coverageService.processTestResults(this.agentId, ast, rawData);
-    await this.sendTestResults(sessionId, data);
   }
 
   private async ensureActiveSession(sessionId): Promise<any> {

@@ -1,16 +1,15 @@
-import * as bodyParser from 'body-parser';
-import cors from 'cors';
-import express from 'express';
-import swaggerUi from 'swagger-ui-express';
+import Koa, { ExtendableContext, Next } from 'koa';
+import Router, { IRouterParamContext } from 'koa-router';
+import cors from 'koa-cors';
+import bodyParser from 'koa-bodyparser';
+import koaRespond from 'koa-respond';
 
-import * as swaggerController from './controllers/swagger';
-import { spec } from './controllers/swagger';
+import responseHandler from './middleware/response.handler';
 
 import loggerMiddleware from './middleware/logger';
 import populateReqWithAgent from './middleware/populate.req.with.agent';
-import populateReqWithTest2Code from './middleware/populate.req.with.test2code';
+import populateReqWithTest2Code from './middleware/populate.req.with.plugin';
 import ensureAgentRegistration from './middleware/ensure.agent.registration';
-import responseHandler from './middleware/response.handler';
 
 import { ILoggerProvider, ILogger } from './util/logger';
 
@@ -29,19 +28,30 @@ interface AppConfig {
   loggerProvider: ILoggerProvider
 }
 
-declare module 'express-serve-static-core' {
-  export interface Request {
-    drillCtx?: {
-      agent?: Agent // TODO agent should not be optional,
-      plugins?: {
-        test2Code: Test2CodePlugin
+declare module 'koa' {
+  interface ExtendableContext {
+    ok: (response?: unknown) => Context;
+    created: (response?: unknown) => Context;
+    noContent: (response?: unknown) => Context;
+    badRequest: (response?: unknown) => Context;
+    unauthorized: (response?: unknown) => Context;
+    forbidden: (response?: unknown) => Context;
+    notFound: (response?: unknown) => Context;
+    locked: (response?: unknown) => Context;
+    internalServerError: (response?: unknown) => Context;
+    notImplemented: (response?: unknown) => Context;
+
+    state: {
+      drill: {
+        agent: Agent,
+        test2Code?: Test2CodePlugin
       }
-    }
+    },
   }
 }
 
 export class App {
-  public app: express.Application;
+  public app: Koa;
 
   private config: AppConfig;
 
@@ -60,57 +70,59 @@ export class App {
     this.agentHub = agentHub;
     this.config = config;
     this.logger = this.config.loggerProvider.getLogger('drill', 'webserver');
-    this.app = express();
-    this.app.use(bodyParser.json({
-      limit: this.config.body?.json?.limit || '50mb',
+    this.app = new Koa();
+
+    this.app.use(bodyParser({
+      jsonLimit: this.config.body?.json?.limit || '50mb',
+      formLimit: this.config.body?.urlencoded?.limit || '50mb',
+      // extendTypes: {}, // TODO decide if this is necessary
     }));
-    this.app.use(bodyParser.urlencoded({
-      limit: this.config.body?.urlencoded?.limit || '50mb',
-      extended: true,
-    }));
+    this.app.use(koaRespond());
     this.app.use(cors());
     this.app.use(loggerMiddleware(this.logger));
     this.setRoutes();
   }
 
-  public async start(): Promise<Express.Application> {
-    return new Promise((resolve, reject) => { // TODO reject
+  public async start(): Promise<Koa> {
+    return new Promise((resolve, reject) => {
       this.app.listen(this.config.port, () => {
-        this.logger.info(`running at http://localhost:${this.config.port} in ${this.app.get('env')} mode\n press CTRL-C to stop`);
+        this.logger.info(`running at http://localhost:${this.config.port} in ${process.env.NODE_ENV || 'development'} mode
+        \n press CTRL-C to stop`);
         resolve(this.app);
       });
+      const timeout = parseInt(process.env.WEBSERVER_LAUNCH_TIMEOUT, 10) || 10000;
+      setTimeout(() => reject(new Error(`timeout of ${timeout}ms exceeded`)), timeout);
     });
   }
 
   private setRoutes() {
-    this.app.use(
-      '/api-docs',
-      swaggerUi.serve,
-      swaggerUi.setup(spec, {
-        explorer: true,
-      }),
-    );
-    this.app.get('/api-docs', swaggerController.apiDocs);
+    const router = new Router();
 
-    this.app.get('/', (req, res) => {
-      res.json({ status: 200, message: 'JS middleware API. Use /api-docs to view routes description.' });
-    });
+    router.use(responseHandler);
+    router.get('/', (ctx, next) => ctx.ok('JS middleware API. Use /api-docs to view routes description'));
 
-    this.app.use(responseHandler);
-
-    this.app.post('/ast',
+    router.post('/agents/:agentId/plugins/:pluginId/ast',
       this.middleware.ensureAgentRegistration,
       this.middleware.populateReqWithAgent,
       populateReqWithTest2Code,
-      (req) => req.drillCtx.plugins.test2Code.updateAst(req.body.data));
+      (ctx: ExtendableContext) => ctx.state.drill.test2Code.updateAst(ctx.request.body.data));
 
-    // TODO might be better to merge agent & plugin context population (the latter will fail in absense of the former)
-    this.app.use(this.middleware.populateReqWithAgent);
-    this.app.use(populateReqWithTest2Code);
+    const test2CodeRouter = new Router();
 
-    this.app.post('/source-maps', (req) => req.drillCtx.plugins.test2Code.updateSourceMaps(req.body));
-    this.app.post('/start-session', (req) => req.drillCtx.plugins.test2Code.startSession(req.body.sessionId));
-    this.app.post('/finish-session', (req) => req.drillCtx.plugins.test2Code.finishSession(req.body.sessionId));
-    this.app.post('/coverage', (req) => req.drillCtx.plugins.test2Code.processCoverage(String(req.query.sessionId), req.body));
+    test2CodeRouter.post('/source-maps', (ctx: ExtendableContext) =>
+      ctx.state.drill.test2Code.updateSourceMaps(ctx.request.body));
+
+    test2CodeRouter.post('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
+      ctx.state.drill.test2Code.startSession(ctx.params.sessionId));
+
+    test2CodeRouter.patch('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
+      ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body));
+
+    router.use('/agents/:agentId/plugins/:pluginId',
+      this.middleware.populateReqWithAgent,
+      populateReqWithTest2Code,
+      test2CodeRouter.routes());
+
+    this.app.use(router.routes());
   }
 }

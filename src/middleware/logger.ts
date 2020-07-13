@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
+import Koa from 'koa';
 
-export default (logger) => (req: Request, resp: Response, next: any) => {
-  logger.info('request:', req.method, req.path);
-  next();
+export default (logger) => async (ctx: Koa.Context, next: Koa.Next): Promise<unknown> => {
+  logger.info('request:', ctx.request.method, ctx.request.path);
+  return next();
 };

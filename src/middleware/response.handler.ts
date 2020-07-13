@@ -1,12 +1,11 @@
-export default async function (req, res, next: any): Promise<void> {
+import { ExtendableContext, Next } from 'koa';
+
+export default async function (ctx: ExtendableContext, next: Next): Promise<void> {
   try {
-    // TODO that does not work as express does not support async functions directly
-    //      get rid of it and get koa
     const data = await next();
-    res.status = 200;
-    res.json(data || {});
+    ctx.ok(data);
   } catch (e) {
-    res.status = 500; // TODO just for now
-    res.json({ message: e.message || 'INTERNAL_SERVER_ERROR' });
+    ctx.response.status = e.status || 500;
+    ctx.response.body = { message: e.message || 'INTERNAL_SERVER_ERROR' };
   }
 }
