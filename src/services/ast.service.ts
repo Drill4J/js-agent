@@ -38,7 +38,7 @@ export function formatAst(astTreeData) {
         returnType = 'void',
         loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
       }) => {
-        const probes = [start, ...statements, end].sort((a, b) => (a - b));
+        const probes = [...new Set([start, ...statements, end])].sort((a, b) => (a - b));
         return {
           name,
           params,
