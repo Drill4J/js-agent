@@ -14,7 +14,7 @@ services:
       - "8404:8080"
     environment:
       WAIT_HOSTS: mongo:27017
-      DRILL_ADMIN_PRTOCOL: "ws"
+      DRILL_ADMIN_PROTOCOL: "ws"
       DRILL_ADMIN_HOST: "194.67.92.202:8090"
       MONGO_HOST: "mongo:27017"
       MONGO_DBNAME: "js-agent"
