@@ -1,4 +1,4 @@
-import Koa, { ExtendableContext, Next } from 'koa';
+import Koa, { ExtendableContext, Middleware } from 'koa';
 import Router, { IRouterParamContext } from 'koa-router';
 import cors from 'koa-cors';
 import bodyParser from 'koa-bodyparser';
@@ -7,48 +7,16 @@ import koaRespond from 'koa-respond';
 import responseHandler from './middleware/response.handler';
 
 import loggerMiddleware from './middleware/logger';
-import populateReqWithAgent from './middleware/populate.req.with.agent';
-import populateReqWithTest2Code from './middleware/populate.req.with.plugin';
+import populateCtxWithAgent from './middleware/populate.req.with.agent';
+import populateCtxWithPlugin from './middleware/populate.req.with.plugin';
 import ensureAgentRegistration from './middleware/ensure.agent.registration';
 
-import { ILoggerProvider, ILogger } from './util/logger';
+import { ILogger } from './util/logger';
+import { AppConfig } from './app.types';
 
 import {
   AgentHub,
-  Agent,
-  Test2CodePlugin,
 } from './services/agent.hub';
-
-interface AppConfig {
-  port: number,
-  body?: {
-    json?: { limit: string, }
-    urlencoded?: { limit: string, }
-  },
-  loggerProvider: ILoggerProvider
-}
-
-declare module 'koa' {
-  interface ExtendableContext {
-    ok: (response?: unknown) => Context;
-    created: (response?: unknown) => Context;
-    noContent: (response?: unknown) => Context;
-    badRequest: (response?: unknown) => Context;
-    unauthorized: (response?: unknown) => Context;
-    forbidden: (response?: unknown) => Context;
-    notFound: (response?: unknown) => Context;
-    locked: (response?: unknown) => Context;
-    internalServerError: (response?: unknown) => Context;
-    notImplemented: (response?: unknown) => Context;
-
-    state: {
-      drill: {
-        agent: Agent,
-        test2Code?: Test2CodePlugin
-      }
-    },
-  }
-}
 
 export class App {
   public app: Koa;
@@ -57,14 +25,14 @@ export class App {
 
   private agentHub: AgentHub;
 
-  private middleware: any;
+  private middlewares: { [key: string]: Middleware };
 
   private logger: ILogger;
 
   constructor(config: AppConfig, agentHub: AgentHub) {
-    this.middleware = {
+    this.middlewares = {
       ensureAgentRegistration: ensureAgentRegistration.bind(this),
-      populateReqWithAgent: populateReqWithAgent.bind(this),
+      populateCtxWithAgent: populateCtxWithAgent.bind(this),
     };
 
     this.agentHub = agentHub;
@@ -99,12 +67,12 @@ export class App {
     const router = new Router();
 
     router.use(responseHandler);
-    router.get('/', (ctx, next) => ctx.ok('JS middleware API. Use /api-docs to view routes description'));
+    router.get('/', (ctx: ExtendableContext) => ctx.ok('JS middleware API. Use /api-docs to view routes description'));
 
     router.post('/agents/:agentId/plugins/:pluginId/ast',
-      this.middleware.ensureAgentRegistration,
-      this.middleware.populateReqWithAgent,
-      populateReqWithTest2Code,
+      this.middlewares.ensureAgentRegistration,
+      this.middlewares.populateCtxWithAgent,
+      populateCtxWithPlugin,
       (ctx: ExtendableContext) => ctx.state.drill.test2Code.updateAst(ctx.request.body.data));
 
     const test2CodeRouter = new Router();
@@ -119,8 +87,8 @@ export class App {
       ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body));
 
     router.use('/agents/:agentId/plugins/:pluginId',
-      this.middleware.populateReqWithAgent,
-      populateReqWithTest2Code,
+      this.middlewares.populateCtxWithAgent,
+      populateCtxWithPlugin,
       test2CodeRouter.routes());
 
     this.app.use(router.routes());
