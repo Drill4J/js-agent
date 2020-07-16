@@ -21,16 +21,5 @@ declare module 'koa' {
         test2Code?: Test2CodePlugin
       }
     }
-
-    ok: (response?: unknown) => Context;
-    created: (response?: unknown) => Context;
-    noContent: (response?: unknown) => Context;
-    badRequest: (response?: unknown) => Context;
-    unauthorized: (response?: unknown) => Context;
-    forbidden: (response?: unknown) => Context;
-    notFound: (response?: unknown) => Context;
-    locked: (response?: unknown) => Context;
-    internalServerError: (response?: unknown) => Context;
-    notImplemented: (response?: unknown) => Context;
   }
 }
