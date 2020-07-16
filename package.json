@@ -25,7 +25,6 @@
     "koa": "^2.13.0",
     "koa-bodyparser": "^4.3.0",
     "koa-cors": "0.0.16",
-    "koa-respond": "^2.1.0",
     "koa-router": "^9.1.0",
     "mongodb": "^3.5.9",
     "sizeof": "^1.0.0",

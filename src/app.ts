@@ -2,7 +2,6 @@ import Koa, { ExtendableContext, Middleware } from 'koa';
 import Router, { IRouterParamContext } from 'koa-router';
 import cors from 'koa-cors';
 import bodyParser from 'koa-bodyparser';
-import koaRespond from 'koa-respond';
 
 import responseHandler from './middleware/response.handler';
 
@@ -43,9 +42,7 @@ export class App {
     this.app.use(bodyParser({
       jsonLimit: this.config.body?.json?.limit || '50mb',
       formLimit: this.config.body?.urlencoded?.limit || '50mb',
-      // extendTypes: {}, // TODO decide if this is necessary
     }));
-    this.app.use(koaRespond());
     this.app.use(cors());
     this.app.use(loggerMiddleware(this.logger));
     this.setRoutes();
@@ -67,7 +64,7 @@ export class App {
     const router = new Router();
 
     router.use(responseHandler);
-    router.get('/', (ctx: ExtendableContext) => ctx.ok('JS middleware API. Use /api-docs to view routes description'));
+    router.get('/', () => ({ message: 'JS middleware API. Use /api-docs to view routes description' }));
 
     router.post('/agents/:agentId/plugins/:pluginId/ast',
       this.middlewares.ensureAgentRegistration,
