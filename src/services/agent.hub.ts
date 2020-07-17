@@ -63,7 +63,7 @@ export class AgentHub {
     await Promise.all(agentsInitializing);
   }
 
-  public async startAgent(agentData: AgentData, isNew = false): Promise<void> {
+  public async startAgent(agentData: AgentData, isNew = false): Promise<Agent> {
     this.logger.info('start agent:', agentData.id);
     // TODO what if agent already started?
 
@@ -73,7 +73,7 @@ export class AgentHub {
 
     const agentConfig: AgentConfig = {
       loggerProvider: this.config.loggerProvider,
-      connection: this.config.agent.connection,
+      connection: this.config.connection,
       messageParseFunction: parseJsonRecursive,
       availablePlugins,
     };
@@ -81,13 +81,34 @@ export class AgentHub {
     const agent = new Agent(agentData, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
     this.agents[agent.id] = agent;
     await agent.initializing;
+    return agent;
   }
 
-  public async registerAgent(agentData: AgentData): Promise<void> {
+  public async restartAgent(agentData: AgentData): Promise<Agent> {
+    this.logger.info('restart agent %o', agentData);
+    const agent = this.getAgentById(agentData.id);
+
+    // note that agentData.buildVersion is a supposedly "new" buildVersion
+    agent.checkUniqueBuildVersion(agentData.buildVersion);
+
+    const pluginsIds = agent.getPluginsIds();
+    await this.stopAndRemoveAgent(agent);
+
+    const restartedAgent = await this.startAgent(agentData);
+    await Promise.all(pluginsIds.map(pluginId => restartedAgent.ensurePluginInstance(pluginId)));
+    return restartedAgent;
+  }
+
+  private async stopAndRemoveAgent(agent: Agent) {
+    await agent.stop();
+    delete this.agents[agent.data.id];
+  }
+
+  public async registerAgent(agentData: AgentData): Promise<Agent> {
     this.logger.info('register agent %o', agentData);
     // TODO what if agent already registered?
     await this.agentsDataStorage.registerAgent(agentData);
-    await this.startAgent(agentData, true);
+    return this.startAgent(agentData, true);
   }
 
   public async doesAgentExist(agentId: string): Promise<boolean> {
@@ -136,7 +157,7 @@ export class Agent {
 
   private needSync = false;
 
-  private data: AgentData;
+  readonly data: AgentData;
 
   private plugins: Plugins = {};
 
@@ -198,7 +219,7 @@ export class Agent {
           this.logger.info('connection established');
           resolve();
         });
-        const connectionTimeout = parseInt(process.env.AGENT_ESTABLISH_CONNECTON_TIMEOUT_MS, 10) || 10000;
+        const connectionTimeout = parseInt(process.env.AGENT_ESTABLISH_CONNECTION_TIMEOUT_MS, 10) || 10000;
         setTimeout(() => reject(), connectionTimeout);
       });
 
@@ -220,6 +241,16 @@ export class Agent {
     }
   }
 
+  public async stop() {
+    this.connection.close();
+    await new Promise((resolve, reject) => {
+      this.connection.on('close', () => resolve());
+      const timeout = parseInt(process.env.AGENT_CLOSE_CONNECTION_TIMEOUT_MS, 10) || 10000;
+      setTimeout(() => reject(new Error('failed to close connection')), timeout);
+    });
+  }
+
+  // TODO add try ... catch and await all async methods to avoid unhandled promise rejections
   private handleMessage(rawMessage: string) {
     const data = this.config.messageParseFunction(rawMessage);
     if (!data) return;
@@ -267,8 +298,18 @@ export class Agent {
     return this.instantiatePlugin(pluginId);
   }
 
+  public getPluginInstance(pluginId: string): Plugin {
+    const plugin = this.plugins[pluginId];
+    if (!plugin) {
+      const msg = `plugin ${pluginId} does not exist!`;
+      this.logger.error(msg);
+      throw new Error(msg);
+    }
+    return plugin;
+  }
+
   private instantiatePlugin(pluginId: string): Plugin {
-    this.logger.silly('instantiate plugin', pluginId);
+    this.logger.info('instantiate plugin', pluginId);
     const PluginClass = this.config.availablePlugins[pluginId];
     const plugin = new PluginClass(
       pluginId,
@@ -289,6 +330,16 @@ export class Agent {
     // Startup after middleware reboot does not require repeated plugin.init() call
     // because plugin is already "initiated" at drill backend.
     await plugin.init();
+  }
+
+  public checkUniqueBuildVersion(buildVersion: string): void {
+    if (this.data.buildVersion === buildVersion) {
+      this.logger.warning(`build version ${buildVersion} matches existing version!`);
+    }
+  }
+
+  public getPluginsIds(): string[] {
+    return Object.keys(this.plugins);
   }
 }
 
@@ -425,12 +476,15 @@ export class Test2CodePlugin extends Plugin {
     return (action as InitActiveScope).type === 'INIT_ACTIVE_SCOPE';
   }
 
-  public async updateAst(rawAst: unknown[]): Promise<void> {
+  public async updateAst(rawAst: unknown[], isLiveUpdate = false): Promise<void> {
     this.logger.debug('update ast');
 
     const ast = await astService.formatAst(rawAst); // TODO abstract AST processor
     await storage.saveAst(this.agentId, ast); // TODO abstract storage
 
+    if (isLiveUpdate) {
+      await this.init();
+    }
     // TODO send INIT_DATA_PART if ast were updated during runtime? (and not at initialization)
   }
 
@@ -531,23 +585,22 @@ export interface AgentData {
 
 export interface AgentHubConfig {
   loggerProvider: ILoggerProvider,
-  agent: {
-    connection: AgentConnectionConfig
+  connection: {
+    protocol: string,
+    host: string
   }
 }
 
 interface AgentConfig {
-  connection: AgentConnectionConfig,
+  loggerProvider: ILoggerProvider,
+  connection: {
+    protocol: string,
+    host: string,
+  },
   messageParseFunction: MessageParseFunction,
   availablePlugins: {
     [pluginId: string]: IPlugin
   },
-  loggerProvider: ILoggerProvider,
-}
-
-interface AgentConnectionConfig {
-  protocol: string,
-  host: string,
 }
 
 interface Scope {
@@ -561,6 +614,7 @@ interface Connection {
   on(event: string, handler: Handler): unknown;
   _on?(event: string, handler: Handler): unknown;
   send(data: string): unknown; // TODO set data type to Package
+  close(): void;
 }
 
 interface ConnectionProvider {

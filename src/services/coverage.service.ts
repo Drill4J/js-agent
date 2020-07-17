@@ -120,7 +120,6 @@ export async function processTestResults(agentId, ast, rawData) {
   const {
     coverage: rawCoverage,
     test,
-    branch = 'master',
     scriptSources: sources,
   } = rawData;
 

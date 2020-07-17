@@ -14,11 +14,9 @@ async function start(): Promise<void> {
   const agentsDataStorage = new AgentsDataStorage(storage);
   const agentHubConfig: AgentHubConfig = {
     loggerProvider: LoggerProvider,
-    agent: {
-      connection: {
-        protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
-        host: process.env.DRILL_ADMIN_HOST,
-      },
+    connection: {
+      protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
+      host: process.env.DRILL_ADMIN_HOST,
     },
   };
   const agentHub = new AgentHub(agentsDataStorage, Websocket, agentHubConfig);

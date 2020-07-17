@@ -43,8 +43,8 @@ export class Storage {
     await this.saveToDb('coverage', data);
   }
 
-  public async getCoverage(branch): Promise<any[]> {
-    const coverages = await this.getFromDb('coverage', { branch });
+  public async getCoverage(buildVersion): Promise<any[]> {
+    const coverages = await this.getFromDb('coverage', { buildVersion });
     return coverages;
   }
 

@@ -1,4 +1,4 @@
-import Koa, { ExtendableContext, Middleware } from 'koa';
+import Koa, { ExtendableContext, Middleware, Next } from 'koa';
 import Router, { IRouterParamContext } from 'koa-router';
 import cors from 'koa-cors';
 import bodyParser from 'koa-bodyparser';
@@ -8,13 +8,13 @@ import responseHandler from './middleware/response.handler';
 import loggerMiddleware from './middleware/logger';
 import populateCtxWithAgent from './middleware/populate.req.with.agent';
 import populateCtxWithPlugin from './middleware/populate.req.with.plugin';
-import ensureAgentRegistration from './middleware/ensure.agent.registration';
 
 import { ILogger } from './util/logger';
 import { AppConfig } from './app.types';
 
 import {
   AgentHub,
+  AgentData,
 } from './services/agent.hub';
 
 export class App {
@@ -31,7 +31,6 @@ export class App {
   constructor(config: AppConfig, agentHub: AgentHub) {
     this.middlewares = {
       responseHandler: responseHandler.bind(this),
-      ensureAgentRegistration: ensureAgentRegistration.bind(this),
       populateCtxWithAgent: populateCtxWithAgent.bind(this),
     };
 
@@ -68,10 +67,41 @@ export class App {
     router.get('/', () => ({ message: 'JS middleware API. Use /api-docs to view routes description' }));
 
     router.post('/agents/:agentId/plugins/:pluginId/ast',
-      this.middlewares.ensureAgentRegistration,
-      this.middlewares.populateCtxWithAgent,
+      async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
+        const agentId = String(ctx.params.agentId);
+
+        const agentExists = await this.agentHub.doesAgentExist(agentId);
+        const { buildVersion } = ctx.request.body;
+        const agentData: AgentData = {
+          id: agentId,
+          instanceId: process.env.AGENT_INSTANCE_ID || '', // TODO generate some uuid
+          buildVersion,
+          serviceGroupId: process.env.AGENT_SERVICE_GROUP_ID || '', // TODO what is that for and how it should be configured
+          agentType: 'NODEJS',
+        };
+        if (agentExists) {
+          const restartedAgent = await this.agentHub.restartAgent(agentData);
+          restartedAgent.getPluginInstance('test2code');
+          ctx.state.drill = {
+            agent: restartedAgent,
+            test2CodeCtx: {
+              isLiveUpdate: true,
+            },
+          };
+        } else {
+          const newAgent = await this.agentHub.registerAgent(agentData);
+          ctx.state.drill = {
+            agent: newAgent,
+            test2CodeCtx: {
+              isLiveUpdate: false,
+            },
+          };
+        }
+        return next();
+      },
       populateCtxWithPlugin,
-      (ctx: ExtendableContext) => ctx.state.drill.test2Code.updateAst(ctx.request.body.data));
+      (ctx: ExtendableContext) =>
+        (ctx.state.drill.test2Code.updateAst(ctx.request.body.data, ctx.state.drill.test2CodeCtx.isLiveUpdate)));
 
     const test2CodeRouter = new Router();
 
