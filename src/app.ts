@@ -30,6 +30,7 @@ export class App {
 
   constructor(config: AppConfig, agentHub: AgentHub) {
     this.middlewares = {
+      responseHandler: responseHandler.bind(this),
       ensureAgentRegistration: ensureAgentRegistration.bind(this),
       populateCtxWithAgent: populateCtxWithAgent.bind(this),
     };
@@ -63,7 +64,7 @@ export class App {
   private setRoutes() {
     const router = new Router();
 
-    router.use(responseHandler);
+    router.use(this.middlewares.responseHandler);
     router.get('/', () => ({ message: 'JS middleware API. Use /api-docs to view routes description' }));
 
     router.post('/agents/:agentId/plugins/:pluginId/ast',

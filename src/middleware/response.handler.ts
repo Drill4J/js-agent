@@ -8,6 +8,7 @@ export default async function (ctx: ExtendableContext, next: Next): Promise<void
       ctx.response.body = data;
     }
   } catch (e) {
+    this.logger.error('%O', e);
     ctx.response.status = e.status || 500;
     ctx.response.body = { message: e.message || 'INTERNAL_SERVER_ERROR' };
   }
