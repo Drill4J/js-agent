@@ -17,9 +17,10 @@ export default class LoggerProvider {
     name: string,
     levels = {
       0: { name: 'error', format: chalk.whiteBright, prefixFormat: chalk.whiteBright.bgRedBright },
-      1: { name: 'info', format: chalk.white },
-      2: { name: 'debug', format: chalk.blueBright },
-      3: { name: 'silly', format: chalk.yellow },
+      1: { name: 'warning', format: chalk.whiteBright, prefixFormat: chalk.black.bgYellowBright },
+      2: { name: 'info', format: chalk.white },
+      3: { name: 'debug', format: chalk.blueBright },
+      4: { name: 'silly', format: chalk.yellow },
     },
   ): ILogger { // TODO this is a terrible spaghetti, refactor it
     const logFn = debug(`${prefix}:${name}`);
