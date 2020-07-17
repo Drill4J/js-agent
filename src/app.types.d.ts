@@ -18,7 +18,10 @@ declare module 'koa' {
     state: {
       drill: {
         agent: Agent,
-        test2Code?: Test2CodePlugin
+        test2Code?: Test2CodePlugin,
+        test2CodeCtx?: {
+          isLiveUpdate: boolean
+        }
       }
     }
   }

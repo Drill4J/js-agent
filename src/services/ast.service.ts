@@ -2,7 +2,7 @@ import * as upath from 'upath';
 
 // TODO move type definitions to d.ts
 interface Ast {
-  branch: string;
+  buildVersion: string;
   data: AstData[];
 }
 
@@ -36,6 +36,7 @@ export function formatAst(astTreeData) {
         params = [],
         statements = [],
         returnType = 'void',
+        checksum = '',
         loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
       }) => {
         const probes = [...new Set([start, ...statements, end])].sort((a, b) => (a - b));
@@ -43,6 +44,7 @@ export function formatAst(astTreeData) {
           name,
           params,
           returnType,
+          checksum,
           probes,
           count: probes.length,
           start,
@@ -67,6 +69,7 @@ export function formatForBackend(data) {
         returnType: x.returnType,
         probes: x.probes,
         count: x.count,
+        checksum: x.checksum,
       })),
     };
   });
