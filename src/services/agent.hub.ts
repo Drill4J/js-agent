@@ -228,7 +228,11 @@ export class Agent {
         this.logger.error('connection error', ...args);
       });
 
-      this.connection.on('close', (reasonCode, description) => {
+      this.connection.on('close', (reasonCode: string, description: string) => {
+        if (parseInt(reasonCode, 10) > 1000) {
+          this.logger.error(`connection closed abnormally\n    reason ${reasonCode}\n    description${description}`);
+          return;
+        }
         this.logger.info(`connection closed\n    reason ${reasonCode}\n    description${description}`);
       });
 
@@ -243,6 +247,7 @@ export class Agent {
   }
 
   public async stop() {
+    if (this.connection.readyState === ConnectionReadyState.OPEN) {
       this.connection.close();
       await new Promise((resolve, reject) => {
         this.connection.on('close', () => resolve());
@@ -250,6 +255,7 @@ export class Agent {
         setTimeout(() => reject(new Error('failed to close connection')), timeout);
       });
     }
+  }
 
   // TODO add try ... catch and await all async methods to avoid unhandled promise rejections
   private handleMessage(rawMessage: string) {
@@ -599,6 +605,14 @@ interface Connection {
   _on?(event: string, handler: Handler): unknown;
   send(data: string): unknown; // TODO set data type to Package
   close(): void;
+  readyState: ConnectionReadyState
+}
+
+enum ConnectionReadyState {
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
 }
 
 interface ConnectionProvider {
