@@ -1,8 +1,6 @@
 import { ILoggerProvider } from './util/logger';
-import {
-  Agent,
-  Test2CodePlugin,
-} from './services/agent.hub';
+import { Agent } from './services/agent';
+import { Test2CodePlugin } from './services/plugins/test2code';
 
 export interface AppConfig {
   port: number,
