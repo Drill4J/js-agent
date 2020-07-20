@@ -31,8 +31,9 @@
       }
     ],
     "import/extensions": 0,
+    "indent": "off",
     "@typescript-eslint/indent": [
-      2,
+      "error",
       2
     ],
     "eofline": 0,
