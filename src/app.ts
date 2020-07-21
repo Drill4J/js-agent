@@ -1,6 +1,6 @@
 import Koa, { ExtendableContext, Middleware, Next } from 'koa';
 import Router, { IRouterParamContext } from 'koa-router';
-import cors from 'koa-cors';
+import cors from '@koa/cors';
 import bodyParser from 'koa-bodyparser';
 
 import responseHandler from './middleware/response.handler';
