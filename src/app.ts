@@ -12,8 +12,8 @@ import populateCtxWithPlugin from './middleware/populate.req.with.plugin';
 import { ILogger } from './util/logger';
 import { AppConfig } from './app.types';
 
-import { AgentHub } from './services/agent.hub';
-import { AgentData } from './services/agent.types';
+import { AgentHub } from './services/hub';
+import { AgentData } from './services/agent/types';
 
 export class App {
   public app: Koa;

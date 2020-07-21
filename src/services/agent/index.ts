@@ -3,10 +3,10 @@ import {
   Connection,
   DataPackage,
   ConfirmationPackage,
-} from './agent.hub.types';
-import { AgentData, AgentConfig } from './agent.types';
-import { isTest2CodePlugin } from './plugin.guards';
-import { Plugin, Plugins } from './plugin';
+} from '../hub/types';
+import { AgentData, AgentConfig } from './types';
+import { isTest2CodePlugin } from '../plugin/guards';
+import { Plugin, Plugins } from '../plugin';
 
 export interface AgentsMap {
   [agentId: string]: Agent

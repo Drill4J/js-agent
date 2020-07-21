@@ -1,6 +1,6 @@
 import { Next, ExtendableContext } from 'koa';
 import { IRouterParamContext } from 'koa-router';
-import { AgentHub } from '../services/agent.hub';
+import { AgentHub } from '../services/hub';
 
 export default async function (ctx: ExtendableContext & IRouterParamContext, next: Next): Promise<void> {
   const agentId = String(ctx.params.agentId);

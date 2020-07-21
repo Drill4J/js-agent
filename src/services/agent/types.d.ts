@@ -1,5 +1,5 @@
-import { ILoggerProvider } from '../util/logger';
-import { PluginConstructor } from './plugin';
+import { ILoggerProvider } from '../../util/logger';
+import { PluginConstructor } from '../plugin';
 
 export interface AgentData {
   id: string,

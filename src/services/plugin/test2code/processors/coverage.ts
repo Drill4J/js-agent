@@ -7,8 +7,8 @@ import fsExtra from 'fs-extra';
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
 import { ExecClassData } from '@drill4j/test2code-types';
 
-import storage from '../storage';
-import LoggerProvider from '../util/logger';
+import storage from '../../../../storage';
+import LoggerProvider from '../../../../util/logger';
 
 const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 

@@ -16,13 +16,13 @@ import {
   ScopeSummary,
 } from '@drill4j/test2code-types';
 
-import { Scope } from './test2code.types';
+import { Scope } from './types';
 
 // TODO abstract ast processor, coverage processor and storage provider
-import * as astService from '../ast.service';
-import * as coverageService from '../coverage.service';
-import storage from '../../storage';
-import { Plugin } from '../plugin';
+import * as astProcessor from './processors/ast';
+import * as coverageProcessor from './processors/coverage';
+import storage from '../../../storage';
+import { Plugin } from '..';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
@@ -51,7 +51,7 @@ export class Test2CodePlugin extends Plugin {
     //    it differs from Java agent's implementation (you won't find INIT_DATA_PART in java agent sourcecode)
     const initDataPartMessage: InitDataPart = {
       type: 'INIT_DATA_PART',
-      astEntities: astService.formatForBackend(ast),
+      astEntities: astProcessor.formatForBackend(ast),
     };
     super.send(initDataPartMessage);
 
@@ -100,9 +100,9 @@ export class Test2CodePlugin extends Plugin {
   }
 
   public async updateAst(rawAst: unknown[], isLiveUpdate = false): Promise<void> {
-    this.logger.debug('update ast');
+    this.logger.info('update ast');
 
-    const ast = await astService.formatAst(rawAst); // TODO abstract AST processor
+    const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
     await storage.saveAst(this.agentId, ast); // TODO abstract storage
 
     if (isLiveUpdate) {
@@ -112,13 +112,13 @@ export class Test2CodePlugin extends Plugin {
   }
 
   public async updateSourceMaps(sourceMap): Promise<void> {
-    this.logger.debug('update source maps');
+    this.logger.info('update source maps');
     // await coverage
-    await coverageService.saveSourceMap(this.agentId, sourceMap);
+    await coverageProcessor.saveSourceMap(this.agentId, sourceMap);
   }
 
   public async startSession(sessionId): Promise<void> {
-    this.logger.debug('start session', sessionId);
+    this.logger.info('start session', sessionId);
     await storage.saveSession(this.agentId, sessionId);
 
     const sessionStartedMessage: SessionStarted = {
@@ -132,13 +132,13 @@ export class Test2CodePlugin extends Plugin {
   }
 
   public async finishSession(sessionId: string, rawData): Promise<void> {
-    this.logger.debug('process coverage and finish session', sessionId);
+    this.logger.info('process coverage and finish session', sessionId);
     await this.ensureActiveSession(sessionId);
 
     const astTree = await storage.getAst(this.agentId);
     const { data: ast } = astTree;
 
-    const data = await coverageService.processTestResults(this.agentId, ast, rawData);
+    const data = await coverageProcessor.processTestResults(this.agentId, ast, rawData);
     await this.sendTestResults(sessionId, data);
 
     await storage.removeSession(this.agentId, sessionId);

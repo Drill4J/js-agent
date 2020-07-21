@@ -1,8 +1,8 @@
 import Websocket from 'ws';
 import { App } from './app';
 import storage from './storage';
-import { AgentHubConfig } from './services/agent.hub.types';
-import { AgentHub, AgentsDataStorage } from './services/agent.hub';
+import { AgentHubConfig } from './services/hub/types';
+import { AgentHub, AgentsDataStorage } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
 
 const startupLogger = LoggerProvider.getLogger('drill', 'startup');
