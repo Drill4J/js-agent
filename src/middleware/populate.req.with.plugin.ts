@@ -1,6 +1,6 @@
 import { ExtendableContext, Next } from 'koa';
 import { IRouterParamContext } from 'koa-router';
-import { isTest2CodePlugin } from '../services/plugin.guards';
+import { isTest2CodePlugin } from '../services/plugin/guards';
 
 export default async function (ctx: ExtendableContext & IRouterParamContext, next: Next): Promise<void> {
   const { agent } = ctx.state.drill;

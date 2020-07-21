@@ -3,12 +3,12 @@ import {
   AgentData,
   AgentConfig,
   Message,
-} from './agent.types';
-import { AgentHubConfig, ConnectionProvider } from './agent.hub.types';
-import { Agent, AgentsMap } from './agent';
-import { Test2CodePlugin } from './plugins/test2code';
-import parseJsonRecursive from '../util/parse-json-recursive';
-import { AvailablePlugins } from './plugin';
+} from '../agent/types';
+import { AgentHubConfig, ConnectionProvider } from './types';
+import { Agent, AgentsMap } from '../agent';
+import { Test2CodePlugin } from '../plugin/test2code';
+import parseJsonRecursive from '../../util/parse-json-recursive';
+import { AvailablePlugins } from '../plugin';
 
 export class AgentHub {
   private config: AgentHubConfig;

@@ -20,7 +20,8 @@
       "outputCapture": "std",
       "env": {
         "DRILL_ADMIN_PROTOCOL": "ws",
-        "DRILL_ADMIN_HOST": "194.67.92.202:8090",
+        // "DRILL_ADMIN_HOST": "194.67.92.202:8090",
+        "DRILL_ADMIN_HOST": "localhost:9090",
         "TEST_2_CODE_PLUGINID": "test2code",
         "MONGO_HOST": "localhost:27017",
         "MONGO_DBNAME": "js-agent",
@@ -29,7 +30,7 @@
         "DEBUG": "drill:*",
         "DEBUG_COLORS": "true",
         "FORCE_COLOR": "3", // required in order for chalk to work within vscode
-        "DEBUG_LOG_LEVEL": "2" // (0-3 by default)
+        "DEBUG_LOG_LEVEL": "2" // (0-4 by default)
       }
     },
     {

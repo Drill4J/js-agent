@@ -1,5 +1,5 @@
-import { PluginConfig } from './plugin.types';
-import { Connection } from './agent.hub.types';
+import { PluginConfig } from './types';
+import { Connection } from '../hub/types';
 
 export interface PluginConstructor {
   new(pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin
