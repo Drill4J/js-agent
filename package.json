@@ -18,6 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/koa-cors": "0.0.0",
+    "axios": "^0.19.2",
     "chalk": "^4.1.0",
     "convert-source-map": "^1.7.0",
     "debug": "^4.1.1",
@@ -33,7 +34,6 @@
     "supports-color": "^7.1.0",
     "swagger-jsdoc": "^3.5.0",
     "upath": "^1.2.0",
-    "uuid": "^3.4.0",
     "v8-to-istanbul": "^4.0.1",
     "ws": "^7.3.0"
   },
