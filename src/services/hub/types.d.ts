@@ -8,6 +8,10 @@ export interface AgentHubConfig {
   }
 }
 
+export interface AgentsDataProvider {
+  get(): Promise<any[]>
+}
+
 export interface Connection {
   on(event: string, handler: Handler): unknown;
   _on?(event: string, handler: Handler): unknown;

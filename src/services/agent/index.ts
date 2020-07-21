@@ -27,19 +27,16 @@ export class Agent {
 
   private plugins: Plugins = {};
 
-  public id: string;
-
   public initialized: boolean;
 
   public initializing: Promise<any>;
 
-  constructor(agentData: AgentData, connectionProvider: ConnectionProvider, config: AgentConfig, needSync: boolean) {
-    this.id = agentData.id;
-    this.data = agentData;
+  constructor(agentInfo: any, connectionProvider: ConnectionProvider, config: AgentConfig, needSync: boolean) {
+    this.data = agentInfo.data;
     this.ConnectionProvider = connectionProvider;
     this.config = config;
     this.needSync = needSync;
-    this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentData.id}`);
+    this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentInfo.data.id}`);
     this.initializing = this.init();
   }
 
@@ -96,6 +93,7 @@ export class Agent {
       this.connection.on('close', (reasonCode: string, description: string) => {
         if (parseInt(reasonCode, 10) > 1000) {
           this.logger.error(`connection closed abnormally\n    reason ${reasonCode}\n    description${description}`);
+          // TODO remove dangling agent instances from agent hub? (plugins will get discarded as well)
           return;
         }
         this.logger.info(`connection closed\n    reason ${reasonCode}\n    description${description}`);
@@ -187,7 +185,7 @@ export class Agent {
     const PluginClass = this.config.availablePlugins[pluginId];
     const plugin = new PluginClass(
       pluginId,
-      this.id,
+      this.data.id,
       this.connection,
       {
         loggerProvider: this.config.loggerProvider,

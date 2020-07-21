@@ -1,19 +1,22 @@
-/* eslint-disable max-classes-per-file */
+import {
+  AgentHubConfig,
+  ConnectionProvider,
+  AgentsDataProvider,
+} from './types';
 import {
   AgentData,
   AgentConfig,
   Message,
 } from '../agent/types';
-import { AgentHubConfig, ConnectionProvider } from './types';
 import { Agent, AgentsMap } from '../agent';
+import { AvailablePlugins } from '../plugin';
 import { Test2CodePlugin } from '../plugin/test2code';
 import parseJsonRecursive from '../../util/parse-json-recursive';
-import { AvailablePlugins } from '../plugin';
 
 export class AgentHub {
   private config: AgentHubConfig;
 
-  private agentsDataStorage: AgentsDataStorage;
+  private agentsDataProvider: AgentsDataProvider;
 
   private AgentConnectionProvider: ConnectionProvider;
 
@@ -26,8 +29,8 @@ export class AgentHub {
   public initializing: Promise<any>;
 
   // TODO choose suitable dependency injection plugin to avoid passing logger via config
-  constructor(agentsDataStorage: AgentsDataStorage, agentConnectionProvider: ConnectionProvider, config: AgentHubConfig) {
-    this.agentsDataStorage = agentsDataStorage;
+  constructor(agentsDataProvider: AgentsDataProvider, agentConnectionProvider: ConnectionProvider, config: AgentHubConfig) {
+    this.agentsDataProvider = agentsDataProvider;
     this.AgentConnectionProvider = agentConnectionProvider;
     this.config = config;
     this.logger = this.config.loggerProvider.getLogger('drill', 'agenthub');
@@ -43,28 +46,29 @@ export class AgentHub {
 
   private async initAgents(): Promise<void> {
     this.logger.info('init agents');
-    const agentsData = await this.agentsDataStorage.getAgentsData();
-    const agentsInitializing = agentsData.map((agentData: AgentData) => this.startAgent(agentData));
+    const agentsList = await this.agentsDataProvider.get(); // TODO no any!
+    const agentsInitializing = agentsList.map((x) => this.startAgent(x));
     await Promise.all(agentsInitializing);
   }
 
-  public async startAgent(agentData: AgentData, isNew = false): Promise<Agent> {
-    this.logger.info('start agent:', agentData.id);
+  public async startAgent(agentInfo: any, isNew = false): Promise<Agent> {
+    this.logger.info('start agent:', agentInfo.data.id);
     // TODO what if agent already started?
 
     const availablePlugins: AvailablePlugins = {
       test2code: Test2CodePlugin, // TODO there must be a way to resolve that with type system instead of hardcoded key
     };
 
-    const agentConfig: AgentConfig = {
+    const agentConfig: AgentConfig = { // TODO agent config never changes, supply it in hub config!
       loggerProvider: this.config.loggerProvider,
       connection: this.config.connection,
       messageParseFunction: (rawMessage) => (parseJsonRecursive(rawMessage) as Message),
       availablePlugins,
     };
 
-    const agent = new Agent(agentData, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
-    this.agents[agent.id] = agent;
+    // TODO supply this.AgentConnectionProvider in agentConfig!
+    const agent = new Agent(agentInfo, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
+    this.agents[agent.data.id] = agent;
     await agent.initializing;
     return agent;
   }
@@ -92,8 +96,7 @@ export class AgentHub {
   public async registerAgent(agentData: AgentData): Promise<Agent> {
     this.logger.info('register agent %o', agentData);
     // TODO what if agent already registered?
-    await this.agentsDataStorage.registerAgent(agentData);
-    return this.startAgent(agentData, true);
+    return this.startAgent({ data: agentData }, true);
   }
 
   public async doesAgentExist(agentId: string): Promise<boolean> {
@@ -103,7 +106,7 @@ export class AgentHub {
       throw new Error(msg);
     }
 
-    // TODO what if agent is not initialized yet await this.agentsDataStorage.findAgent(agentId);
+    // TODO what if agent is not initialized yet? // await agentsDataProvider.isRegistered(agentId)
 
     const agent = !!this.agents[agentId];
     return !!agent;
@@ -111,22 +114,5 @@ export class AgentHub {
 
   public getAgentById(agentId: string): Agent {
     return this.agents[agentId];
-  }
-}
-
-export class AgentsDataStorage {
-  private storageInstance;
-
-  constructor(storageInstance) {
-    this.storageInstance = storageInstance;
-  }
-
-  public async getAgentsData(): Promise<AgentData[]> {
-    const data = await this.storageInstance.findAll('agents');
-    return data;
-  }
-
-  public async registerAgent(agentData: AgentData): Promise<void> {
-    await this.storageInstance.save('agents', agentData);
   }
 }

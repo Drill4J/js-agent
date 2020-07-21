@@ -72,9 +72,9 @@ export class App {
         const { buildVersion } = ctx.request.body;
         const agentData: AgentData = {
           id: agentId,
-          instanceId: process.env.AGENT_INSTANCE_ID || '', // TODO generate some uuid
+          instanceId: '',
           buildVersion,
-          serviceGroupId: process.env.AGENT_SERVICE_GROUP_ID || '', // TODO what is that for and how it should be configured
+          serviceGroupId: '',
           agentType: 'NODEJS',
         };
         if (agentExists) {
