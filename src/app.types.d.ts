@@ -17,9 +17,6 @@ declare module 'koa' {
       drill: {
         agent: Agent,
         test2Code?: Test2CodePlugin,
-        test2CodeCtx?: {
-          isLiveUpdate: boolean
-        }
       }
     }
   }

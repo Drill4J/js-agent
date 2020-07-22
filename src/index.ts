@@ -4,7 +4,7 @@ import storage from './storage';
 import { AgentHubConfig } from './services/hub/types';
 import { AgentHub } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
-import * as AgentsDataProvider from './agents.data.provider';
+import * as AgentsInfoProvider from './services/agents-info-provider';
 
 const startupLogger = LoggerProvider.getLogger('drill', 'startup');
 
@@ -20,7 +20,7 @@ async function start(): Promise<void> {
       host: process.env.DRILL_ADMIN_HOST,
     },
   };
-  const agentHub = new AgentHub(AgentsDataProvider, Websocket, agentHubConfig);
+  const agentHub = new AgentHub(AgentsInfoProvider, Websocket, agentHubConfig);
   await agentHub.initializing;
 
   const app = new App(

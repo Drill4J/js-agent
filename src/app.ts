@@ -78,28 +78,23 @@ export class App {
           agentType: 'NODEJS',
         };
         if (agentExists) {
-          const restartedAgent = await this.agentHub.restartAgent(agentData);
-          restartedAgent.getPluginInstance('test2code');
+          const agent = this.agentHub.getAgentById(agentData.id);
+          await agent.updateBuildVersion(agentData);
+          agent.checkPluginInstanceExistence('test2code');
           ctx.state.drill = {
-            agent: restartedAgent,
-            test2CodeCtx: {
-              isLiveUpdate: true,
-            },
+            agent,
           };
         } else {
           const newAgent = await this.agentHub.registerAgent(agentData);
           ctx.state.drill = {
             agent: newAgent,
-            test2CodeCtx: {
-              isLiveUpdate: false,
-            },
           };
         }
         return next();
       },
       populateCtxWithPlugin,
       (ctx: ExtendableContext) =>
-        (ctx.state.drill.test2Code.updateAst(ctx.request.body.data, ctx.state.drill.test2CodeCtx.isLiveUpdate)));
+        (ctx.state.drill.test2Code.updateAst(ctx.request.body.data)));
 
     const test2CodeRouter = new Router();
 

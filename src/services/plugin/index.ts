@@ -1,5 +1,5 @@
 import { PluginConfig } from './types';
-import { Connection } from '../hub/types';
+import { Connection } from '../common/types';
 
 export interface PluginConstructor {
   new(pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin
@@ -36,6 +36,8 @@ export class Plugin {
   }
 
   public async init() { throw new Error(`${this.id} init not implemented`); }
+
+  public async stop() { throw new Error(`${this.id} stop not implemented`); }
 
   public hasMatchingId(someId: string) {
     return this.id === someId;
