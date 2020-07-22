@@ -66,8 +66,6 @@ export class Agent {
 
   private async openConnection() {
     try {
-      // TODO add connection status check
-      // TODO what if we already have an open connection, should we re-use it or gracefully shutdown?
       if (this.connection && this.connection.readyState === CONNECTION_READY_STATE.OPEN) {
         const msg = 'connection is already established';
         this.logger.error(msg);
@@ -128,7 +126,6 @@ export class Agent {
   }
 
   private async closeConnection() {
-    // TODO fix a magic number (it's referring to the state OPEN because enums are terrible)
     if (this.connection && this.connection.readyState === CONNECTION_READY_STATE.OPEN) {
       this.connection.close();
       await new Promise((resolve, reject) => {
@@ -260,9 +257,5 @@ export class Agent {
     if (this.data.buildVersion === buildVersion) {
       this.logger.warning(`build version ${buildVersion} matches existing version!`);
     }
-  }
-
-  public getPluginsIds(): string[] {
-    return Object.keys(this.plugins);
   }
 }
