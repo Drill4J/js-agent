@@ -28,3 +28,15 @@ export interface Message {
   type: string,
   message: any, // TODO type it
 }
+
+export interface AgentInfo {
+  id: string,
+  agentType: string,
+  buildVersion: string,
+  instanceIds: string[],
+  plugins: PluginInfo[],
+}
+
+export interface PluginInfo {
+  id: string
+}

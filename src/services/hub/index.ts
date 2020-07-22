@@ -1,13 +1,15 @@
 import {
   AgentHubConfig,
-  ConnectionProvider,
-  AgentsDataProvider,
+  AgentsInfoProvider,
 } from './types';
 import {
   AgentData,
   AgentConfig,
   Message,
 } from '../agent/types';
+import {
+  ConnectionProvider,
+} from '../common/types';
 import { Agent, AgentsMap } from '../agent';
 import { AvailablePlugins } from '../plugin';
 import { Test2CodePlugin } from '../plugin/test2code';
@@ -16,7 +18,7 @@ import parseJsonRecursive from '../../util/parse-json-recursive';
 export class AgentHub {
   private config: AgentHubConfig;
 
-  private agentsDataProvider: AgentsDataProvider;
+  private agentsInfoProvider: AgentsInfoProvider;
 
   private AgentConnectionProvider: ConnectionProvider;
 
@@ -29,8 +31,8 @@ export class AgentHub {
   public initializing: Promise<any>;
 
   // TODO choose suitable dependency injection plugin to avoid passing logger via config
-  constructor(agentsDataProvider: AgentsDataProvider, agentConnectionProvider: ConnectionProvider, config: AgentHubConfig) {
-    this.agentsDataProvider = agentsDataProvider;
+  constructor(agentsInfoProvider: AgentsInfoProvider, agentConnectionProvider: ConnectionProvider, config: AgentHubConfig) {
+    this.agentsInfoProvider = agentsInfoProvider;
     this.AgentConnectionProvider = agentConnectionProvider;
     this.config = config;
     this.logger = this.config.loggerProvider.getLogger('drill', 'agenthub');
@@ -46,13 +48,14 @@ export class AgentHub {
 
   private async initAgents(): Promise<void> {
     this.logger.info('init agents');
-    const agentsList = await this.agentsDataProvider.get(); // TODO no any!
+    const agentsList = await this.agentsInfoProvider.get(); // TODO no any!
     const agentsInitializing = agentsList.map((x) => this.startAgent(x));
     await Promise.all(agentsInitializing);
   }
 
   public async startAgent(agentInfo: any, isNew = false): Promise<Agent> {
-    this.logger.info('start agent:', agentInfo.data.id);
+    const agentId = agentInfo.data.id;
+    this.logger.info('start agent:', agentId);
     // TODO what if agent already started?
 
     const availablePlugins: AvailablePlugins = {
@@ -68,29 +71,9 @@ export class AgentHub {
 
     // TODO supply this.AgentConnectionProvider in agentConfig!
     const agent = new Agent(agentInfo, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
-    this.agents[agent.data.id] = agent;
+    this.agents[agentId] = agent;
     await agent.initializing;
     return agent;
-  }
-
-  public async restartAgent(agentData: AgentData): Promise<Agent> {
-    this.logger.info('restart agent %o', agentData);
-    const agent = this.getAgentById(agentData.id);
-
-    // note that agentData.buildVersion is a supposedly "new" buildVersion
-    agent.checkUniqueBuildVersion(agentData.buildVersion);
-
-    const pluginsIds = agent.getPluginsIds();
-    await this.stopAndRemoveAgent(agent);
-
-    const restartedAgent = await this.startAgent(agentData);
-    await Promise.all(pluginsIds.map(pluginId => restartedAgent.ensurePluginInstance(pluginId)));
-    return restartedAgent;
-  }
-
-  private async stopAndRemoveAgent(agent: Agent) {
-    await agent.stop();
-    delete this.agents[agent.data.id];
   }
 
   public async registerAgent(agentData: AgentData): Promise<Agent> {
@@ -106,7 +89,7 @@ export class AgentHub {
       throw new Error(msg);
     }
 
-    // TODO what if agent is not initialized yet? // await agentsDataProvider.isRegistered(agentId)
+    // TODO what if agent is not initialized yet? // await agentsInfoProvider.isRegistered(agentId)
 
     const agent = !!this.agents[agentId];
     return !!agent;

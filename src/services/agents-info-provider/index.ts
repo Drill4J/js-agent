@@ -1,7 +1,7 @@
 import Websocket from 'ws';
 import axios from 'axios';
-import parseJsonRecursive from './util/parse-json-recursive';
-import { Message } from './services/agent/types';
+import parseJsonRecursive from '../../util/parse-json-recursive';
+import { Message, AgentInfo } from '../agent/types';
 
 export async function get(): Promise<unknown[]> {
   const connection = await connect();
@@ -26,15 +26,6 @@ async function connect() {
   return connection;
 }
 
-async function getData(connection) {
-  const agentsData = (await socketMessageRequest(connection, 'api/agents') as AgentInfo[]);
-  if (Array.isArray(agentsData)) {
-    const jsAgents = agentsData.filter(x => String(x.agentType).toLowerCase() === 'node.js');
-    return jsAgents;
-  }
-  throw new Error('failed to fetch agents data');
-}
-
 async function getAuthToken() {
   // TODO add non-hardcoded protocol & https support
   const url = `http://${process.env.DRILL_ADMIN_HOST}/api`;
@@ -43,6 +34,15 @@ async function getAuthToken() {
     throw new Error('failed to authorize');
   }
   return response.headers.authorization;
+}
+
+async function getData(connection) {
+  const agentsData = (await socketMessageRequest(connection, 'api/agents') as AgentInfo[]);
+  if (Array.isArray(agentsData)) {
+    const jsAgents = agentsData.filter(x => String(x.agentType).toLowerCase() === 'node.js');
+    return jsAgents;
+  }
+  throw new Error('failed to fetch agents data');
 }
 
 async function socketEvent(connection, event, timeout = 10000): Promise<unknown[]> {
@@ -54,7 +54,6 @@ async function socketEvent(connection, event, timeout = 10000): Promise<unknown[
   });
 }
 
-// TODO unknown at the end looks questionable
 async function socketMessageRequest(connection, destination: string, timeout = 10000): Promise<unknown> {
   const responsePromise = new Promise<unknown>((resolve, reject) => {
     connection.on('message', async (rawMessage: string) => {
@@ -70,16 +69,4 @@ async function socketMessageRequest(connection, destination: string, timeout = 1
   });
   await connection.send(JSON.stringify({ destination, type: 'SUBSCRIBE' }));
   return responsePromise;
-}
-
-interface AgentInfo {
-  id: string,
-  buildVersion: string,
-  agentType: string,
-  instanceIds: string[],
-  plugins: PluginInfo[],
-}
-
-type PluginInfo = {
-  id: string
 }

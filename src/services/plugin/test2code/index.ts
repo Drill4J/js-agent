@@ -63,6 +63,10 @@ export class Test2CodePlugin extends Plugin {
     this.logger.debug('init: done');
   }
 
+  public async stop(): Promise<void> {
+    this.logger.info('stop\n   (it is a stub method, does not do anything yet)');
+  }
+
   public handleAction(action) {
     this.logger.silly('handle action %o', action);
     if (this.isInitActiveScopeAction(action)) {
@@ -99,15 +103,12 @@ export class Test2CodePlugin extends Plugin {
     return (action as InitActiveScope).type === 'INIT_ACTIVE_SCOPE';
   }
 
-  public async updateAst(rawAst: unknown[], isLiveUpdate = false): Promise<void> {
+  public async updateAst(rawAst: unknown[]): Promise<void> {
     this.logger.info('update ast');
 
     const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
     await storage.saveAst(this.agentId, ast); // TODO abstract storage
 
-    if (isLiveUpdate) {
-      await this.init();
-    }
     // TODO send INIT_DATA_PART if ast were updated during runtime? (and not at initialization)
   }
 
