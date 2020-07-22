@@ -174,6 +174,12 @@ export class Agent {
       this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
       return;
     }
+    if (destination === '/agent/load-classes-data') {
+      this.logger.info('/agent/load-classes-data');
+      this.send({ type: 'START_CLASSES_TRANSFER', text: '' }); // initiates build processing on backend
+      this.send({ type: 'FINISH_CLASSES_TRANSFER', text: '' }); // finalizes build processing on backend
+      return;
+    }
     if (destination === '/plugin/togglePlugin') {
       const { message: { pluginId } } = data;
       this.togglePlugin(pluginId);
