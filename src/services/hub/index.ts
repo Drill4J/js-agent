@@ -11,8 +11,6 @@ import {
   ConnectionProvider,
 } from '../common/types';
 import { Agent, AgentsMap } from '../agent';
-import { AvailablePlugins } from '../plugin';
-import { Test2CodePlugin } from '../plugin/test2code';
 import parseJsonRecursive from '../../util/parse-json-recursive';
 
 export class AgentHub {
@@ -58,15 +56,10 @@ export class AgentHub {
     this.logger.info('start agent:', agentId);
     // TODO what if agent already started?
 
-    const availablePlugins: AvailablePlugins = {
-      test2code: Test2CodePlugin, // TODO there must be a way to resolve that with type system instead of hardcoded key
-    };
-
     const agentConfig: AgentConfig = { // TODO agent config never changes, supply it in hub config!
       loggerProvider: this.config.loggerProvider,
       connection: this.config.connection,
       messageParseFunction: (rawMessage) => (parseJsonRecursive(rawMessage) as Message),
-      availablePlugins,
     };
 
     // TODO supply this.AgentConnectionProvider in agentConfig!

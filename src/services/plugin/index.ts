@@ -1,12 +1,8 @@
 import { PluginConfig } from './types';
 import { Connection } from '../common/types';
 
-export interface PluginConstructor {
+export interface IPluginConstructor {
   new(pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin
-}
-
-export interface AvailablePlugins {
-  [pluginId: string]: PluginConstructor
 }
 
 export interface Plugins {
