@@ -6,7 +6,7 @@ import {
 } from '../common/types';
 import { AgentData, AgentConfig, PluginInfo } from './types';
 import { isTest2CodePlugin } from '../plugin/guards';
-import { Plugin, Plugins } from '../plugin';
+import { Plugin, Plugins, IPluginConstructor } from '../plugin';
 
 export interface AgentsMap {
   [agentId: string]: Agent
@@ -54,7 +54,7 @@ export class Agent {
   private async start() {
     this.logger.info('init %o', this.data);
     await this.openConnection();
-    this.instantiatePlugins();
+    await this.instantiatePlugins();
     this.initialized = true;
   }
 
@@ -136,9 +136,9 @@ export class Agent {
     }
   }
 
-  private instantiatePlugins(): void {
+  private async instantiatePlugins(): Promise<void> {
     if (this.enabledPlugins) {
-      this.enabledPlugins.forEach(pluginInfo => this.instantiatePlugin(pluginInfo.id));
+      await Promise.all(this.enabledPlugins.map(pluginInfo => this.instantiatePlugin(pluginInfo.id)));
     }
   }
 
@@ -159,7 +159,7 @@ export class Agent {
   }
 
   // TODO add try ... catch and await all async methods to avoid unhandled promise rejections
-  private handleMessage(rawMessage: string) {
+  private async handleMessage(rawMessage: string) {
     const data = this.config.messageParseFunction(rawMessage);
     if (!data) return;
 
@@ -184,7 +184,7 @@ export class Agent {
     }
     if (destination === '/plugin/action') {
       const { message: { id, message: action } } = data;
-      const plugin = this.ensurePluginInstance(id);
+      const plugin = await this.ensurePluginInstance(id);
       if (isTest2CodePlugin(plugin)) {
         plugin.handleAction(action);
       }
@@ -207,7 +207,7 @@ export class Agent {
     this.send(delivered);
   }
 
-  public ensurePluginInstance(pluginId: string): Plugin {
+  public async ensurePluginInstance(pluginId: string): Promise<Plugin> {
     if (this.plugins[pluginId]) {
       return this.plugins[pluginId];
     }
@@ -223,10 +223,10 @@ export class Agent {
     }
   }
 
-  private instantiatePlugin(pluginId: string): Plugin {
+  private async instantiatePlugin(pluginId: string): Promise<Plugin> {
     this.logger.info('instantiate plugin', pluginId);
-    const PluginClass = this.config.availablePlugins[pluginId];
-    const plugin = new PluginClass(
+    const PluginConstructor = await this.importPluginConstructor(pluginId);
+    const plugin = new PluginConstructor(
       pluginId,
       this.data.id,
       this.connection,
@@ -238,6 +238,27 @@ export class Agent {
     return plugin;
   }
 
+  private async importPluginConstructor(rawPluginId: string): Promise<IPluginConstructor> {
+    const pluginId = rawPluginId.toLowerCase().replace(/[^a-zA-Z-\d]/, '');
+    if (pluginId !== rawPluginId) {
+      const msg = 'Failed to import plugin: pluginId is missing or malformed. Only lowercase kebab-cased-names are allowed';
+      this.logger.error(msg);
+      throw new Error(msg);
+    }
+    try {
+      const exportedMembers = await import(`../plugin/${pluginId}`);
+      if (!exportedMembers.default) {
+        throw new Error(`Plugin ${pluginId} has no member exported by default. Please, export default member to support dynamic imports.`);
+      }
+      return exportedMembers.default as IPluginConstructor;
+    } catch (e) {
+      this.logger.error(e.message);
+      const msg = `Failed to import plugin with id ${pluginId}. Plugin is malformed or does not exist.`;
+      this.logger.error(msg);
+      throw new Error(msg);
+    }
+  }
+
   public async togglePlugin(pluginId: string): Promise<void> {
     this.logger.debug('toggle plugin', pluginId);
 
@@ -246,7 +267,7 @@ export class Agent {
       this.enabledPlugins.push({ id: pluginId });
     }
 
-    const plugin = this.ensurePluginInstance(pluginId);
+    const plugin = await this.ensurePluginInstance(pluginId);
     // Note that currently plugin.init() is called during registration process & build version update
     // Startup after middleware reboot does not require repeated plugin.init() call
     // because plugin is already "initiated" at drill backend.

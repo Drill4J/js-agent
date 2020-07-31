@@ -8,7 +8,7 @@ export default async function (ctx: ExtendableContext & IRouterParamContext, nex
     throw new Error('agent instance not found!');
   }
 
-  const plugin = agent.ensurePluginInstance(ctx.params.pluginId);
+  const plugin = await agent.ensurePluginInstance(ctx.params.pluginId);
   if (isTest2CodePlugin(plugin)) {
     ctx.state.drill.test2Code = plugin;
   }

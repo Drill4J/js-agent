@@ -1,5 +1,4 @@
 import { ILoggerProvider } from '../../util/logger';
-import { PluginConstructor } from '../plugin';
 
 export interface AgentData {
   id: string,
@@ -16,9 +15,6 @@ export interface AgentConfig {
     host: string,
   },
   messageParseFunction: MessageParseFunction,
-  availablePlugins: {
-    [pluginId: string]: PluginConstructor
-  },
 }
 
 type MessageParseFunction = (rawMessage, ...args: unknown[]) => Message | void;
