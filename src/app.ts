@@ -62,7 +62,7 @@ export class App {
     const router = new Router();
 
     router.use(this.middlewares.responseHandler);
-    router.get('/', () => ({ message: 'JS middleware API. Use /api-docs to view routes description' }));
+    router.get('/', () => ({ message: 'JS middleware API' }));
 
     router.post('/agents/:agentId/plugins/:pluginId/ast',
       async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
