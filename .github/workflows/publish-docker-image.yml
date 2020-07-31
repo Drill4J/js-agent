@@ -1,0 +1,23 @@
+name: Publish docker image
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3 | cut -c 2-)
+      - name: Publish to Registry
+        uses: jerray/publish-docker-action@master
+        with:
+          username: ${{ secrets.DRILL_PASSWORD }}
+          password: ${{ secrets.DRILL_USERNAME }}
+          repository: drill4j/js-agent
+          tags: latest,${{ steps.get_version.outputs.VERSION }}
+          build_args: ENV=development,VERSION=${{ steps.get_version.outputs.VERSION }}
