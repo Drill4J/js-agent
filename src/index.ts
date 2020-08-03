@@ -15,12 +15,16 @@ async function start(): Promise<void> {
 
   const agentHubConfig: AgentHubConfig = {
     loggerProvider: LoggerProvider,
-    connection: {
-      protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
-      host: process.env.DRILL_ADMIN_HOST,
+    agentConfig: {
+      loggerProvider: LoggerProvider,
+      connection: {
+        protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
+        host: process.env.DRILL_ADMIN_HOST,
+        Provider: Websocket,
+      },
     },
   };
-  const agentHub = new AgentHub(AgentsInfoProvider, Websocket, agentHubConfig);
+  const agentHub = new AgentHub(AgentsInfoProvider, agentHubConfig);
   await agentHub.initializing;
 
   const app = new App(
