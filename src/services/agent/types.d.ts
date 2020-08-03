@@ -1,3 +1,4 @@
+import { ConnectionProvider } from '../common/types';
 import { ILoggerProvider } from '../../util/logger';
 
 export interface AgentData {
@@ -13,8 +14,8 @@ export interface AgentConfig {
   connection: {
     protocol: string,
     host: string,
+    Provider: ConnectionProvider
   },
-  messageParseFunction: MessageParseFunction,
 }
 
 type MessageParseFunction = (rawMessage, ...args: unknown[]) => Message | void;

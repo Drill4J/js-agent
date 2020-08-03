@@ -1,12 +1,9 @@
 import { ILoggerProvider } from '../../util/logger';
-import { AgentInfo } from '../agent/types';
+import { AgentConfig } from '../agent/types';
 
 export interface AgentHubConfig {
   loggerProvider: ILoggerProvider,
-  connection: {
-    protocol: string,
-    host: string
-  }
+  agentConfig: AgentConfig,
 }
 
 // TODO there is a mismatch between expected AgentData format accepted on backend and supplied from backend
