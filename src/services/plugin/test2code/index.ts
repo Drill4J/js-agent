@@ -169,3 +169,5 @@ export class Test2CodePlugin extends Plugin {
     super.send(coverDataPartMessage);
   }
 }
+
+export default Test2CodePlugin;
