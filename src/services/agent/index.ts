@@ -1,12 +1,17 @@
 import {
-  ConnectionProvider,
+  AgentData,
+  AgentConfig,
+  PluginInfo,
+  Message,
+} from './types';
+import {
   Connection,
   DataPackage,
   ConfirmationPackage,
 } from '../common/types';
-import { AgentData, AgentConfig, PluginInfo } from './types';
 import { isTest2CodePlugin } from '../plugin/guards';
 import { Plugin, Plugins, IPluginConstructor } from '../plugin';
+import parseJsonRecursive from '../../util/parse-json-recursive';
 
 export interface AgentsMap {
   [agentId: string]: Agent
@@ -24,8 +29,6 @@ export class Agent {
 
   private logger: any;
 
-  private ConnectionProvider: ConnectionProvider;
-
   private connection: Connection;
 
   private needSync = false;
@@ -40,11 +43,10 @@ export class Agent {
 
   public initializing: Promise<any>;
 
-  constructor(agentInfo: any, connectionProvider: ConnectionProvider, config: AgentConfig, needSync: boolean) {
+  constructor(agentInfo: any, config: AgentConfig, needSync: boolean) {
     const { data, plugins = [] }: { data: AgentData, plugins: PluginInfo[] } = agentInfo;
     this.data = data;
     this.enabledPlugins = plugins;
-    this.ConnectionProvider = connectionProvider;
     this.config = config;
     this.needSync = needSync;
     this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentInfo.data.id}`);
@@ -80,7 +82,7 @@ export class Agent {
         },
       };
 
-      this.connection = new this.ConnectionProvider(url, options);
+      this.connection = new this.config.connection.Provider(url, options);
 
       if (process.env.DEBUG_AGENT_SERVICE_CONNECTION === 'true') {
         this.connection._on = this.connection.on;
@@ -160,7 +162,7 @@ export class Agent {
 
   // TODO add try ... catch and await all async methods to avoid unhandled promise rejections
   private async handleMessage(rawMessage: string) {
-    const data = this.config.messageParseFunction(rawMessage);
+    const data = (parseJsonRecursive(rawMessage) as Message);
     if (!data) return;
 
     const { destination } = data;

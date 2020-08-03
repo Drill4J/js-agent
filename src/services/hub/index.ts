@@ -7,18 +7,12 @@ import {
   AgentConfig,
   Message,
 } from '../agent/types';
-import {
-  ConnectionProvider,
-} from '../common/types';
 import { Agent, AgentsMap } from '../agent';
-import parseJsonRecursive from '../../util/parse-json-recursive';
 
 export class AgentHub {
   private config: AgentHubConfig;
 
   private agentsInfoProvider: AgentsInfoProvider;
-
-  private AgentConnectionProvider: ConnectionProvider;
 
   private logger: any;
 
@@ -29,9 +23,8 @@ export class AgentHub {
   public initializing: Promise<any>;
 
   // TODO choose suitable dependency injection plugin to avoid passing logger via config
-  constructor(agentsInfoProvider: AgentsInfoProvider, agentConnectionProvider: ConnectionProvider, config: AgentHubConfig) {
+  constructor(agentsInfoProvider: AgentsInfoProvider, config: AgentHubConfig) {
     this.agentsInfoProvider = agentsInfoProvider;
-    this.AgentConnectionProvider = agentConnectionProvider;
     this.config = config;
     this.logger = this.config.loggerProvider.getLogger('drill', 'agenthub');
     this.initializing = this.init();
@@ -56,14 +49,7 @@ export class AgentHub {
     this.logger.info('start agent:', agentId);
     // TODO what if agent already started?
 
-    const agentConfig: AgentConfig = { // TODO agent config never changes, supply it in hub config!
-      loggerProvider: this.config.loggerProvider,
-      connection: this.config.connection,
-      messageParseFunction: (rawMessage) => (parseJsonRecursive(rawMessage) as Message),
-    };
-
-    // TODO supply this.AgentConnectionProvider in agentConfig!
-    const agent = new Agent(agentInfo, this.AgentConnectionProvider, agentConfig, isNew); // TODO figure out needSync
+    const agent = new Agent(agentInfo, this.config.agentConfig, isNew); // TODO figure out needSync
     this.agents[agentId] = agent;
     await agent.initializing;
     return agent;
