@@ -33,8 +33,9 @@ services:
     image: drill4j/js-agent:${JS_AGENT_VERSION}
     hostname: jsagent
     ports:
-      - '9404:8080'
+      - '9404:9404'
     environment:
+      APP_PORT: '9404'
       WAIT_HOSTS: mongo:27017, drill-admin:8090
       DRILL_ADMIN_PROTOCOL: 'ws'
       DRILL_ADMIN_HOST: 'drill-admin:8090'
