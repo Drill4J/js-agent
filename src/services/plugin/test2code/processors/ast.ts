@@ -1,4 +1,5 @@
 import * as upath from 'upath';
+import normalizeScriptPath from '../../../../util/normalize-script-path';
 
 // TODO move type definitions to d.ts
 interface Ast {
@@ -28,40 +29,35 @@ interface Location {
 }
 
 export function formatAst(astTreeData) {
-  return astTreeData.map(({ filePath, data: { methods = [] } }) => ({
+  return astTreeData.map(({ filePath, suffix, methods = [] }) => ({
     filePath: upath.toUnix(filePath),
+    suffix,
     methods: methods.map(
       ({
-        name = '',
+        name,
         params = [],
-        statements = [],
+        probes,
         returnType = 'void',
-        checksum = '',
-        loc: { start: { line: start = 0 } = {}, end: { line: end = 0 } = {} } = {},
-      }) => {
-        const probes = [...new Set([start, ...statements, end])].sort((a, b) => (a - b));
-        return {
-          name,
-          params,
-          returnType,
-          checksum,
-          probes,
-          count: probes.length,
-          start,
-          statements,
-          end,
-        };
-      },
+        checksum,
+      }) => ({
+        name,
+        params,
+        returnType,
+        checksum,
+        probes,
+        count: probes.length,
+      }),
     ),
   }));
 }
 
 export function formatForBackend(data) {
   return data.map(file => {
-    const path = upath.dirname(file.filePath);
-    const name = upath.basename(file.filePath);
+    const parsedPath = upath.parse(normalizeScriptPath(file.filePath));
+    const path = parsedPath.dir;
+    const name = parsedPath.base + (file.suffix ? file.suffix : '');
     return {
-      path: path.substring(1, path.length),
+      path,
       name,
       methods: file.methods.map(x => ({
         name: x.name,
