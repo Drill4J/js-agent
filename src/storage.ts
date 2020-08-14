@@ -80,12 +80,12 @@ export class Storage {
   // #endregion
 
   // #region sourcemaps (mainScriptNames)
-  public async addMainScriptName(name) {
-    await this.saveToDb('scriptnames', { name });
+  public async addMainScriptName(agentId, name) {
+    await this.saveToDb('scriptnames', { agentId, name });
   }
 
-  public async getMainScriptNames(): Promise<string[]> {
-    const data = await this.getFromDb('scriptnames');
+  public async getMainScriptNames(agentId): Promise<string[]> {
+    const data = await this.getFromDb('scriptnames', { agentId });
     return data.map(x => x.name);
   }
 

@@ -27,12 +27,13 @@ const filters = [
 export async function saveSourceMap(agentId, sourceMap) {
   // TODO fix: anything besides valid sourceMap with .file property breaks this code
   const scriptName = upath.basename(sourceMap.file);
-  const fileName = `${sourceMapFolder}${upath.sep}${scriptName}.map`;
-  await fsExtra.ensureDir(`${sourceMapFolder}`);
+  const dirPath = `${sourceMapFolder}${upath.sep}${agentId}`;
+  const fileName = `${dirPath}${upath.sep}${scriptName}.map`;
+  await fsExtra.ensureDir(dirPath);
   await fsExtra.writeJSON(fileName, sourceMap);
 
   // TODO fix: that solution will break in either case of scriptName change on-the-fly or multiple script names
-  await storage.addMainScriptName(scriptName);
+  await storage.addMainScriptName(agentId, scriptName);
 }
 
 export async function mapCoverageToFiles(test: any, coverage: any, files: any): Promise<ExecClassData[]> {
@@ -116,17 +117,17 @@ export async function processTestResults(agentId, ast, rawData) {
     scriptSources: sources,
   } = rawData;
 
-  const coverage = await convertCoverage(sources, rawCoverage);
+  const coverage = await convertCoverage(agentId, sources, rawCoverage);
 
   const data = await mapCoverageToFiles(test, coverage, ast);
 
   return data;
 }
 
-async function convertCoverage(sources: any, coverage: any) {
+async function convertCoverage(agentId: string, sources: any, coverage: any) {
   const result = [];
 
-  const mainScriptNames = await storage.getMainScriptNames();
+  const mainScriptNames = await storage.getMainScriptNames(agentId);
   if (!Array.isArray(mainScriptNames) || mainScriptNames.length === 0) {
     // TODO extend error and dispatch it in cetralized error handler
     throw new Error('Script names not found. You are probably missing source maps?');
@@ -154,7 +155,7 @@ async function convertCoverage(sources: any, coverage: any) {
     const rawSource = script.source;
     const v8coverage = element.functions;
 
-    const sourceMap = convertRawSourceMap(rawSource);
+    const sourceMap = convertRawSourceMap(agentId, rawSource);
 
     if (
       sourceMap == null ||
@@ -165,25 +166,26 @@ async function convertCoverage(sources: any, coverage: any) {
       continue;
     }
     logger.debug(`script was processed ${scriptName}`);
-    const cov = await cover(scriptName, rawSource, sourceMap, v8coverage);
+    const cov = await cover(agentId, scriptName, rawSource, sourceMap, v8coverage);
     result.push(...cov);
   }
 
   return result;
 }
 
-function convertRawSourceMap(source: any) {
-  return convertSourceMap.fromMapFileSource(source, sourceMapFolder);
+function convertRawSourceMap(agentId: string, source: any) {
+  return convertSourceMap.fromMapFileSource(source, `${sourceMapFolder}${upath.sep}${agentId}`);
 }
 
 async function cover(
+  agentId: string,
   scriptName: string,
   rawSource: any,
   sourceMap: any,
   v8coverage: any,
 ) {
   const cov = await convertFromV8ToIstanbul(
-    `${sourceMapFolder}/${scriptName}`,
+    `${sourceMapFolder}${upath.sep}${agentId}${upath.sep}${scriptName}`,
     rawSource,
     sourceMap,
     v8coverage,
