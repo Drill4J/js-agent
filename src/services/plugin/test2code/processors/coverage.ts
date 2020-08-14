@@ -9,6 +9,7 @@ import { ExecClassData } from '@drill4j/test2code-types';
 
 import storage from '../../../../storage';
 import LoggerProvider from '../../../../util/logger';
+import normalizeScriptPath from '../../../../util/normalize-script-path';
 
 const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
@@ -47,6 +48,9 @@ function mapCoverageToFile(coverage, file) {
     file: filePath,
     methods: [],
   };
+  if (file.suffix) {
+    result.file += file.suffix;
+  }
 
   result.methods = file.methods.map(astMethod => {
     // TODO "method" is not guaranteed to be an actual method, it could be a class member, e.g. a static property
@@ -66,25 +70,14 @@ function mapCoverageToFile(coverage, file) {
 }
 
 function getLinesCoveredByTest(lineCoverage, astMethod, filePath) {
-  const totalLines = lineCoverage.filter(
-    it =>
-      filePath.includes(transformPath(it.source)) &&
-      it.originalLine >= astMethod.start &&
-      it.originalLine <= astMethod.end,
-  );
-  if (totalLines.length === 0) return [];
+  const coveredLines = lineCoverage
+    .filter(x =>
+      filePath.includes(normalizeScriptPath(x.source)) &&
+      astMethod.probes.includes(x.originalLine))
+    .reduce((result, x) =>
+      result.add(x.originalLine), new Set());
 
-  const coveredLines = totalLines
-    .filter(it => it.hits === 1) // TODO hits >== 1?
-    .map(it => it.originalLine);
-
-  const uniqueCoveredLines = [...new Set(coveredLines)];
-  return uniqueCoveredLines;
-}
-
-function transformPath(path) {
-  const result = path.replace(/^(?:\.\.\/)+/, '');
-  return result;
+  return Array.from(coveredLines);
 }
 
 function concatFileProbes(testName, coverage) {
@@ -92,10 +85,10 @@ function concatFileProbes(testName, coverage) {
     .map(({ file, methods = [] }) => {
       const probes = concatMethodsProbes(methods);
 
-      const className = upath.toUnix(file);
+      const className = normalizeScriptPath(file);
       return {
         id: 0,
-        className: className.substring(1, className.length),
+        className,
         probes,
         testName,
       };
