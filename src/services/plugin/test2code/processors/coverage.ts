@@ -74,7 +74,8 @@ function getLinesCoveredByTest(lineCoverage, astMethod, filePath) {
   const coveredLines = lineCoverage
     .filter(x =>
       filePath.includes(normalizeScriptPath(x.source)) &&
-      astMethod.probes.includes(x.originalLine))
+      astMethod.probes.includes(x.originalLine) &&
+      x.hits > 0)
     .reduce((result, x) =>
       result.add(x.originalLine), new Set());
 
