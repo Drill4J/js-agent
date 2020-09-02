@@ -36,10 +36,11 @@ export async function saveSourceMap(agentId, sourceMap) {
   await storage.addMainScriptName(agentId, scriptName);
 }
 
+// TODO refactor, naming is confusing
 export async function mapCoverageToFiles(test: any, coverage: any, files: any): Promise<ExecClassData[]> {
-  const data = files.map((file) => mapCoverageToFile(coverage, file));
-
-  return concatFileProbes(test.name, data);
+  const fileMappedCoverage = files.map((file) => mapCoverageToFile(coverage, file));
+  const filesWithProbes = concatFileProbes(test.name, fileMappedCoverage);
+  return filesWithProbes.filter(file => file.probes.includes(true));
 }
 
 function mapCoverageToFile(coverage, file) {
