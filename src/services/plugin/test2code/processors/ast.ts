@@ -35,12 +35,13 @@ export function formatAst(astTreeData) {
     methods: methods.map(
       ({
         name,
+        parentNameChain,
         params = [],
         probes,
         returnType = 'void',
         checksum,
       }) => ({
-        name,
+        name: `${parentNameChain ? `${parentNameChain}.` : ''}${name}`,
         params,
         returnType,
         checksum,
