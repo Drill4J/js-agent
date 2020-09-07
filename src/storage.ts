@@ -21,6 +21,15 @@ export class Storage {
     this.db = await this.connect();
   }
 
+  public async saveBundleHashes(agentId, data) {
+    await this.upsertToDb('bundlehashes', { agentId, data }, { agentId });
+  }
+
+  public async getBundleHashes(agentId): Promise<any> {
+    const bundleHashes = await this.getFromDb('bundlehashes', { agentId });
+    return bundleHashes && bundleHashes[0].data;
+  }
+
   // #region AST
   public async saveAst(agentId, data) {
     await this.upsertToDb('ast', { agentId, data }, { agentId });
@@ -61,8 +70,6 @@ export class Storage {
 
   public async getSession(agentId: string, id: string): Promise<any | undefined> {
     const sessions = await this.getFromDb('session', { agentId, id });
-
-    // TODO fix: might return wrong session in case there are > 1 session stored
     return sessions && sessions[0];
   }
 
@@ -80,13 +87,13 @@ export class Storage {
   // #endregion
 
   // #region sourcemaps (mainScriptNames)
-  public async addMainScriptName(agentId, name) {
-    await this.saveToDb('scriptnames', { agentId, name });
+  public async saveBundleScriptsNames(agentId, names) {
+    await this.upsertToDb('scriptnames', { agentId, names }, { agentId });
   }
 
-  public async getMainScriptNames(agentId): Promise<string[]> {
+  public async getBundleScriptsNames(agentId): Promise<string[]> {
     const data = await this.getFromDb('scriptnames', { agentId });
-    return data.map(x => x.name);
+    return data[0]?.names;
   }
 
   public async cleanMainScriptNames() {
