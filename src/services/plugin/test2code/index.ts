@@ -12,6 +12,7 @@ import {
   Initialized,
   SessionStarted,
   SessionFinished,
+  SessionCancelled,
   ScopeInitialized,
   ScopeSummary,
 } from '@drill4j/test2code-types';
@@ -103,19 +104,29 @@ export class Test2CodePlugin extends Plugin {
     return (action as InitActiveScope).type === 'INIT_ACTIVE_SCOPE';
   }
 
-  public async updateAst(rawAst: unknown[]): Promise<void> {
-    this.logger.info('update ast');
-
-    const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
-    await storage.saveAst(this.agentId, ast); // TODO abstract storage
-
-    // TODO send INIT_DATA_PART if ast were updated during runtime? (and not at initialization)
+  public async updateBuildInfo(buildInfo): Promise<void> {
+    const { bundleHashes, sourcemaps, data } = buildInfo;
+    // TODO transaction
+    await this.updateAst(data);
+    await this.updateBundleHashes(bundleHashes);
+    await this.updateSourceMaps(sourcemaps);
   }
 
-  public async updateSourceMaps(sourceMap): Promise<void> {
+  public async updateBundleHashes(data: { file: string, hash: string }[]): Promise<void> {
+    this.logger.info('update bundle hashes');
+    await storage.saveBundleHashes(this.agentId, data);
+  }
+
+  public async updateAst(rawAst: unknown[]): Promise<void> {
+    this.logger.info('update ast');
+    const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
+    await storage.saveAst(this.agentId, ast); // TODO abstract storage
+  }
+
+  public async updateSourceMaps(sourceMaps): Promise<void> {
     this.logger.info('update source maps');
     // await coverage
-    await coverageProcessor.saveSourceMap(this.agentId, sourceMap);
+    await coverageProcessor.saveSourceMaps(this.agentId, sourceMaps);
   }
 
   public async startSession(sessionId): Promise<void> {
@@ -135,21 +146,37 @@ export class Test2CodePlugin extends Plugin {
   public async finishSession(sessionId: string, rawData): Promise<void> {
     this.logger.info('process coverage and finish session', sessionId);
     await this.ensureActiveSession(sessionId);
+    try {
+      const astTree = await storage.getAst(this.agentId);
+      const bundleHashes = await storage.getBundleHashes(this.agentId);
+      const { data: ast } = astTree;
 
-    const astTree = await storage.getAst(this.agentId);
-    const { data: ast } = astTree;
+      const data = await coverageProcessor.processTestResults(this.agentId, ast, rawData, bundleHashes);
+      await this.sendTestResults(sessionId, data);
 
-    const data = await coverageProcessor.processTestResults(this.agentId, ast, rawData);
-    await this.sendTestResults(sessionId, data);
+      await storage.removeSession(this.agentId, sessionId);
+      const sessionFinishedMessage: SessionFinished = {
+        type: 'SESSION_FINISHED',
+        sessionId,
+        ts: 0,
+      };
 
+      super.send(sessionFinishedMessage);
+    } catch (e) {
+      this.logger.warning(`failed to finish session. Session will be canceled. \n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
+      this.cancelSession(sessionId);
+    }
+  }
+
+  public async cancelSession(sessionId: string): Promise<void> {
     await storage.removeSession(this.agentId, sessionId);
-    const sessionFinishedMessage: SessionFinished = {
-      type: 'SESSION_FINISHED',
+    const sessionCanceledMessage: SessionCancelled = {
+      type: 'SESSION_CANCELLED',
       sessionId,
       ts: 0,
     };
 
-    super.send(sessionFinishedMessage);
+    super.send(sessionCanceledMessage);
   }
 
   private async ensureActiveSession(sessionId): Promise<any> {

@@ -64,16 +64,16 @@ export class App {
     router.use(this.middlewares.responseHandler);
     router.get('/', () => ({ message: 'JS middleware API' }));
 
-    router.post('/agents/:agentId/plugins/:pluginId/ast',
+    router.post('/agents/:agentId/plugins/:pluginId/build',
       async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
         const agentId = String(ctx.params.agentId);
 
         const agentExists = await this.agentHub.doesAgentExist(agentId);
-        const { buildVersion } = ctx.request.body;
+        const { version } = ctx.request.body;
         const agentData: AgentData = {
           id: agentId,
           instanceId: '',
-          buildVersion,
+          buildVersion: version,
           serviceGroupId: '',
           agentType: 'NODEJS',
         };
@@ -93,20 +93,23 @@ export class App {
         return next();
       },
       populateCtxWithPlugin,
-      (ctx: ExtendableContext) =>
-        (ctx.state.drill.test2Code.updateAst(ctx.request.body.data)));
+      async (ctx: ExtendableContext) => {
+        const { test2Code } = ctx.state.drill;
+        const { data } = ctx.request.body;
+        await test2Code.updateBuildInfo(data);
+      });
 
     const test2CodeRouter = new Router();
-
-    test2CodeRouter.post('/source-maps', (ctx: ExtendableContext) =>
-      ctx.state.drill.test2Code.updateSourceMaps(ctx.request.body));
-
     test2CodeRouter.post('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
       ctx.state.drill.test2Code.startSession(ctx.params.sessionId));
 
     test2CodeRouter.patch('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
       ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body));
 
+    test2CodeRouter.delete('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
+      ctx.state.drill.test2Code.cancelSession(ctx.params.sessionId));
+
+    // TODO dynamic plugin route initialization
     router.use('/agents/:agentId/plugins/:pluginId',
       this.middlewares.populateCtxWithAgent,
       populateCtxWithPlugin,

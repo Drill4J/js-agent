@@ -29,8 +29,8 @@ interface Location {
 }
 
 export function formatAst(astTreeData) {
-  return astTreeData.map(({ filePath, suffix, methods = [] }) => ({
-    filePath: upath.toUnix(filePath),
+  return astTreeData.map(({ path, suffix, methods = [] }) => ({
+    filePath: upath.toUnix(path),
     suffix,
     methods: methods.map(
       ({
