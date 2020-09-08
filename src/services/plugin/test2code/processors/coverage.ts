@@ -3,6 +3,7 @@ import convertSourceMap from 'convert-source-map';
 import { SourceMapConsumer } from 'source-map';
 import * as upath from 'upath';
 import fsExtra from 'fs-extra';
+import crypto from 'crypto';
 
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
 import { ExecClassData } from '@drill4j/test2code-types';
@@ -24,16 +25,18 @@ const filters = [
   'environment.ts',
 ];
 
-export async function saveSourceMap(agentId, sourceMap) {
-  // TODO fix: anything besides valid sourceMap with .file property breaks this code
-  const scriptName = upath.basename(sourceMap.file);
+export async function saveSourceMaps(agentId: string, sourcemaps: any[]): Promise<void> {
   const dirPath = `${sourceMapFolder}${upath.sep}${agentId}`;
-  const fileName = `${dirPath}${upath.sep}${scriptName}.map`;
   await fsExtra.ensureDir(dirPath);
-  await fsExtra.writeJSON(fileName, sourceMap);
 
-  // TODO fix: that solution will break in either case of scriptName change on-the-fly or multiple script names
-  await storage.addMainScriptName(agentId, scriptName);
+  const scriptsNames = await Promise.all(sourcemaps.map(async (sourcemap) => {
+    const name = upath.basename(sourcemap.file);
+    const fileName = `${dirPath}${upath.sep}${name}.map`;
+    await fsExtra.writeJSON(fileName, sourcemap);
+    return name;
+  }));
+
+  await storage.saveBundleScriptsNames(agentId, scriptsNames);
 }
 
 // TODO refactor, naming is confusing
@@ -112,29 +115,29 @@ function concatMethodsProbes(methods) {
   return data;
 }
 
-export async function processTestResults(agentId, ast, rawData) {
+export async function processTestResults(agentId, ast, rawData, bundleHashes: { file: string, hash: string }[]) {
   const {
     coverage: rawCoverage,
     test,
     scriptSources: sources,
   } = rawData;
 
-  const coverage = await convertCoverage(agentId, sources, rawCoverage);
+  const coverage = await convertCoverage(agentId, sources, rawCoverage, bundleHashes);
 
   const data = await mapCoverageToFiles(test, coverage, ast);
 
   return data;
 }
 
-async function convertCoverage(agentId: string, sources: any, coverage: any) {
+async function convertCoverage(agentId: string, sources: any, coverage: any, bundleHashes: { file: string, hash: string }[]) {
   const result = [];
 
-  const mainScriptNames = await storage.getMainScriptNames(agentId);
-  if (!Array.isArray(mainScriptNames) || mainScriptNames.length === 0) {
+  const bundleScriptsNames = await storage.getBundleScriptsNames(agentId);
+  if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
     // TODO extend error and dispatch it in cetralized error handler
-    throw new Error('Script names not found. You are probably missing source maps?');
+    throw new Error('Bundle script names not found. You are probably missing source maps?');
   }
-  logger.silly(`using script filters ${mainScriptNames}`);
+  logger.silly(`using script filters ${bundleScriptsNames}`);
 
   for (const element of coverage) {
     const { url } = element;
@@ -144,7 +147,7 @@ async function convertCoverage(agentId: string, sources: any, coverage: any) {
 
     const scriptName = url.substring(url.lastIndexOf('/') + 1);
 
-    if (!scriptName || !mainScriptNames.some(it => it.includes(scriptName))) {
+    if (!scriptName || !bundleScriptsNames.some(it => it.includes(scriptName))) {
       logger.silly(`Script was filtered ${scriptName}`);
       continue;
     }
@@ -153,6 +156,13 @@ async function convertCoverage(agentId: string, sources: any, coverage: any) {
     if (!script) {
       continue;
     }
+
+    const scriptHash = crypto
+      .createHash('sha256')
+      .update(script.source.replace(/\r\n/g, '\n'))
+      .digest('hex');
+    const isSameBundle = bundleHashes.findIndex(({ file, hash }) => file.includes(scriptName) && scriptHash === hash) > -1;
+    if (!isSameBundle) throw new Error(`coverage processing: bundle hash mismatch for script ${url}`);
 
     const rawSource = script.source;
     const v8coverage = element.functions;
