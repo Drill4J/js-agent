@@ -54,7 +54,7 @@ function mapCoverageToFile(coverage, file) {
     methods: [],
   };
   if (file.suffix) {
-    result.file += ` (class ${file.suffix})`;
+    result.file += `.${file.suffix}`;
   }
 
   result.methods = file.methods.map(astMethod => {

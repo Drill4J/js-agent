@@ -56,7 +56,7 @@ export function formatForBackend(data) {
   return data.map(file => {
     const parsedPath = upath.parse(normalizeScriptPath(file.filePath));
     const path = parsedPath.dir;
-    const name = parsedPath.base + (file.suffix ? ` (class ${file.suffix})` : '');
+    const name = parsedPath.base + (file.suffix ? `.${file.suffix}` : '');
     return {
       path,
       name,
