@@ -19,9 +19,11 @@
       // Capture "std" instead of "console"
       "outputCapture": "std",
       "env": {
+        "DEBUG_TARGET_SCRIPT_URL": "http://localhost/js/Application.js",
         "DRILL_ADMIN_PROTOCOL": "ws",
         // "DRILL_ADMIN_HOST": "194.67.92.202:8090",
         "DRILL_ADMIN_HOST": "localhost:9090",
+        // "DRILL_ADMIN_HOST": "ecse00500994.epam.com:8090",
         "TEST_2_CODE_PLUGINID": "test2code",
         "MONGO_HOST": "localhost:27017",
         "MONGO_DBNAME": "js-agent",
