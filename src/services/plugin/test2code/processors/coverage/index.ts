@@ -150,11 +150,7 @@ async function convertCoverage(agentId: string, sources: any, coverage: any, bun
     if (!script) {
       continue;
     }
-
-    const scriptHash = crypto
-      .createHash('sha256')
-      .update(script.source.replace(/\r\n/g, '\n'))
-      .digest('hex');
+    const scriptHash = getHash(unifyLineEndings(script.source));
     const isSameBundle = bundleHashes.findIndex(({ file, hash }) => file.includes(scriptName) && scriptHash === hash) > -1;
     if (!isSameBundle) throw new Error(`coverage processing: bundle hash mismatch for script ${url}`);
     // TODO process.env.DUMP_SOURCE_ON_HASH_MISMATCH
@@ -184,6 +180,22 @@ async function convertCoverage(agentId: string, sources: any, coverage: any, bun
   }
 
   return result;
+}
+
+function getHash(data) {
+  return crypto
+    .createHash('sha256')
+    .update(data)
+    .digest('hex');
+}
+
+function unifyLineEndings(str: string): string {
+  // reference https://www.ecma-international.org/ecma-262/10.0/#sec-line-terminators
+  const LF = '\u000A';
+  const CRLF = '\u000D\u000A';
+  const LS = '\u2028';
+  const PS = '\u2028';
+  return str.replace(RegExp(`(${CRLF}|${LS}|${PS})`, 'g'), LF);
 }
 
 /*
