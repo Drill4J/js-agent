@@ -283,7 +283,17 @@ async function mapGeneratedOffsetsOntoOriginalLines(rawSource, sourceMap, consec
   const sourcemapConsumer = await new SourceMapConsumer(sourceMap.sourcemap);
   const convertedCoverage = consecutiveRanges
     .map((range) => {
-      const originalPosition = source.offsetToOriginalRelative(sourcemapConsumer, range.startOffset, range.endOffset);
+      const rangeString = rawSource.substring(range.startOffset, range.endOffset);
+      if (!rangeString.trim()) return null; // ignore range if it contains only whitespaces, tabs and newlines
+
+      const leadingWhitespacesCount = rangeString.length - rangeString.trimLeft().length;
+      const trailingWhitespacesCount = rangeString.length - rangeString.trimRight().length;
+
+      // ignore whitespace coverage
+      const startOffset = leadingWhitespacesCount > 0 ? range.startOffset + leadingWhitespacesCount : range.startOffset;
+      const endOffset = trailingWhitespacesCount > 0 ? range.endOffset - trailingWhitespacesCount : range.endOffset;
+
+      const originalPosition = source.offsetToOriginalRelative(sourcemapConsumer, startOffset, endOffset);
       const rangeNotInOriginalSource = Object.keys(originalPosition).length === 0;
       if (rangeNotInOriginalSource) return null;
       return {
