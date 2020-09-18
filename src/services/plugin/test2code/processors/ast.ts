@@ -18,9 +18,9 @@ interface AstMethod {
   name: string;
   loc: {
     start: Location;
-    end: Location
-  }
-  returnType?: string
+    end: Location;
+  };
+  returnType?: string;
 }
 
 interface Location {
@@ -32,23 +32,14 @@ export function formatAst(astTreeData) {
   return astTreeData.map(({ path, suffix, methods = [] }) => ({
     filePath: upath.toUnix(path),
     suffix,
-    methods: methods.map(
-      ({
-        name,
-        parentNameChain,
-        params = [],
-        probes,
-        returnType = 'void',
-        checksum,
-      }) => ({
-        name: `${parentNameChain ? `${parentNameChain}.` : ''}${name}`,
-        params,
-        returnType,
-        checksum,
-        probes,
-        count: probes.length,
-      }),
-    ),
+    methods: methods.map(({ name, parentNameChain, params = [], probes, returnType = 'void', checksum }) => ({
+      name: `${parentNameChain ? `${parentNameChain}.` : ''}${name}`,
+      params,
+      returnType,
+      checksum,
+      probes,
+      count: probes.length,
+    })),
   }));
 }
 

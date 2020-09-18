@@ -5,7 +5,7 @@ import { AgentHub } from '../services/hub';
 export default async function (ctx: ExtendableContext & IRouterParamContext, next: Next): Promise<void> {
   const agentId = String(ctx.params.agentId);
 
-  const agentHub = (this.agentHub as AgentHub);
+  const agentHub = this.agentHub as AgentHub;
 
   const agentExists = await agentHub.doesAgentExist(agentId); // TODO might move that to getAgentInstance method with a check inside
   if (!agentExists) {

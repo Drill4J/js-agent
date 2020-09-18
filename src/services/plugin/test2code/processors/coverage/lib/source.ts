@@ -7,86 +7,78 @@ const { GREATEST_LOWER_BOUND, LEAST_UPPER_BOUND } = SourceMapConsumer;
 
 export default class CovSource {
   constructor(sourceRaw, wrapperLength) {
-    sourceRaw = sourceRaw.trimEnd()
-    this.lines = []
-    this.eof = sourceRaw.length
-    this.shebangLength = getShebangLength(sourceRaw)
-    this.wrapperLength = wrapperLength - this.shebangLength
-    this._buildLines(sourceRaw)
+    sourceRaw = sourceRaw.trimEnd();
+    this.lines = [];
+    this.eof = sourceRaw.length;
+    this.shebangLength = getShebangLength(sourceRaw);
+    this.wrapperLength = wrapperLength - this.shebangLength;
+    this._buildLines(sourceRaw);
   }
 
   _buildLines(source) {
-    let position = 0
-    let ignoreCount = 0
+    let position = 0;
+    let ignoreCount = 0;
     for (const [i, lineStr] of source.split(/(?<=\r?\n)/u).entries()) {
-      const line = new CovLine(i + 1, position, lineStr)
+      const line = new CovLine(i + 1, position, lineStr);
       if (ignoreCount > 0) {
-        line.ignore = true
-        ignoreCount--
+        line.ignore = true;
+        ignoreCount--;
       } else {
-        ignoreCount = this._parseIgnoreNext(lineStr, line)
+        ignoreCount = this._parseIgnoreNext(lineStr, line);
       }
-      this.lines.push(line)
-      position += lineStr.length
+      this.lines.push(line);
+      position += lineStr.length;
     }
   }
 
   _parseIgnoreNext(lineStr, line) {
-    const testIgnoreNextLines = lineStr.match(/^\W*\/\* c8 ignore next (?<count>[0-9]+)? *\*\/\W*$/)
+    const testIgnoreNextLines = lineStr.match(/^\W*\/\* c8 ignore next (?<count>[0-9]+)? *\*\/\W*$/);
     if (testIgnoreNextLines) {
-      line.ignore = true
+      line.ignore = true;
       if (testIgnoreNextLines.groups.count) {
-        return Number(testIgnoreNextLines.groups.count)
+        return Number(testIgnoreNextLines.groups.count);
       } else {
-        return 1
+        return 1;
       }
     } else {
       if (lineStr.match(/\/\* c8 ignore next \*\//)) {
-        line.ignore = true
+        line.ignore = true;
       }
     }
 
-    return 0
+    return 0;
   }
 
   // given a start column and end column in absolute offsets within
   // a source file (0 - EOF), returns the relative line column positions.
   offsetToOriginalRelative(sourceMap, startCol, endCol) {
     const lines = this.lines.filter((line, i) => {
-      return startCol <= line.endCol && endCol >= line.startCol
-    })
-    if (!lines.length) return {}
+      return startCol <= line.endCol && endCol >= line.startCol;
+    });
+    if (!lines.length) return {};
 
-    const start = originalPositionTryBoth(
-      sourceMap,
-      lines[0].line,
-      Math.max(0, startCol - lines[0].startCol)
-    )
-    let end = originalEndPositionFor(
-      sourceMap,
-      lines[lines.length - 1].line,
-      endCol - lines[lines.length - 1].startCol
-    )
+    const start = originalPositionTryBoth(sourceMap, lines[0].line, Math.max(0, startCol - lines[0].startCol));
+    let end = originalEndPositionFor(sourceMap, lines[lines.length - 1].line, endCol - lines[lines.length - 1].startCol);
 
     if (!(start && end)) {
-      return {}
+      return {};
     }
 
     if (!(start.source && end.source)) {
-      return {}
+      return {};
     }
 
     if (start.source !== end.source) {
-      return {}
+      return {};
     }
 
     if (start.line === end.line && start.column === end.column) {
       end = sourceMap.originalPositionFor({
         line: lines[lines.length - 1].line,
         column: endCol - lines[lines.length - 1].startCol,
-        bias: LEAST_UPPER_BOUND
-      })
-      end.column -= 1
+        bias: LEAST_UPPER_BOUND,
+      });
+      end.column -= 1;
     }
 
     return {
@@ -94,14 +86,14 @@ export default class CovSource {
       relStartCol: start.column,
       endLine: end.line,
       relEndCol: end.column,
-      source: end.source
-    }
+      source: end.source,
+    };
   }
 
   relativeToOffset(line, relCol) {
-    line = Math.max(line, 1)
-    if (this.lines[line - 1] === undefined) return this.eof
-    return Math.min(this.lines[line - 1].startCol + relCol, this.lines[line - 1].endCol)
+    line = Math.max(line, 1);
+    if (this.lines[line - 1] === undefined) return this.eof;
+    return Math.min(this.lines[line - 1].startCol + relCol, this.lines[line - 1].endCol);
   }
 }
 
@@ -132,14 +124,10 @@ function originalEndPositionFor(sourceMap, line, column) {
   // generated file end location. Note however that this position on its
   // own is not useful because it is the position of the _start_ of the range
   // on the original file, and we want the _end_ of the range.
-  const beforeEndMapping = originalPositionTryBoth(
-    sourceMap,
-    line,
-    Math.max(column - 1, 1)
-  )
+  const beforeEndMapping = originalPositionTryBoth(sourceMap, line, Math.max(column - 1, 1));
 
   if (beforeEndMapping.source === null) {
-    return null
+    return null;
   }
 
   // Convert that original position back to a generated one, with a bump
@@ -151,8 +139,8 @@ function originalEndPositionFor(sourceMap, line, column) {
     source: beforeEndMapping.source,
     line: beforeEndMapping.line,
     column: beforeEndMapping.column + 1,
-    bias: LEAST_UPPER_BOUND
-  })
+    bias: LEAST_UPPER_BOUND,
+  });
   if (
     // If this is null, it means that we've hit the end of the file,
     // so we can use Infinity as the end column.
@@ -160,44 +148,43 @@ function originalEndPositionFor(sourceMap, line, column) {
     // If these don't match, it means that the call to
     // 'generatedPositionFor' didn't find any other original mappings on
     // the line we gave, so consider the binding to extend to infinity.
-    sourceMap.originalPositionFor(afterEndMapping).line !==
-    beforeEndMapping.line
+    sourceMap.originalPositionFor(afterEndMapping).line !== beforeEndMapping.line
   ) {
     return {
       source: beforeEndMapping.source,
       line: beforeEndMapping.line,
-      column: Infinity
-    }
+      column: Infinity,
+    };
   }
 
   // Convert the end mapping into the real original position.
-  return sourceMap.originalPositionFor(afterEndMapping)
+  return sourceMap.originalPositionFor(afterEndMapping);
 }
 
 function originalPositionTryBoth(sourceMap, line, column) {
   const original = sourceMap.originalPositionFor({
     line,
     column,
-    bias: GREATEST_LOWER_BOUND
-  })
+    bias: GREATEST_LOWER_BOUND,
+  });
   if (original.line === null) {
     return sourceMap.originalPositionFor({
       line,
       column,
-      bias: LEAST_UPPER_BOUND
-    })
+      bias: LEAST_UPPER_BOUND,
+    });
   } else {
-    return original
+    return original;
   }
 }
 
 function getShebangLength(source) {
   if (source.indexOf('#!') === 0) {
-    const match = source.match(/(?<shebang>#!.*)/)
+    const match = source.match(/(?<shebang>#!.*)/);
     if (match) {
-      return match.groups.shebang.length
+      return match.groups.shebang.length;
     }
   } else {
-    return 0
+    return 0;
   }
 }

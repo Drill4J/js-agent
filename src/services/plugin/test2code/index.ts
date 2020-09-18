@@ -112,7 +112,7 @@ export class Test2CodePlugin extends Plugin {
     await this.updateSourceMaps(sourcemaps);
   }
 
-  public async updateBundleHashes(data: { file: string, hash: string }[]): Promise<void> {
+  public async updateBundleHashes(data: { file: string; hash: string }[]): Promise<void> {
     this.logger.info('update bundle hashes');
     await storage.saveBundleHashes(this.agentId, data);
   }

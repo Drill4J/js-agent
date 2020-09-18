@@ -1,20 +1,11 @@
-import {
-  AgentData,
-  AgentConfig,
-  PluginInfo,
-  Message,
-} from './types';
-import {
-  Connection,
-  DataPackage,
-  ConfirmationPackage,
-} from '../common/types';
+import { AgentData, AgentConfig, PluginInfo, Message } from './types';
+import { Connection, DataPackage, ConfirmationPackage } from '../common/types';
 import { isTest2CodePlugin } from '../plugin/guards';
 import { Plugin, Plugins, IPluginConstructor } from '../plugin';
 import parseJsonRecursive from '../../util/parse-json-recursive';
 
 export interface AgentsMap {
-  [agentId: string]: Agent
+  [agentId: string]: Agent;
 }
 
 enum CONNECTION_READY_STATE {
@@ -44,7 +35,7 @@ export class Agent {
   public initializing: Promise<any>;
 
   constructor(agentInfo: any, config: AgentConfig, needSync: boolean) {
-    const { data, plugins = [] }: { data: AgentData, plugins: PluginInfo[] } = agentInfo;
+    const { data, plugins = [] }: { data: AgentData; plugins: PluginInfo[] } = agentInfo;
     this.data = data;
     this.enabledPlugins = plugins;
     this.config = config;
@@ -117,7 +108,7 @@ export class Agent {
         this.logger.info(`connection closed\n    reason ${reasonCode}\n    description${description}`);
       });
 
-      this.connection.on('message', (message) => this.handleMessage(String(message)));
+      this.connection.on('message', message => this.handleMessage(String(message)));
 
       await connectionEstablished;
     } catch (e) {
@@ -162,7 +153,7 @@ export class Agent {
 
   // TODO add try ... catch and await all async methods to avoid unhandled promise rejections
   private async handleMessage(rawMessage: string) {
-    const data = (parseJsonRecursive(rawMessage) as Message);
+    const data = parseJsonRecursive(rawMessage) as Message;
     if (!data) return;
 
     const { destination } = data;
@@ -174,12 +165,16 @@ export class Agent {
       return;
     }
     if (destination === '/plugin/togglePlugin') {
-      const { message: { pluginId } } = data;
+      const {
+        message: { pluginId },
+      } = data;
       this.togglePlugin(pluginId);
       return;
     }
     if (destination === '/plugin/action') {
-      const { message: { id, message: action } } = data;
+      const {
+        message: { id, message: action },
+      } = data;
       const plugin = await this.ensurePluginInstance(id);
       if (isTest2CodePlugin(plugin)) {
         plugin.handleAction(action);
@@ -222,14 +217,9 @@ export class Agent {
   private async instantiatePlugin(pluginId: string): Promise<Plugin> {
     this.logger.info('instantiate plugin', pluginId);
     const PluginConstructor = await this.importPluginConstructor(pluginId);
-    const plugin = new PluginConstructor(
-      pluginId,
-      this.data.id,
-      this.connection,
-      {
-        loggerProvider: this.config.loggerProvider,
-      },
-    );
+    const plugin = new PluginConstructor(pluginId, this.data.id, this.connection, {
+      loggerProvider: this.config.loggerProvider,
+    });
     this.plugins[pluginId] = plugin;
     return plugin;
   }

@@ -20,19 +20,21 @@ export async function saveSourceMaps(agentId: string, sourcemaps: any[]): Promis
   const dirPath = `${sourceMapFolder}${upath.sep}${agentId}`;
   await fsExtra.ensureDir(dirPath);
 
-  const scriptsNames = await Promise.all(sourcemaps.map(async (sourcemap) => {
-    const name = upath.basename(sourcemap.file);
-    const fileName = `${dirPath}${upath.sep}${name}.map`;
-    await fsExtra.writeJSON(fileName, sourcemap);
-    return name;
-  }));
+  const scriptsNames = await Promise.all(
+    sourcemaps.map(async sourcemap => {
+      const name = upath.basename(sourcemap.file);
+      const fileName = `${dirPath}${upath.sep}${name}.map`;
+      await fsExtra.writeJSON(fileName, sourcemap);
+      return name;
+    }),
+  );
 
   await storage.saveBundleScriptsNames(agentId, scriptsNames);
 }
 
 // TODO refactor, naming is confusing
 export async function mapCoverageToFiles(test: any, coverage: any, files: any): Promise<ExecClassData[]> {
-  const fileMappedCoverage = files.map((file) => mapCoverageToFile(coverage, file));
+  const fileMappedCoverage = files.map(file => mapCoverageToFile(coverage, file));
   const filesWithProbes = concatFileProbes(test.name, fileMappedCoverage);
   return filesWithProbes.filter(file => file.probes.includes(true));
 }
@@ -74,10 +76,9 @@ function mapCoverageToFile(coverage, file) {
 }
 
 function getRangesCoveredByTest(rangeCoverage, astMethod, filePath) {
-  return rangeCoverage
-    .filter(x =>
-      filePath.includes(normalizeScriptPath(x.source)) &&
-      astMethod.probes.includes(x.startLine) && astMethod.probes.includes(x.endLine));
+  return rangeCoverage.filter(
+    x => filePath.includes(normalizeScriptPath(x.source)) && astMethod.probes.includes(x.startLine) && astMethod.probes.includes(x.endLine),
+  );
 }
 
 function concatFileProbes(testName, coverage) {
@@ -109,12 +110,8 @@ function concatMethodsProbes(methods) {
   return data;
 }
 
-export async function processTestResults(agentId, ast, rawData, bundleHashes: { file: string, hash: string }[]) {
-  const {
-    coverage: rawCoverage,
-    test,
-    scriptSources: sources,
-  } = rawData;
+export async function processTestResults(agentId, ast, rawData, bundleHashes: { file: string; hash: string }[]) {
+  const { coverage: rawCoverage, test, scriptSources: sources } = rawData;
 
   const coverage = await convertCoverage(agentId, sources, rawCoverage, bundleHashes);
 
@@ -123,7 +120,7 @@ export async function processTestResults(agentId, ast, rawData, bundleHashes: { 
   return data;
 }
 
-async function convertCoverage(agentId: string, sources: any, coverage: any, bundleHashes: { file: string, hash: string }[]) {
+async function convertCoverage(agentId: string, sources: any, coverage: any, bundleHashes: { file: string; hash: string }[]) {
   const result = [];
 
   const bundleScriptsNames = await storage.getBundleScriptsNames(agentId);
@@ -164,11 +161,7 @@ async function convertCoverage(agentId: string, sources: any, coverage: any, bun
 
     const sourceMap = convertSourceMap.fromMapFileSource(rawSource, `${sourceMapFolder}${upath.sep}${agentId}`);
 
-    if (
-      sourceMap == null ||
-      !sourceMap.sourcemap ||
-      !sourceMap.sourcemap.file.includes(scriptName)
-    ) {
+    if (sourceMap == null || !sourceMap.sourcemap || !sourceMap.sourcemap.file.includes(scriptName)) {
       logger.error(`there is no source map for ${scriptName}`);
       continue;
     }
@@ -183,10 +176,7 @@ async function convertCoverage(agentId: string, sources: any, coverage: any, bun
 }
 
 function getHash(data) {
-  return crypto
-    .createHash('sha256')
-    .update(data)
-    .digest('hex');
+  return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 function unifyLineEndings(str: string): string {
@@ -199,23 +189,23 @@ function unifyLineEndings(str: string): string {
 }
 
 /*
-*  For a reference see https://v8.dev/blog/javascript-code-coverage#for-embedders
-*
-*  Pay attention to exact range positions in function objects.
-*  For each function:
-*  - ranges with index > 0 overlap Range 0;
-*  - essentially Range 0 is a "base" that marks the whole function as "covered";
-*  - and all ranges with index > 0 exclude certain parts from Range 0, marking those as "not-covered".
-*
-*  Ranges are converted for the whole script at once because some functions have overlapping ranges.
-*  E.g.:
-*  function parent (arr) {
-*    var str = arr
-*        .map(function (x, i) { // callback produces separate function object in v8 report, but it's ranges overlap parent function
-*        return "el #" + i;
-*    })
-*  };
-*/
+ *  For a reference see https://v8.dev/blog/javascript-code-coverage#for-embedders
+ *
+ *  Pay attention to exact range positions in function objects.
+ *  For each function:
+ *  - ranges with index > 0 overlap Range 0;
+ *  - essentially Range 0 is a "base" that marks the whole function as "covered";
+ *  - and all ranges with index > 0 exclude certain parts from Range 0, marking those as "not-covered".
+ *
+ *  Ranges are converted for the whole script at once because some functions have overlapping ranges.
+ *  E.g.:
+ *  function parent (arr) {
+ *    var str = arr
+ *        .map(function (x, i) { // callback produces separate function object in v8 report, but it's ranges overlap parent function
+ *        return "el #" + i;
+ *    })
+ *  };
+ */
 function convertFromOverlappingToConsecutiveRanges(v8coverage: any) {
   let consecutiveRanges = [];
   v8coverage.forEach(fn => {
@@ -232,9 +222,9 @@ function mergeRange(consecutiveRanges: Range[], newRange: Range) {
     return rangesToInsert;
   }
 
-  const intersectionIndex = consecutiveRanges.findIndex(range =>
-    (range.startOffset <= newRange.startOffset &&
-      range.endOffset >= newRange.endOffset));
+  const intersectionIndex = consecutiveRanges.findIndex(
+    range => range.startOffset <= newRange.startOffset && range.endOffset >= newRange.endOffset,
+  );
 
   if (intersectionIndex === -1) {
     const rightNeighboringRange = consecutiveRanges.findIndex(range => range.startOffset >= newRange.endOffset) > -1;
@@ -260,7 +250,8 @@ function mergeRange(consecutiveRanges: Range[], newRange: Range) {
       endOffset: newRange.startOffset,
       count: intersectedRange.count,
     });
-  } else { // newRange is completely nested inside intersectedRange
+  } else {
+    // newRange is completely nested inside intersectedRange
     rangesToInsert.push({
       startOffset: newRange.endOffset,
       endOffset: intersectedRange.endOffset,
@@ -282,7 +273,7 @@ async function mapGeneratedOffsetsOntoOriginalLines(rawSource, sourceMap, consec
   const source = new Source(rawSource, null);
   const sourcemapConsumer = await new SourceMapConsumer(sourceMap.sourcemap);
   const convertedCoverage = consecutiveRanges
-    .map((range) => {
+    .map(range => {
       const rangeString = rawSource.substring(range.startOffset, range.endOffset);
       if (!rangeString.trim()) return null; // ignore range if it contains only whitespaces, tabs and newlines
 
@@ -317,17 +308,19 @@ function printRangeCoverage(rawSource: any, v8coverage: any) {
     const symbol = raw[offset];
     let toAppend = symbol;
     v8coverage.forEach(fn => {
-      fn.ranges.filter(range => range.startOffset <= offset && range.endOffset >= offset).forEach(range => {
-        if (range.count === 0) {
-          toAppend = chalk.bgRed.black(symbol);
-        } else if (range.count === 1) {
-          toAppend = chalk.bgGreen.black(symbol);
-        } else if (range.count === 2) {
-          toAppend = chalk.bgBlue.black(symbol);
-        } else if (range.count > 2) {
-          toAppend = chalk.bgYellow.black(symbol);
-        }
-      });
+      fn.ranges
+        .filter(range => range.startOffset <= offset && range.endOffset >= offset)
+        .forEach(range => {
+          if (range.count === 0) {
+            toAppend = chalk.bgRed.black(symbol);
+          } else if (range.count === 1) {
+            toAppend = chalk.bgGreen.black(symbol);
+          } else if (range.count === 2) {
+            toAppend = chalk.bgBlue.black(symbol);
+          } else if (range.count > 2) {
+            toAppend = chalk.bgYellow.black(symbol);
+          }
+        });
     });
 
     highlightedSource += toAppend;
