@@ -3,15 +3,12 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "target": "es6",
-    "noImplicitAny": false,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
-    "baseUrl": "src",
-    "paths": {
-      "*": ["node_modules/*"]
-    },
-    "resolveJsonModule": true // for testing
+    "baseUrl": "src"
   },
-  "include": ["src/**/*"]
+  "lib": ["es2016"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "__tests__", "**/*.spec.ts"]
 }
