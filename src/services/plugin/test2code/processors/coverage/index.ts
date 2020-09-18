@@ -219,14 +219,14 @@ function unifyLineEndings(str: string): string {
 function convertFromOverlappingToConsecutiveRanges(v8coverage: any) {
   let consecutiveRanges = [];
   v8coverage.forEach(fn => {
-    fn.ranges.forEach(overlappinRange => {
-      consecutiveRanges = mergeOverlappingRange(consecutiveRanges, overlappinRange, v8coverage);
+    fn.ranges.forEach(range => {
+      consecutiveRanges = mergeRange(consecutiveRanges, range);
     });
   });
   return consecutiveRanges;
 }
 
-function mergeOverlappingRange(consecutiveRanges: Range[], newRange: Range, v8coverage) {
+function mergeRange(consecutiveRanges: Range[], newRange: Range) {
   const rangesToInsert: Range[] = [newRange];
   if (consecutiveRanges.length === 0) {
     return rangesToInsert;
