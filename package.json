@@ -12,7 +12,7 @@
   },
   "name": "agent-js",
   "main": "dist/index.js",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "keywords": [],
   "jest": {
     "transform": {
