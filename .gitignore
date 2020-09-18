@@ -1,6 +1,5 @@
 node_modules/
 dist/
 coverage-entries/
-package-lock.json
 sourceMaps/
 .env
