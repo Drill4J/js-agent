@@ -3,21 +3,21 @@ import { Agent } from './services/agent';
 import { Test2CodePlugin } from './services/plugin/test2code';
 
 export interface AppConfig {
-  port: number,
+  port: number;
   body?: {
-    json?: { limit: string, }
-    urlencoded?: { limit: string, }
-  },
-  loggerProvider: ILoggerProvider
+    json?: { limit: string };
+    urlencoded?: { limit: string };
+  };
+  loggerProvider: ILoggerProvider;
 }
 
 declare module 'koa' {
   interface ExtendableContext {
     state: {
       drill: {
-        agent: Agent,
-        test2Code?: Test2CodePlugin,
-      }
-    }
+        agent: Agent;
+        test2Code?: Test2CodePlugin;
+      };
+    };
   }
 }

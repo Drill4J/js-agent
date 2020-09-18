@@ -2,11 +2,11 @@ import { PluginConfig } from './types';
 import { Connection } from '../common/types';
 
 export interface IPluginConstructor {
-  new(pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin
+  new (pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin;
 }
 
 export interface Plugins {
-  [pluginId: string]: Plugin
+  [pluginId: string]: Plugin;
 }
 
 export class Plugin {
@@ -31,9 +31,13 @@ export class Plugin {
     this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentId}:${this.id}`);
   }
 
-  public async init() { throw new Error(`${this.id} init not implemented`); }
+  public async init() {
+    throw new Error(`${this.id} init not implemented`);
+  }
 
-  public async stop() { throw new Error(`${this.id} stop not implemented`); }
+  public async stop() {
+    throw new Error(`${this.id} stop not implemented`);
+  }
 
   public hasMatchingId(someId: string) {
     return this.id === someId;

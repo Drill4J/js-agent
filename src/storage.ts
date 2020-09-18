@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 
 export interface StorageSettings {
-  host: string,
-  dbname: string,
+  host: string;
+  dbname: string;
 }
 
 export class Storage {
@@ -157,13 +157,16 @@ export class Storage {
 
   private async getFromDb(collection, query = {}): Promise<any> {
     const data: any[] = await new Promise((resolve, reject) => {
-      this.db.collection(collection).find(query, { _id: 0 }).toArray((err, result) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(result);
-      });
+      this.db
+        .collection(collection)
+        .find(query, { _id: 0 })
+        .toArray((err, result) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(result);
+        });
     });
     // TODO dirty hack because projection doesnt work for whatever reason
     // does not mean much, mongo will get scrapped anyway

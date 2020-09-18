@@ -1,12 +1,5 @@
-import {
-  AgentHubConfig,
-  AgentsInfoProvider,
-} from './types';
-import {
-  AgentData,
-  AgentConfig,
-  Message,
-} from '../agent/types';
+import { AgentHubConfig, AgentsInfoProvider } from './types';
+import { AgentData, AgentConfig, Message } from '../agent/types';
 import { Agent, AgentsMap } from '../agent';
 
 export class AgentHub {
@@ -40,7 +33,7 @@ export class AgentHub {
   private async initAgents(): Promise<void> {
     this.logger.info('init agents');
     const agentsList = await this.agentsInfoProvider.get(); // TODO no any!
-    const agentsInitializing = agentsList.map((x) => this.startAgent(x));
+    const agentsInitializing = agentsList.map(x => this.startAgent(x));
     await Promise.all(agentsInitializing);
   }
 

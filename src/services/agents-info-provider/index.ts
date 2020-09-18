@@ -37,7 +37,7 @@ async function getAuthToken() {
 }
 
 async function getData(connection) {
-  const agentsData = (await socketMessageRequest(connection, 'api/agents') as AgentInfo[]);
+  const agentsData = (await socketMessageRequest(connection, 'api/agents')) as AgentInfo[];
   if (Array.isArray(agentsData)) {
     const jsAgents = agentsData.filter(x => String(x.agentType).toLowerCase() === 'node.js');
     return jsAgents;
@@ -57,7 +57,7 @@ async function socketEvent(connection, event, timeout = 10000): Promise<unknown[
 async function socketMessageRequest(connection, destination: string, timeout = 10000): Promise<unknown> {
   const responsePromise = new Promise<unknown>((resolve, reject) => {
     connection.on('message', async (rawMessage: string) => {
-      const message = (parseJsonRecursive(rawMessage) as Message);
+      const message = parseJsonRecursive(rawMessage) as Message;
       if (message.type !== 'MESSAGE') {
         reject(new Error(`socket message request to ${destination} failed: ${message.type}`));
       } else if (message.type === 'MESSAGE' && message.destination === destination) {

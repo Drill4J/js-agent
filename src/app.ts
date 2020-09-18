@@ -37,10 +37,12 @@ export class App {
     this.logger = this.config.loggerProvider.getLogger('drill', 'webserver');
     this.app = new Koa();
 
-    this.app.use(bodyParser({
-      jsonLimit: this.config.body?.json?.limit || '50mb',
-      formLimit: this.config.body?.urlencoded?.limit || '50mb',
-    }));
+    this.app.use(
+      bodyParser({
+        jsonLimit: this.config.body?.json?.limit || '50mb',
+        formLimit: this.config.body?.urlencoded?.limit || '50mb',
+      }),
+    );
     this.app.use(cors());
     this.app.use(loggerMiddleware(this.logger));
     this.setRoutes();
@@ -64,7 +66,8 @@ export class App {
     router.use(this.middlewares.responseHandler);
     router.get('/', () => ({ message: 'JS middleware API' }));
 
-    router.post('/agents/:agentId/plugins/:pluginId/build',
+    router.post(
+      '/agents/:agentId/plugins/:pluginId/build',
       async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
         const agentId = String(ctx.params.agentId);
 
@@ -97,23 +100,29 @@ export class App {
         const { test2Code } = ctx.state.drill;
         const { data } = ctx.request.body;
         await test2Code.updateBuildInfo(data);
-      });
+      },
+    );
 
     const test2CodeRouter = new Router();
     test2CodeRouter.post('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.startSession(ctx.params.sessionId));
+      ctx.state.drill.test2Code.startSession(ctx.params.sessionId),
+    );
 
     test2CodeRouter.patch('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body));
+      ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body),
+    );
 
     test2CodeRouter.delete('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.cancelSession(ctx.params.sessionId));
+      ctx.state.drill.test2Code.cancelSession(ctx.params.sessionId),
+    );
 
     // TODO dynamic plugin route initialization
-    router.use('/agents/:agentId/plugins/:pluginId',
+    router.use(
+      '/agents/:agentId/plugins/:pluginId',
       this.middlewares.populateCtxWithAgent,
       populateCtxWithPlugin,
-      test2CodeRouter.routes());
+      test2CodeRouter.routes(),
+    );
 
     this.app.use(router.routes());
   }

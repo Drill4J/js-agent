@@ -3,23 +3,23 @@ export interface Connection {
   _on?(event: string, handler: Handler): unknown;
   send(data: string): unknown; // TODO set data type to Package
   close(): void;
-  readyState: number
+  readyState: number;
 }
 
 export interface ConnectionProvider {
-  new(url: string, options: any): Connection; // TODO describe options
+  new (url: string, options: any): Connection; // TODO describe options
 }
 
 type Handler = (...args: unknown[]) => unknown;
 
 interface Package {
-  type: string, // TODO describe type enum
+  type: string; // TODO describe type enum
 }
 
 export interface ConfirmationPackage extends Package {
-  destination: string,
+  destination: string;
 }
 
 export interface DataPackage extends Package {
-  text: string,
+  text: string;
 }

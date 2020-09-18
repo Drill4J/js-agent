@@ -1,6 +1,7 @@
 // TODO would be much better to stringify JSON only ONCE, instead of multiple netsted levels. Suggest backend API enhancement
 export default function parseJsonRecursive(rawMessage: string, l = 0): unknown {
-  if (l > 3) { // magic number due to unknown number of nested messages
+  if (l > 3) {
+    // magic number due to unknown number of nested messages
     throw new Error(`Max recursive parse depth reached.\n   Not-parsed content: ${rawMessage}`);
   }
   const result = JSON.parse(rawMessage);

@@ -3,12 +3,12 @@ import chalk from 'chalk';
 
 // TODO type it all!
 export interface ILogger {
-  [key: string]: LogFunction
+  [key: string]: LogFunction;
 }
-type LogFunction = (...args) => void
+type LogFunction = (...args) => void;
 
 export interface ILoggerProvider {
-  getLogger(...args): ILogger
+  getLogger(...args): ILogger;
 }
 
 export default class LoggerProvider {
@@ -22,7 +22,8 @@ export default class LoggerProvider {
       3: { name: 'debug', format: chalk.blueBright },
       4: { name: 'silly', format: chalk.yellow },
     },
-  ): ILogger { // TODO this is a terrible spaghetti, refactor it
+  ): ILogger {
+    // TODO this is a terrible spaghetti, refactor it
     const logFn = debug(`${prefix}:${name}`);
     const logger = {};
     const loggingLevel = parseInt(process.env.DEBUG_LOG_LEVEL, 10) || 1;
