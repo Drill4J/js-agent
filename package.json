@@ -4,11 +4,11 @@
     "test": "jest --coverage --colors",
     "start": "node .",
     "predev": "npm run build",
-    "prebuild": "eslint . --ext .ts",
+    "prebuild": "eslint . --ext .ts && rm -rf dist",
     "lint": "eslint . --ext .ts --fix",
     "dev": "npx nodemon dist/index.js",
     "debug": "npx nodemon --inspect dist/index.js",
-    "build": "tsc -p ."
+    "build": "tsc"
   },
   "name": "agent-js",
   "main": "dist/index.js",
