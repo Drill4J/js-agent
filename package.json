@@ -61,6 +61,11 @@
     "ts-node": "^8.6.2",
     "typescript": "^3.7.4"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "git-format-staged -f 'prettier --ignore-unknown --stdin --stdin-filepath \"{}\"' ."
+    }
+  },
   "jest": {
     "testEnvironment": "node",
     "coveragePathIgnorePatterns": [
