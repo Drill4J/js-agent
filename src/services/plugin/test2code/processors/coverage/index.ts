@@ -168,7 +168,17 @@ async function convertCoverage(agentId: string, sources: any, coverage: any, bun
 
     logger.debug(`script was processed ${scriptName}`);
     const consecutiveRanges = convertFromOverlappingToConsecutiveRanges(v8coverage);
-    const coveredRanges = await mapGeneratedOffsetsOntoOriginalLines(rawSource, sourceMap, consecutiveRanges);
+    let coveredRanges = await mapGeneratedOffsetsOntoOriginalLines(rawSource, sourceMap, consecutiveRanges);
+    // HACK that sets prefix to omit from sourcepath for all agents. Think about setting on per-agent basis
+    if (process.env.COVERAGE_SOURCE_OMIT_PREFIX) {
+      coveredRanges = coveredRanges.map(x => {
+        const source = x.source.replace(process.env.COVERAGE_SOURCE_OMIT_PREFIX, '');
+        return {
+          ...x,
+          source,
+        };
+      });
+    }
     result.push(...coveredRanges);
   }
 

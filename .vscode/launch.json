@@ -15,6 +15,7 @@
       // Capture "std" instead of "console"
       "outputCapture": "std",
       "env": {
+        "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
         "DEBUG_TARGET_SCRIPT_URL": "http://localhost/js/Application.js",
         "DRILL_ADMIN_PROTOCOL": "ws",
         // "DRILL_ADMIN_HOST": "194.67.92.202:8090",
