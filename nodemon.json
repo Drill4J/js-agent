@@ -3,11 +3,22 @@
   "ignore": [".git", "node_modules/**/node_modules"],
   "verbose": true,
   "execMap": {
-    "ts": "node --require ts-node/register"
+    "js": "node"
   },
-  "watch": ["src/"],
+  "watch": ["dist/"],
   "env": {
-    "NODE_ENV": "development"
+    "DEBUG_TARGET_SCRIPT_URL": "http://localhost/js/Application.js",
+    "DRILL_ADMIN_PROTOCOL": "ws",
+    "DRILL_ADMIN_HOST": "localhost:9090",
+    "TEST_2_CODE_PLUGINID": "test2code",
+    "MONGO_HOST": "localhost:27017",
+    "MONGO_DBNAME": "js-agent",
+    "SOURCE_MAP_FOLDER": "./sourceMaps",
+    "DEBUG_AGENT_SERVICE_CONNECTION": "true",
+    "DEBUG": "drill:*",
+    "DEBUG_COLORS": "true",
+    "FORCE_COLOR": "3",
+    "DEBUG_LOG_LEVEL": "2"
   },
-  "ext": "js,json,ts"
+  "ext": "js"
 }
