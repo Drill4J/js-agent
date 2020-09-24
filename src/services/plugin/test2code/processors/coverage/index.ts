@@ -88,7 +88,6 @@ function concatFileProbes(testName, coverage) {
 
       const className = normalizeScriptPath(file);
       return {
-        id: 0,
         className,
         probes,
         testName,
