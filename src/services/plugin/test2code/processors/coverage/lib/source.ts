@@ -1,5 +1,5 @@
-// this implementation is pulled over from https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/source.js and slightly modified
 /* eslint-disable */
+// this implementation is pulled over from https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/source.js and slightly modified
 // @ts-nocheck
 import CovLine from './line';
 import { SourceMapConsumer } from 'source-map';

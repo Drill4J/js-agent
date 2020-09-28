@@ -1,5 +1,5 @@
-// this implementation is pulled over from https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/line.js
 /* eslint-disable */
+// this implementation is pulled over from https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/line.js
 // @ts-nocheck
 export default class CovLine {
   constructor(line, startCol, lineStr) {
