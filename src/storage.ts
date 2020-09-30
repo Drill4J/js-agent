@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { MongoClient } from 'mongodb';
+import { BundleScriptNames } from 'services/plugin/test2code/processors/coverage/types';
 
 export interface StorageSettings {
   host: string;
@@ -106,7 +107,7 @@ export class Storage {
     await this.upsertToDb('scriptnames', { agentId, names }, { agentId });
   }
 
-  public async getBundleScriptsNames(agentId): Promise<string[]> {
+  public async getBundleScriptsNames(agentId): Promise<BundleScriptNames> {
     const data = await this.getFromDb('scriptnames', { agentId });
     return data[0]?.names;
   }

@@ -16,7 +16,6 @@
 /* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
 import {
   // Models
-  AstEntity,
   InitScopePayload,
   CoverDataPart,
   // Actions
@@ -29,21 +28,22 @@ import {
   SessionFinished,
   SessionCancelled,
   ScopeInitialized,
-  ScopeSummary,
 } from '@drill4j/test2code-types';
 
+import upath from 'upath';
+import * as sourcemapUtil from './sourcemap-util';
 import { Scope } from './types';
 
 // TODO abstract ast processor, coverage processor and storage provider
 import * as astProcessor from './processors/ast';
-import * as coverageProcessor from './processors/coverage';
+import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
 import { Plugin } from '..';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
 
-  public async init() {
+  public async init(): Promise<void> {
     this.logger.info('init');
     // this.initialized = true;
     // starts test2code initialization (gotta send InitDataPart message to complete it)
@@ -141,7 +141,7 @@ export class Test2CodePlugin extends Plugin {
   public async updateSourceMaps(sourceMaps): Promise<void> {
     this.logger.info('update source maps');
     // await coverage
-    await coverageProcessor.saveSourceMaps(this.agentId, sourceMaps);
+    await sourcemapUtil.save(this.agentId, sourceMaps);
   }
 
   public async startSession(sessionId): Promise<void> {
@@ -164,9 +164,21 @@ export class Test2CodePlugin extends Plugin {
     try {
       const astTree = await storage.getAst(this.agentId);
       const bundleHashes = await storage.getBundleHashes(this.agentId);
+      const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
+      if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
+        // TODO extend error and dispatch it in centralized error handler
+        throw new Error('Bundle script names not found. You are probably missing source maps?');
+      }
       const { data: ast } = astTree;
 
-      const data = await coverageProcessor.processTestResults(this.agentId, ast, rawData, bundleHashes);
+      const data = await coverageProcessor(
+        `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
+        ast,
+        rawData,
+        bundleHashes,
+        bundleScriptsNames,
+      );
+
       await this.sendTestResults(sessionId, data);
 
       await storage.removeSession(this.agentId, sessionId);

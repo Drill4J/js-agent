@@ -1,7 +1,5 @@
 const path = require('path');
 const nodeExternals = require('webpack-node-externals');
-const { CheckerPlugin } = require('awesome-typescript-loader');
-console.log(process.env.NODE_ENV);
 module.exports = {
   mode: process.env.NODE_ENV,
   target: 'node',
@@ -11,14 +9,25 @@ module.exports = {
     rules: [
       {
         test: /\.ts$/,
-        use: 'awesome-typescript-loader',
-        exclude: /node_modules/,
+        enforce: 'pre',
+        exclude: /(node_modules|\.spec\.ts)/,
+        use: [
+          {
+            loader: 'ts-loader',
+          },
+          {
+            loader: 'webpack-strip-block',
+            options: {
+              start: 'testblock:start',
+              end: 'testblock:end',
+            },
+          },
+        ],
       },
     ],
   },
   devtool: process.env.NODE_ENV === 'development' ? 'eval-source-map' : undefined,
   watch: process.env.NODE_ENV === 'development',
-  plugins: [new CheckerPlugin()],
   resolve: {
     extensions: ['.ts', '.js'],
   },

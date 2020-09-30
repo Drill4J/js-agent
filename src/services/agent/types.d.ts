@@ -47,6 +47,7 @@ export interface AgentInfo {
   buildVersion: string;
   instanceIds: string[];
   plugins: PluginInfo[];
+  status: 'ONLINE' | 'OFFLINE' | 'NOT_REGISTERED';
 }
 
 export interface PluginInfo {

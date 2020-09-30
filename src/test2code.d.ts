@@ -243,6 +243,7 @@ declare module '@drill4j/test2code-types' {
     returnType: string;
     count?: number;
     probes?: number[];
+    checksum: string; // FIXME
   }
   export interface CancelSession {
     type: 'CANCEL';

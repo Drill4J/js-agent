@@ -13,8 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface Range {
+/* eslint-disable import/no-unresolved */
+import * as Test2Code from '@drill4j/test2code-types';
+
+export interface AstEntity extends Test2Code.AstEntity {
+  filePath: string;
+  suffix: string;
+  methods: Test2Code.AstMethod[];
+}
+
+export type RawSourceCoverage = {
+  startOffset: number;
+  endOffset: number;
+  count: number;
+};
+
+export type OriginalSourceCoverage = {
+  count?: number;
+  startLine?: number;
+  relStartCol?: number;
+  endLine?: number;
+  relEndCol?: number;
+  source?: string;
+};
+
+export type ScriptSources = {
+  [url: string]: {
+    source: RawSource;
+  };
+};
+
+export type RawSource = Opaque<'RawSource', string>;
+export type ScriptName = Opaque<'ScriptName', string>;
+export type ScriptUrl = Opaque<'ScriptUrl', string>;
+
+export type Test = {
+  type: 'MANUAL' | 'AUTO';
+  name: TestName;
+};
+
+export type TestName = Opaque<'TestName', string>;
+
+export type V8Coverage = V8ScriptCoverage[];
+
+export interface V8ScriptCoverage {
+  functions: V8FunctionCoverage[];
+  url: ScriptUrl;
+}
+
+export interface V8FunctionCoverage {
+  functionName: string;
+  ranges: V8CoverageRange[];
+  isBlockCoverage: boolean;
+}
+
+export interface V8CoverageRange {
   startOffset: number;
   endOffset: number;
   count: number;
 }
+
+interface BundleHash {
+  file: string;
+  hash: string;
+}
+
+export type BundleHashes = BundleHash[];
+
+export type BundleScriptNames = ScriptName[];
