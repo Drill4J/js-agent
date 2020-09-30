@@ -47,6 +47,7 @@
       "type": "node",
       "request": "launch",
       "name": "Jest Current File",
+      // "skipFiles": ["<node_internals>/**"], //, "${workspaceFolder}/node_modules/**/*.js"],
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "args": ["${fileBasenameNoExtension}"],
       "console": "integratedTerminal",

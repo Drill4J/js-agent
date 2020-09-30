@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "target": "es6",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "baseUrl": "src",
+    "resolveJsonModule": true
+  },
+  "lib": ["es2016"],
+  "include": ["__tests__", "src/**/*"],
+  "exclude": ["node_modules"]
+}

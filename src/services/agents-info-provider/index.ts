@@ -18,19 +18,28 @@ import axios from 'axios';
 import parseJsonRecursive from '../../util/parse-json-recursive';
 import { Message, AgentInfo } from '../agent/types';
 
+const AgentStatus = {
+  ONLINE: 'ONLINE',
+  NOT_REGISTERED: 'NOT_REGISTERED',
+  OFFLINE: 'OFFLINE',
+  BUSY: 'BUSY',
+};
+
 export async function get(): Promise<unknown[]> {
   const connection = await connect();
   const agentsInfo = await getData(connection);
-  return agentsInfo.map(x => ({
-    data: {
-      id: x.id,
-      instanceId: '',
-      buildVersion: x.buildVersion,
-      serviceGroupId: '',
-      agentType: 'NODEJS',
-    },
-    plugins: x.plugins.map(p => ({ id: p.id })),
-  }));
+  return agentsInfo
+    .filter(x => x.status === AgentStatus.ONLINE)
+    .map(x => ({
+      data: {
+        id: x.id,
+        instanceId: '',
+        buildVersion: x.buildVersion,
+        serviceGroupId: '',
+        agentType: 'NODEJS',
+      },
+      plugins: x.plugins.map(p => ({ id: p.id })),
+    }));
 }
 
 async function connect() {

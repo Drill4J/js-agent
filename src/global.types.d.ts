@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import upath from 'upath';
+export {};
 
-export default function normalizePath(path: string): string {
-  // .toUnix is required, because .normalize fallbacks to regular path.normalize when ran in Jest
-  // reference https://github.com/facebook/jest/issues/9360
-  return upath.toUnix(upath.normalize(path)).replace(/^\W+/, '');
+declare global {
+  type Opaque<K, T> = T & { __TYPE__: K };
 }

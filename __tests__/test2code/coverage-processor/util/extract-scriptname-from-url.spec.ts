@@ -13,10 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import upath from 'upath';
+import { extractScriptNameFromUrl } from '../../../../src/services/plugin/test2code/processors/coverage/util';
 
-export default function normalizePath(path: string): string {
-  // .toUnix is required, because .normalize fallbacks to regular path.normalize when ran in Jest
-  // reference https://github.com/facebook/jest/issues/9360
-  return upath.toUnix(upath.normalize(path)).replace(/^\W+/, '');
-}
+it('ran on correct url must return last part after "/"', () => {
+  const result = extractScriptNameFromUrl('http://localhost:8081/js/Application.js');
+  expect(result).toEqual('Application.js');
+});
+it('ran on empty string must return empty string', () => {
+  const result = extractScriptNameFromUrl('');
+  expect(result).toEqual('');
+});
