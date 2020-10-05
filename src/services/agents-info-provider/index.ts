@@ -52,7 +52,7 @@ async function getAuthToken() {
 }
 
 async function getData(connection) {
-  const agentsData = (await socketMessageRequest(connection, 'api/agents')) as AgentInfo[];
+  const agentsData = (await socketMessageRequest(connection, '/api/agents')) as AgentInfo[];
   if (Array.isArray(agentsData)) {
     const jsAgents = agentsData.filter(x => String(x.agentType).toLowerCase() === 'node.js');
     return jsAgents;
