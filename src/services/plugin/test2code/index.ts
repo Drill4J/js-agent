@@ -87,27 +87,26 @@ export class Test2CodePlugin extends Plugin {
     this.logger.info('stop\n   (it is a stub method, does not do anything yet)');
   }
 
-  public handleAction(action: unknown): void {
+  public async handleAction(action: unknown): Promise<void> {
     switch ((action as Test2CodeAction).type) {
       case 'INIT_ACTIVE_SCOPE':
-        this.setActiveScope((action as InitActiveScope).payload);
+        await this.setActiveScope((action as InitActiveScope).payload);
         break;
 
       case 'START_AGENT_SESSION':
-        this.startSession((action as StartSession).payload);
+        await this.startSession((action as StartSession).payload);
         break;
 
       case 'STOP':
-        this.finishSession((action as StopSession).payload.sessionId);
+        await this.finishSession((action as StopSession).payload.sessionId);
         break;
 
       case 'CANCEL':
-        this.cancelSession((action as CancelSession).payload.sessionId);
-        console.log('ok');
+        await this.cancelSession((action as CancelSession).payload.sessionId);
         break;
 
-      case 'ADD_SESSION_dATA': // TODO update on backend fix
-        this.processCoverage((action as AddSessionData).payload.sessionId, (action as AddSessionData).payload.data);
+      case 'ADD_SESSION_DATA':
+        await this.processCoverage((action as AddSessionData).payload.sessionId, (action as AddSessionData).payload.data);
         break;
 
       default:
@@ -121,7 +120,7 @@ export class Test2CodePlugin extends Plugin {
     return ast && ast.data;
   }
 
-  private setActiveScope(payload: InitScopePayload) {
+  private async setActiveScope(payload: InitScopePayload) {
     this.logger.info('init active scope %o', payload);
     const { id, name, prevId } = payload;
     this.activeScope = {
@@ -130,7 +129,7 @@ export class Test2CodePlugin extends Plugin {
       prevId,
       ts: Date.now(),
     };
-    storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
+    await storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
 
     const scopeInitializedMessage: ScopeInitialized = {
       type: 'SCOPE_INITIALIZED',
@@ -223,7 +222,7 @@ export class Test2CodePlugin extends Plugin {
       super.send(sessionFinishedMessage);
     } catch (e) {
       this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
-      this.cancelSession(sessionId);
+      await this.cancelSession(sessionId); // FIXME that might fail as well, e.g. due to storage failure
     }
   }
 

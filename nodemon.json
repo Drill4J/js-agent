@@ -1,6 +1,6 @@
 {
   "restartable": "rs",
-  "ignore": [".git", "node_modules/**/node_modules"],
+  "ignore": [".git", "node_modules/**/node_modules", "<node_internals>/**"],
   "verbose": true,
   "execMap": {
     "js": "node"
@@ -8,9 +8,9 @@
   "watch": ["dist/"],
   "env": {
     "DEBUG_TARGET_SCRIPT_URL": "http://localhost/js/Application.js",
+    "COVERAGE_SOURCE_APPEND_PREFIX": "js/",
     "DRILL_ADMIN_PROTOCOL": "ws",
-    "DRILL_ADMIN_HOST": "localhost:9090",
-    "TEST_2_CODE_PLUGINID": "test2code",
+    "DRILL_ADMIN_HOST": "localhost:8090",
     "MONGO_HOST": "localhost:27017",
     "MONGO_DBNAME": "js-agent",
     "SOURCE_MAP_FOLDER": "./sourceMaps",
