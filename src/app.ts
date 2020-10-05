@@ -21,7 +21,6 @@ import bodyParser from 'koa-bodyparser';
 import responseHandler from './middleware/response.handler';
 
 import loggerMiddleware from './middleware/logger';
-import populateCtxWithAgent from './middleware/populate.req.with.agent';
 import populateCtxWithPlugin from './middleware/populate.req.with.plugin';
 
 import { ILogger } from './util/logger';
@@ -44,7 +43,6 @@ export class App {
   constructor(config: AppConfig, agentHub: AgentHub) {
     this.middlewares = {
       responseHandler: responseHandler.bind(this),
-      populateCtxWithAgent: populateCtxWithAgent.bind(this),
     };
 
     this.agentHub = agentHub;
@@ -116,27 +114,6 @@ export class App {
         const { data } = ctx.request.body;
         await test2Code.updateBuildInfo(data);
       },
-    );
-
-    const test2CodeRouter = new Router();
-    test2CodeRouter.post('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.startSession(ctx.params.sessionId),
-    );
-
-    test2CodeRouter.patch('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.finishSession(ctx.params.sessionId, ctx.request.body),
-    );
-
-    test2CodeRouter.delete('/sessions/:sessionId', (ctx: ExtendableContext & IRouterParamContext) =>
-      ctx.state.drill.test2Code.cancelSession(ctx.params.sessionId),
-    );
-
-    // TODO dynamic plugin route initialization
-    router.use(
-      '/agents/:agentId/plugins/:pluginId',
-      this.middlewares.populateCtxWithAgent,
-      populateCtxWithPlugin,
-      test2CodeRouter.routes(),
     );
 
     this.app.use(router.routes());

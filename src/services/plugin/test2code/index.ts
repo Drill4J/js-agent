@@ -18,8 +18,6 @@ import {
   // Models
   InitScopePayload,
   CoverDataPart,
-  // Actions
-  InitActiveScope,
   // Messages
   InitInfo,
   InitDataPart,
@@ -28,11 +26,17 @@ import {
   SessionFinished,
   SessionCancelled,
   ScopeInitialized,
+  StartSessionPayload,
+  StopSession,
+  StartSession,
+  CancelSession,
+  InitActiveScope,
+  AddSessionData,
 } from '@drill4j/test2code-types';
 
 import upath from 'upath';
 import * as sourcemapUtil from './sourcemap-util';
-import { Scope } from './types';
+import { Scope, Test2CodeAction } from './types';
 
 // TODO abstract ast processor, coverage processor and storage provider
 import * as astProcessor from './processors/ast';
@@ -83,13 +87,33 @@ export class Test2CodePlugin extends Plugin {
     this.logger.info('stop\n   (it is a stub method, does not do anything yet)');
   }
 
-  public handleAction(action) {
-    this.logger.silly('handle action %o', action);
-    if (this.isInitActiveScopeAction(action)) {
-      this.setActiveScope(action.payload);
-      return;
+  public handleAction(action: unknown): void {
+    switch ((action as Test2CodeAction).type) {
+      case 'INIT_ACTIVE_SCOPE':
+        this.setActiveScope((action as InitActiveScope).payload);
+        break;
+
+      case 'START_AGENT_SESSION':
+        this.startSession((action as StartSession).payload);
+        break;
+
+      case 'STOP':
+        this.finishSession((action as StopSession).payload.sessionId);
+        break;
+
+      case 'CANCEL':
+        this.cancelSession((action as CancelSession).payload.sessionId);
+        console.log('ok');
+        break;
+
+      case 'ADD_SESSION_dATA': // TODO update on backend fix
+        this.processCoverage((action as AddSessionData).payload.sessionId, (action as AddSessionData).payload.data);
+        break;
+
+      default:
+        this.logger.debug('received unknown action %o', action);
+        break;
     }
-    this.logger.debug('received unknown action %o', action);
   }
 
   private async getAst() {
@@ -113,10 +137,6 @@ export class Test2CodePlugin extends Plugin {
       ...this.activeScope,
     };
     super.send(scopeInitializedMessage);
-  }
-
-  isInitActiveScopeAction(action: InitActiveScope): action is InitActiveScope {
-    return (action as InitActiveScope).type === 'INIT_ACTIVE_SCOPE';
   }
 
   public async updateBuildInfo(buildInfo): Promise<void> {
@@ -144,24 +164,27 @@ export class Test2CodePlugin extends Plugin {
     await sourcemapUtil.save(this.agentId, sourceMaps);
   }
 
-  public async startSession(sessionId): Promise<void> {
-    this.logger.info('start session', sessionId);
-    await storage.saveSession(this.agentId, sessionId);
+  public async startSession(payload: StartSessionPayload): Promise<void> {
+    this.logger.info('start session', JSON.stringify(payload));
+    const { testType, sessionId } = payload;
+    await storage.saveSession(this.agentId, sessionId, payload);
 
     const sessionStartedMessage: SessionStarted = {
       type: 'SESSION_STARTED',
       sessionId,
-      testType: 'MANUAL', // TODO send actuall test type, dont just send 'MANUAL'
-      ts: 0,
+      testType,
+      ts: Date.now(),
     };
 
     super.send(sessionStartedMessage);
   }
 
-  public async finishSession(sessionId: string, rawData): Promise<void> {
-    this.logger.info('process coverage and finish session', sessionId);
+  async processCoverage(sessionId, stringifiedData): Promise<void> {
+    this.logger.info('process coverage', sessionId);
     await this.ensureActiveSession(sessionId);
     try {
+      const rawData = JSON.parse(stringifiedData);
+      const { data: test } = await storage.getSession(this.agentId, sessionId); // TODO just return data?
       const astTree = await storage.getAst(this.agentId);
       const bundleHashes = await storage.getBundleHashes(this.agentId);
       const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
@@ -175,32 +198,42 @@ export class Test2CodePlugin extends Plugin {
         `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
         ast,
         rawData,
+        test,
         bundleHashes,
         bundleScriptsNames,
       );
 
       await this.sendTestResults(sessionId, data);
+    } catch (e) {
+      this.logger.warning(`failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
+    }
+  }
 
+  public async finishSession(sessionId: string): Promise<void> {
+    this.logger.info('finish session', sessionId);
+    await this.ensureActiveSession(sessionId);
+    try {
       await storage.removeSession(this.agentId, sessionId);
       const sessionFinishedMessage: SessionFinished = {
         type: 'SESSION_FINISHED',
         sessionId,
-        ts: 0,
+        ts: Date.now(),
       };
 
       super.send(sessionFinishedMessage);
     } catch (e) {
-      this.logger.warning(`failed to finish session. Session will be canceled. \n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
+      this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
       this.cancelSession(sessionId);
     }
   }
 
   public async cancelSession(sessionId: string): Promise<void> {
+    this.logger.info('cancel session', sessionId);
     await storage.removeSession(this.agentId, sessionId);
     const sessionCanceledMessage: SessionCancelled = {
       type: 'SESSION_CANCELLED',
       sessionId,
-      ts: 0,
+      ts: Date.now(),
     };
 
     super.send(sessionCanceledMessage);

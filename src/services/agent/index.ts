@@ -94,7 +94,13 @@ export class Agent {
         this.connection._on = this.connection.on;
         this.connection.on = (event, handler) => {
           const wrappedHandler = (...args) => {
-            this.logger.debug(`event: ${event}\n    arguments:\n    ${args}`);
+            const argsString = JSON.stringify(args);
+            const maxArgsLength = parseInt(process.env.DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH, 10) || 2000;
+            this.logger.debug(
+              `event: ${event}\n    arguments:\n    ${
+                argsString.length <= maxArgsLength ? args : `${argsString.substring(0, maxArgsLength)}...args too long...`
+              }`,
+            );
             handler.apply(this, args);
           };
           this.connection._on(event, wrappedHandler);

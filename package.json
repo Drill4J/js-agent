@@ -1,7 +1,8 @@
 {
   "version": "1.0.0",
   "scripts": {
-    "test": "jest -c jest.unit.js --coverage --colors",
+    "coverage": "jest -c jest.unit.js --coverage --colors",
+    "test": "jest -c jest.unit.js",
     "start": "node .",
     "predev": "npm run build",
     "prebuild": "eslint . --ext .ts && rm -rf dist",

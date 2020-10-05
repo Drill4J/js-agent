@@ -26,15 +26,13 @@ export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 export default async function processCoverage(
   sourceMapPath: string,
   astEntities: AstEntity[],
-  rawData: { coverage: V8Coverage; test: Test; scriptSources: ScriptSources },
+  rawData: { coverage: V8Coverage; scriptSources: ScriptSources },
+  test: Test,
   bundleHashes: BundleHashes,
   bundleScriptNames: BundleScriptNames,
 ): Promise<ExecClassData[]> {
-  const {
-    coverage,
-    test: { name: testName },
-    scriptSources: sources,
-  } = rawData;
+  const { coverage, scriptSources: sources } = rawData;
+  const { testName } = test;
 
   const v8coverage = coverage
     .filter(scriptCoverage => scriptCoverage.url && sources[scriptCoverage.url])
