@@ -20,8 +20,8 @@ export interface AgentData {
   id: string;
   agentType: 'NODEJS';
   instanceId: string; // TODO what is that for and how it should be configured
-  buildVersion: string; // TODO what is that for and how it should be configured
-  serviceGroupId: string; // TODO what is that for and how it should be configured
+  buildVersion: string;
+  serviceGroupId?: string;
 }
 
 export interface AgentConfig {
@@ -45,7 +45,8 @@ export interface AgentInfo {
   id: string;
   agentType: string;
   buildVersion: string;
-  instanceIds: string[];
+  serviceGroup?: string;
+  instanceIds?: string[];
   plugins: PluginInfo[];
   status: 'ONLINE' | 'OFFLINE' | 'NOT_REGISTERED';
 }

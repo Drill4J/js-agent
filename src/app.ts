@@ -85,12 +85,12 @@ export class App {
         const agentId = String(ctx.params.agentId);
 
         const agentExists = await this.agentHub.doesAgentExist(agentId);
-        const { version } = ctx.request.body;
+        const { version, groupId } = ctx.request.body;
         const agentData: AgentData = {
           id: agentId,
           instanceId: '',
           buildVersion: version,
-          serviceGroupId: '',
+          serviceGroupId: groupId || '',
           agentType: 'NODEJS',
         };
         if (agentExists) {

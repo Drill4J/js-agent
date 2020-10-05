@@ -35,7 +35,7 @@ export async function get(): Promise<unknown[]> {
         id: x.id,
         instanceId: '',
         buildVersion: x.buildVersion,
-        serviceGroupId: '',
+        serviceGroupId: x.serviceGroup,
         agentType: 'NODEJS',
       },
       plugins: x.plugins.map(p => ({ id: p.id })),

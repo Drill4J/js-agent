@@ -178,31 +178,40 @@ export class Agent {
     if (!data) return;
 
     const { destination } = data;
-    this.sendDeliveryConfirmation(destination);
 
-    if (destination === '/agent/load') {
-      // HACK for non-Java agent implementation / sends signal to Java backend to load test2code plugin
-      this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
-      return;
-    }
-    if (destination === '/plugin/togglePlugin') {
-      const {
-        message: { pluginId },
-      } = data;
-      this.togglePlugin(pluginId);
-      return;
-    }
-    if (destination === '/plugin/action') {
-      const {
-        message: { id, message: action },
-      } = data;
-      const plugin = await this.ensurePluginInstance(id);
-      if (isTest2CodePlugin(plugin)) {
-        plugin.handleAction(action);
+    switch (destination) {
+      case '/agent/load':
+        // HACK for non-Java agent implementation / sends signal to Java backend to load test2code plugin
+        this.sendDeliveryConfirmation('/agent/plugin/test2code/loaded');
+        break;
+
+      case '/plugin/togglePlugin': {
+        const {
+          message: { pluginId },
+        } = data;
+        await this.togglePlugin(pluginId);
+        break;
       }
-      return;
+
+      case '/plugin/action': {
+        const {
+          message: { id, message: action },
+        } = data;
+        const plugin = await this.ensurePluginInstance(id);
+        if (isTest2CodePlugin(plugin)) {
+          await plugin.handleAction(action);
+        }
+        break;
+      }
+
+      default:
+        this.logger.debug(
+          `received message for unknown destination.\n    destination: ${destination}\n    message: ${JSON.stringify(data)}`,
+        );
+        break;
     }
-    this.logger.debug(`received message for unknown destination.\n    destination: ${destination}\n    message: ${JSON.stringify(data)}`);
+
+    this.sendDeliveryConfirmation(destination);
   }
 
   private send(data: DataPackage | ConfirmationPackage): void {
