@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// eslint-disable-next-line import/no-unresolved
+import { StartSessionPayload } from '@drill4j/test2code-types';
 import { MongoClient } from 'mongodb';
 import { BundleScriptNames } from 'services/plugin/test2code/processors/coverage/types';
 
@@ -80,8 +82,8 @@ export class Storage {
   // #endregion
 
   // #region sessionId
-  public async saveSession(agentId: string, id: string) {
-    await this.saveToDb('session', { agentId, id }); // TODO type session
+  public async saveSession(agentId: string, id: string, data: StartSessionPayload) {
+    await this.saveToDb('session', { agentId, id, data }); // TODO type session
   }
 
   public async getSession(agentId: string, id: string): Promise<any | undefined> {

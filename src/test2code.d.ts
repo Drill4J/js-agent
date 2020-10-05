@@ -243,7 +243,7 @@ declare module '@drill4j/test2code-types' {
     returnType: string;
     count?: number;
     probes?: number[];
-    checksum: string; // FIXME
+    checksum: string; // TODO update test2code.d.ts
   }
   export interface CancelSession {
     type: 'CANCEL';
@@ -325,9 +325,18 @@ declare module '@drill4j/test2code-types' {
     type: 'START_AGENT_SESSION';
     payload: StartSessionPayload;
   }
+  export interface AddSessionData {
+    type: 'ADD_SESSION_DATA';
+    payload: SessionDataPayload;
+  }
+  export interface SessionDataPayload {
+    sessionId: string;
+    data: string;
+  }
   export interface StartSessionPayload {
     sessionId: string;
-    startPayload: StartPayload;
+    testName?: string; // TODO update test2code.d.ts
+    testType?: string; // TODO update test2code.d.ts
   }
   export interface StopSession {
     type: 'STOP';

@@ -19,3 +19,7 @@ export interface Scope {
   prevId: string;
   ts: number;
 }
+
+export interface Test2CodeAction {
+  type: string;
+}

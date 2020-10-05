@@ -48,10 +48,11 @@ export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
 
 export type Test = {
-  type: 'MANUAL' | 'AUTO';
-  name: TestName;
+  testType: TestType;
+  testName: TestName;
 };
 
+export type TestType = Opaque<'TestType', string>;
 export type TestName = Opaque<'TestName', string>;
 
 export type V8Coverage = V8ScriptCoverage[];
