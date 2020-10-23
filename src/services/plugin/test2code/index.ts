@@ -222,7 +222,7 @@ export class Test2CodePlugin extends Plugin {
       super.send(sessionFinishedMessage);
     } catch (e) {
       this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
-      await this.cancelSession(sessionId); // FIXME that might fail as well, e.g. due to storage failure
+      await this.cancelSession(sessionId); // TODO that might fail as well, e.g. due to storage failure
     }
   }
 
