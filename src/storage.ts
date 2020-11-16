@@ -39,13 +39,13 @@ export class Storage {
     this.db = await this.connect();
   }
 
-  public async saveBundleHashes(agentId, data) {
-    await this.upsertToDb('bundlehashes', { agentId, data }, { agentId });
+  public async saveBundleMeta(agentId, data) {
+    await this.upsertToDb('bundlemeta', { agentId, data }, { agentId });
   }
 
-  public async getBundleHashes(agentId): Promise<any> {
-    const bundleHashes = await this.getFromDb('bundlehashes', { agentId });
-    return bundleHashes && bundleHashes[0].data;
+  public async getBundleMeta(agentId): Promise<any> {
+    const res = await this.getFromDb('bundlemeta', { agentId });
+    return res && res[0].data;
   }
 
   // #region AST

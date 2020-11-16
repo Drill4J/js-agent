@@ -1,64 +1,61 @@
-/* eslint-disable */
-// this implementation is pulled over from https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/source.js and slightly modified
-// @ts-nocheck
-import CovLine from './line';
+/*
+ * Copyright 2020 EPAM Systems
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// original implementation https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/source.js
 import { SourceMapConsumer } from 'source-map';
+import CovLine from './line';
+
 const { GREATEST_LOWER_BOUND, LEAST_UPPER_BOUND } = SourceMapConsumer;
 
 export default class CovSource {
-  constructor(sourceRaw, wrapperLength) {
-    sourceRaw = sourceRaw.trimEnd();
+  lines: CovLine[];
+
+  eof: number;
+
+  constructor(sourceRawUntrimmed: string) {
+    const sourceRaw = sourceRawUntrimmed.trimRight();
     this.lines = [];
     this.eof = sourceRaw.length;
-    this.shebangLength = getShebangLength(sourceRaw);
-    this.wrapperLength = wrapperLength - this.shebangLength;
     this._buildLines(sourceRaw);
   }
 
-  _buildLines(source) {
+  _buildLines(source: string): void {
     let position = 0;
-    let ignoreCount = 0;
     for (const [i, lineStr] of source.split(/(?<=\r?\n)/u).entries()) {
       const line = new CovLine(i + 1, position, lineStr);
-      if (ignoreCount > 0) {
-        line.ignore = true;
-        ignoreCount--;
-      } else {
-        ignoreCount = this._parseIgnoreNext(lineStr, line);
-      }
       this.lines.push(line);
       position += lineStr.length;
     }
   }
 
-  _parseIgnoreNext(lineStr, line) {
-    const testIgnoreNextLines = lineStr.match(/^\W*\/\* c8 ignore next (?<count>[0-9]+)? *\*\/\W*$/);
-    if (testIgnoreNextLines) {
-      line.ignore = true;
-      if (testIgnoreNextLines.groups.count) {
-        return Number(testIgnoreNextLines.groups.count);
-      } else {
-        return 1;
-      }
-    } else {
-      if (lineStr.match(/\/\* c8 ignore next \*\//)) {
-        line.ignore = true;
-      }
-    }
-
-    return 0;
-  }
-
   // given a start column and end column in absolute offsets within
   // a source file (0 - EOF), returns the relative line column positions.
-  offsetToOriginalRelative(sourceMap, startCol, endCol) {
-    const lines = this.lines.filter((line, i) => {
-      return startCol <= line.endCol && endCol >= line.startCol;
-    });
+  offsetToOriginalRelative(sourceMap, startCol: number, endCol: number) {
+    const lineStartIndex = binarySearchLine(this.lines, startCol);
+    const lineEndIndex = binarySearchLine(this.lines, endCol);
+
+    if (lineStartIndex === -1 || lineEndIndex === -1) return {};
+
+    const lines = this.lines.slice(lineStartIndex, lineEndIndex + 1);
+
     if (!lines.length) return {};
 
     const start = originalPositionTryBoth(sourceMap, lines[0].line, Math.max(0, startCol - lines[0].startCol));
-    let end = originalEndPositionFor(sourceMap, lines[lines.length - 1].line, endCol - lines[lines.length - 1].startCol);
+
+    const lastLine = lines[lines.length - 1];
+    let end = originalEndPositionFor(sourceMap, lastLine.line, endCol - lastLine.startCol);
 
     if (!(start && end)) {
       return {};
@@ -88,12 +85,6 @@ export default class CovSource {
       relEndCol: end.column,
       source: end.source,
     };
-  }
-
-  relativeToOffset(line, relCol) {
-    line = Math.max(line, 1);
-    if (this.lines[line - 1] === undefined) return this.eof;
-    return Math.min(this.lines[line - 1].startCol + relCol, this.lines[line - 1].endCol);
   }
 }
 
@@ -136,20 +127,16 @@ function originalEndPositionFor(sourceMap, line, column) {
   // mapping that corresponds to the one immediately after the
   // beforeEndMapping mapping.
   const afterEndMapping = sourceMap.generatedPositionFor({
+    // TODO this runs very slow. Why?
     source: beforeEndMapping.source,
     line: beforeEndMapping.line,
     column: beforeEndMapping.column + 1,
     bias: LEAST_UPPER_BOUND,
   });
-  if (
+
+  if (afterEndMapping.line === null) {
     // If this is null, it means that we've hit the end of the file,
     // so we can use Infinity as the end column.
-    afterEndMapping.line === null ||
-    // If these don't match, it means that the call to
-    // 'generatedPositionFor' didn't find any other original mappings on
-    // the line we gave, so consider the binding to extend to infinity.
-    sourceMap.originalPositionFor(afterEndMapping).line !== beforeEndMapping.line
-  ) {
     return {
       source: beforeEndMapping.source,
       line: beforeEndMapping.line,
@@ -158,7 +145,20 @@ function originalEndPositionFor(sourceMap, line, column) {
   }
 
   // Convert the end mapping into the real original position.
-  return sourceMap.originalPositionFor(afterEndMapping);
+  const originalPosForAfterEndMapping = sourceMap.originalPositionFor(afterEndMapping);
+
+  if (originalPosForAfterEndMapping.line !== beforeEndMapping.line) {
+    // If these don't match, it means that the call to
+    // 'generatedPositionFor' didn't find any other original mappings on
+    // the line we gave, so consider the binding to extend to infinity.
+    return {
+      source: beforeEndMapping.source,
+      line: beforeEndMapping.line,
+      column: Infinity,
+    };
+  }
+
+  return originalPosForAfterEndMapping;
 }
 
 function originalPositionTryBoth(sourceMap, line, column) {
@@ -173,18 +173,27 @@ function originalPositionTryBoth(sourceMap, line, column) {
       column,
       bias: LEAST_UPPER_BOUND,
     });
-  } else {
-    return original;
   }
+  return original;
 }
 
-function getShebangLength(source) {
-  if (source.indexOf('#!') === 0) {
-    const match = source.match(/(?<shebang>#!.*)/);
-    if (match) {
-      return match.groups.shebang.length;
+// TODO think of an other way to expose functions for testing
+// strip-code plugins mess up source maps and break TS debugging
+export function binarySearchLine(lines: CovLine[], col: number): number {
+  let start = 0;
+  let end = lines.length - 1;
+
+  while (start <= end) {
+    const mid = Math.floor((start + end) / 2);
+
+    if (lines[mid].startCol <= col && lines[mid].endCol >= col) return mid;
+
+    if (lines[mid].endCol < col) {
+      start = mid + 1;
+    } else {
+      end = mid - 1;
     }
-  } else {
-    return 0;
   }
+
+  return -1;
 }

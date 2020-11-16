@@ -52,8 +52,8 @@ export class App {
 
     this.app.use(
       bodyParser({
-        jsonLimit: this.config.body?.json?.limit || '50mb',
-        formLimit: this.config.body?.urlencoded?.limit || '50mb',
+        jsonLimit: this.config.body?.json?.limit || '500mb',
+        formLimit: this.config.body?.urlencoded?.limit || '500mb',
       }),
     );
     this.app.use(cors());

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import upath from 'upath';
+import * as upath from 'upath';
 
 export default function normalizePath(path: string): string {
   // .toUnix is required, because .normalize fallbacks to regular path.normalize when ran in Jest

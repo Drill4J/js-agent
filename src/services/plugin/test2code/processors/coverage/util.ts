@@ -14,47 +14,45 @@
  * limitations under the License.
  */
 import chalk from 'chalk';
-import { RawSource, ScriptName, ScriptSources, V8Coverage, V8FunctionCoverage } from './types';
+import { RawSource, ScriptName, V8Coverage, V8FunctionCoverage } from './types';
 
 export function extractScriptNameFromUrl(url: string): ScriptName {
   return url.substring(url.lastIndexOf('/') + 1) as ScriptName;
 }
 
-export function printV8Coverage(v8coverage: V8Coverage, sources: ScriptSources, targetUrl: string): void {
+export function printV8Coverage(v8coverage: V8Coverage, targetUrl: string): void {
   v8coverage.forEach(part => {
-    const { url, functions } = part;
-    const script = sources[url];
+    const { url, functions, source } = part;
     if (url === targetUrl) {
-      printRangeCoverage(script.source, functions);
+      printRangeCoverage(source, functions);
     }
   });
 }
 
 function printRangeCoverage(rawSource: RawSource, v8coverage: V8FunctionCoverage[]): void {
-  const raw = rawSource;
-  let highlightedSource = '';
-  /* eslint-disable no-plusplus */
-  for (let offset = 0; offset < raw.length; offset++) {
-    const symbol = raw[offset];
-    let toAppend = symbol;
-    v8coverage.forEach(fn => {
-      fn.ranges
-        .filter(range => range.startOffset <= offset && range.endOffset >= offset)
-        .forEach(range => {
-          if (range.count === 0) {
-            toAppend = chalk.bgRed.black(symbol);
-          } else if (range.count === 1) {
-            toAppend = chalk.bgGreen.black(symbol);
-          } else if (range.count === 2) {
-            toAppend = chalk.bgBlue.black(symbol);
-          } else if (range.count > 2) {
-            toAppend = chalk.bgYellow.black(symbol);
-          }
-        });
-    });
+  const omissionCharacter = '\u200B';
 
-    highlightedSource += toAppend;
-  }
-  const highlightedLines = highlightedSource.replace(/\r?\n/g, '\n').split('\n');
+  const highlightedSource = v8coverage.reduce((acc, fn) => {
+    const toAppend = fn.ranges.reduce((acc2, range) => {
+      let textToAppend;
+      const originalText = rawSource.substring(range.startOffset, range.endOffset);
+      if (range.count === 0) {
+        textToAppend = omissionCharacter;
+      } else if (range.count === 1) {
+        textToAppend = chalk.bgGreen.black(originalText);
+      } else if (range.count === 2) {
+        textToAppend = chalk.bgBlue.black(originalText);
+      } else if (range.count > 2) {
+        textToAppend = chalk.bgYellow.black(originalText);
+      }
+      return acc2 + textToAppend;
+    }, '');
+    return acc + toAppend;
+  }, '');
+
+  const highlightedLines = highlightedSource
+    .replace(new RegExp(`${omissionCharacter}+`, 'g'), '\n...not covered lines...\n')
+    .replace(/\r?\n/g, '\n')
+    .split('\n');
   highlightedLines.forEach(x => console.log(x));
 }

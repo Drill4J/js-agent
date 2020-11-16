@@ -23,7 +23,8 @@ export default function toExecClass(
   astEntity: AstEntity,
   testName: TestName,
 ): ExecClassData {
-  const entityCoverage = originalSourceCoverage.filter(x => isCoverageSourceMatchesFilepath(x.source, astEntity.filePath));
+  const entityCoverage = originalSourceCoverage.filter(x => x.source === astEntity.filePath);
+  if (entityCoverage.length === 0) return null;
   const className = normalizeScriptPath(astEntity.filePath) + (astEntity.suffix ? `.${astEntity.suffix}` : '');
   const probes = mapCoverageToEntityProbes(astEntity, entityCoverage);
 
@@ -33,17 +34,6 @@ export default function toExecClass(
     probes,
     testName,
   };
-}
-
-function isCoverageSourceMatchesFilepath(rawSource, filePath) {
-  let source = rawSource;
-  if (process.env.COVERAGE_SOURCE_OMIT_PREFIX) {
-    source = rawSource.replace(process.env.COVERAGE_SOURCE_OMIT_PREFIX, '');
-  }
-  if (process.env.COVERAGE_SOURCE_APPEND_PREFIX) {
-    source = `${process.env.COVERAGE_SOURCE_APPEND_PREFIX}${source}`;
-  }
-  return source === filePath;
 }
 
 function mapCoverageToEntityProbes(file: AstEntity, fileCoverage: OriginalSourceCoverage[]) {

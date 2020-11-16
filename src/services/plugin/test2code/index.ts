@@ -34,10 +34,10 @@ import {
   AddSessionData,
 } from '@drill4j/test2code-types';
 
-import upath from 'upath';
+import fsExtra from 'fs-extra';
+import * as upath from 'upath';
 import * as sourcemapUtil from './sourcemap-util';
 import { Scope, Test2CodeAction } from './types';
-
 // TODO abstract ast processor, coverage processor and storage provider
 import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
@@ -139,16 +139,36 @@ export class Test2CodePlugin extends Plugin {
   }
 
   public async updateBuildInfo(buildInfo): Promise<void> {
-    const { bundleHashes, sourcemaps, data } = buildInfo;
+    const { bundleFiles, sourcemaps, data } = buildInfo;
     // TODO transaction
     await this.updateAst(data);
-    await this.updateBundleHashes(bundleHashes);
+    await this.updateBundleFiles(bundleFiles);
     await this.updateSourceMaps(sourcemaps);
   }
 
-  public async updateBundleHashes(data: { file: string; hash: string }[]): Promise<void> {
-    this.logger.info('update bundle hashes');
-    await storage.saveBundleHashes(this.agentId, data);
+  private getBundlePath() {
+    const bundlesDir = process.env.BUNDLES_FOLDER || 'bundles';
+    return upath.join(bundlesDir, this.agentId);
+  }
+
+  public async updateBundleFiles(data: { file: string; source: string; hash: string }[]): Promise<void> {
+    this.logger.info('update bundle files');
+    const bundlePath = this.getBundlePath();
+
+    await fsExtra.remove(bundlePath);
+    await fsExtra.ensureDir(bundlePath);
+    const meta = await Promise.all(
+      data.map(async x => {
+        const fileName = upath.join(bundlePath, upath.basename(x.file));
+        await fsExtra.writeFile(fileName, x.source);
+        return {
+          file: x.file,
+          hash: x.hash,
+        };
+      }),
+    );
+    // TODO save bundle hashes info with scriptnames from sourcemaps
+    await storage.saveBundleMeta(this.agentId, meta);
   }
 
   public async updateAst(rawAst: unknown[]): Promise<void> {
@@ -185,20 +205,23 @@ export class Test2CodePlugin extends Plugin {
       const rawData = JSON.parse(stringifiedData);
       const { data: test } = await storage.getSession(this.agentId, sessionId); // TODO just return data?
       const astTree = await storage.getAst(this.agentId);
-      const bundleHashes = await storage.getBundleHashes(this.agentId);
+      const bundleMeta = await storage.getBundleMeta(this.agentId);
       const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
+
       if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
         // TODO extend error and dispatch it in centralized error handler
         throw new Error('Bundle script names not found. You are probably missing source maps?');
       }
       const { data: ast } = astTree;
 
+      const bundlePath = this.getBundlePath();
       const data = await coverageProcessor(
         `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
         ast,
         rawData,
         test,
-        bundleHashes,
+        bundlePath,
+        bundleMeta,
         bundleScriptsNames,
       );
 
