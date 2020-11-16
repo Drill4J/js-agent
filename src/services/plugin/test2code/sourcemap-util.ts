@@ -20,18 +20,19 @@ import storage from '../../../storage';
 
 export const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
-export async function save(agentId: string, sourcemaps: RawSourceMap[]): Promise<void> {
+export async function save(agentId: string, sourcemaps: { sourcemap: RawSourceMap; fileName: string }[]): Promise<void> {
   const dirPath = `${sourceMapFolder}${upath.sep}${agentId}`;
   await fsExtra.ensureDir(dirPath);
 
-  const scriptsNames = await Promise.all(
-    sourcemaps.map(async sourcemap => {
-      const name = upath.basename(sourcemap.file);
-      const fileName = `${dirPath}${upath.sep}${name}.map`;
-      await fsExtra.writeJSON(fileName, sourcemap);
-      return name;
+  await Promise.all(
+    sourcemaps.map(async x => {
+      const { sourcemap, fileName } = x;
+      const fullPath = upath.join(dirPath, fileName);
+      await fsExtra.writeJSON(fullPath, sourcemap);
     }),
   );
+
+  const scriptsNames = sourcemaps.map(x => upath.basename(x.sourcemap.file));
 
   await storage.saveBundleScriptsNames(agentId, scriptsNames);
 }

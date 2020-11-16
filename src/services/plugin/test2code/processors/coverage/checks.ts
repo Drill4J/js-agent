@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import crypto from 'crypto';
-import { BundleHashes, ScriptSources, ScriptUrl, V8ScriptCoverage } from './types';
+import { V8ScriptCoverage } from './types';
 import { extractScriptNameFromUrl } from './util';
 import LoggerProvider from '../../../../../util/logger';
 
@@ -28,32 +27,4 @@ export function checkScriptNames(v8ScriptCoverage: V8ScriptCoverage, scriptNames
     logger.silly(`script was filtered ${scriptName}`);
   }
   return scriptNameMatch;
-}
-
-export function checkSameBundle(url: ScriptUrl, sources: ScriptSources, bundleHashes: BundleHashes): boolean {
-  const script = sources[url];
-  if (!script) {
-    logger.warning(`bundle check: unknown script: ${url}`);
-    return false;
-  }
-  const scriptHash = getHash(unifyLineEndings(script.source));
-  const scriptName = extractScriptNameFromUrl(url);
-  const isSameBundle = bundleHashes.findIndex(({ file, hash }) => file.includes(scriptName) && scriptHash === hash) > -1;
-  if (!isSameBundle) {
-    logger.warning(`bundle check: hash mismatch for script: ${url}`);
-  }
-  return isSameBundle;
-}
-
-function getHash(data) {
-  return crypto.createHash('sha256').update(data).digest('hex');
-}
-
-function unifyLineEndings(str: string): string {
-  // reference https://www.ecma-international.org/ecma-262/10.0/#sec-line-terminators
-  const LF = '\u000A';
-  const CRLF = '\u000D\u000A';
-  const LS = '\u2028';
-  const PS = '\u2029';
-  return str.replace(RegExp(`(${CRLF}|${LS}|${PS})`, 'g'), LF);
 }

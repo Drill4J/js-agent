@@ -37,11 +37,7 @@ export type OriginalSourceCoverage = {
   source?: string;
 };
 
-export type ScriptSources = {
-  [url: string]: {
-    source: RawSource;
-  };
-};
+export type ScriptSources = Record<string, RawSource>;
 
 export type RawSource = Opaque<'RawSource', string>;
 export type ScriptName = Opaque<'ScriptName', string>;
@@ -60,6 +56,7 @@ export type V8Coverage = V8ScriptCoverage[];
 export interface V8ScriptCoverage {
   functions: V8FunctionCoverage[];
   url: ScriptUrl;
+  source?: RawSource;
 }
 
 export interface V8FunctionCoverage {
@@ -74,6 +71,7 @@ export interface V8CoverageRange {
   count: number;
 }
 
+// TODO fix interface (BundleMeta instead of BundleHash)
 interface BundleHash {
   file: string;
   hash: string;

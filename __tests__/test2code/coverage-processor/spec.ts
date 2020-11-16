@@ -27,6 +27,7 @@ import {
 import mutationErrorsMatcher from '../../__util__/mutation-errors-matcher';
 import args from './__fixtures__/coverage-processor-args.json';
 
+// TODO fix tests
 it('must match snapshot', async () => {
   const [sourcemapPath, astEntities, rawData, bundleHashes, bundleScriptNames] = args as Array<unknown>;
   const data = await coverageProcessor(

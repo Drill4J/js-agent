@@ -19,7 +19,7 @@ import { ExecClassData } from '@drill4j/test2code-types';
 import convertSourceMap from 'convert-source-map';
 import { RawSourceMap } from 'source-map';
 import LoggerProvider from '../../../../../../util/logger';
-import { AstEntity, RawSource, ScriptName, ScriptSources, TestName, V8ScriptCoverage } from '../types';
+import { AstEntity, RawSource, ScriptName, TestName, V8ScriptCoverage } from '../types';
 import { extractScriptNameFromUrl } from '../util';
 import originalToExecClass from './original-to-exec-class';
 import rawToOriginal from './raw-to-original';
@@ -29,7 +29,6 @@ const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
 export default async function convert(
   v8coverage: V8ScriptCoverage[],
-  sources: ScriptSources,
   sourceMapPath: string,
   astEntities: AstEntity[],
   testName: TestName,
@@ -37,19 +36,32 @@ export default async function convert(
   const originalSourceCoverage = (
     await Promise.all(
       v8coverage.map(async v8ScriptCoverage => {
-        const { url, functions } = v8ScriptCoverage;
+        const { url, functions, source } = v8ScriptCoverage;
         const bundleRanges = v8ToRaw(functions);
-
         const scriptName = extractScriptNameFromUrl(url);
-        const { source } = sources[url];
+
+        // TODO keeping sourcemap in memory can save ~300ms on each run, idk if it's worth it
         const sourceMap = getSourceMap(source, scriptName, sourceMapPath);
-        return rawToOriginal(source, sourceMap, bundleRanges);
+
+        const res = await rawToOriginal(source, sourceMap, bundleRanges);
+        return res;
       }),
     )
-  ).reduce((ranges, acc) => acc.concat(...ranges), []);
+  )
+    .reduce((ranges, acc) => acc.concat(...ranges), []) // TODO acc and currentValue are swapped
+    .filter(x => x.source && !x.source.includes('node_modules'));
 
-  const execClassData = astEntities.map(x => originalToExecClass(originalSourceCoverage, x, testName));
-  return execClassData.filter(x => x.probes.includes(true));
+  // TODO refactor let?
+  let transformed = originalSourceCoverage;
+  if (process.env.COVERAGE_SOURCE_OMIT_PREFIX) {
+    transformed = transformed.map(x => ({ ...x, source: x.source.replace(process.env.COVERAGE_SOURCE_OMIT_PREFIX, '') }));
+  }
+  if (process.env.COVERAGE_SOURCE_APPEND_PREFIX) {
+    transformed = transformed.map(x => ({ ...x, source: `${process.env.COVERAGE_SOURCE_APPEND_PREFIX}${x.source}` }));
+  }
+
+  const execClassData = astEntities.map(x => originalToExecClass(transformed, x, testName));
+  return execClassData.filter(x => x && x.probes.includes(true));
 }
 
 function getSourceMap(source: RawSource, scriptName: ScriptName, sourceMapPath: string): RawSourceMap {

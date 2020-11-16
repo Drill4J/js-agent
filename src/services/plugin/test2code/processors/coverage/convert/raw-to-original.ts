@@ -22,12 +22,15 @@ export default async function rawToOriginal(
   sourceMap: RawSourceMap,
   ranges: RawSourceCoverage[],
 ): Promise<OriginalSourceCoverage[]> {
-  const source = new Source(rawSource, null);
+  const source = new Source(rawSource);
   const sourceMapConsumer = await new SourceMapConsumer(sourceMap);
+
   const convertedCoverage = ranges
+    .map(range => ({ ...range, rangeString: rawSource.substring(range.startOffset, range.endOffset) }))
+    // ignore whitespace-only ranges
+    .filter(range => range.rangeString.trim())
     .map(range => {
-      const rangeString = rawSource.substring(range.startOffset, range.endOffset);
-      if (!rangeString.trim()) return null; // ignore range if it contains only whitespaces, tabs and newlines
+      const { rangeString } = range;
 
       const leadingWhitespacesCount = rangeString.length - rangeString.trimLeft().length;
       const trailingWhitespacesCount = rangeString.length - rangeString.trimRight().length;
@@ -37,6 +40,7 @@ export default async function rawToOriginal(
       const endOffset = trailingWhitespacesCount > 0 ? range.endOffset - trailingWhitespacesCount : range.endOffset;
 
       const originalPosition = source.offsetToOriginalRelative(sourceMapConsumer, startOffset, endOffset);
+
       const rangeNotInOriginalSource = Object.keys(originalPosition).length === 0;
       if (rangeNotInOriginalSource) return null;
       return {
@@ -44,8 +48,7 @@ export default async function rawToOriginal(
         count: range.count,
       };
     })
-    // filter ranges not present in the original source files
-    // e.g. ranges corresponding to boilerplate code produced at file concatenation phase in the build pipeline
+    // filter ranges not present in the original source files (e.g. bundler generated boilerplate code)
     // filter not-covered ranges
     .filter(range => range && range.count > 0);
   sourceMapConsumer.destroy();

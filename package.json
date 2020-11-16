@@ -40,7 +40,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "git-format-staged -f 'prettier --ignore-unknown --stdin --stdin-filepath \"{}\"' ."
+      "pre-commit": "git-format-staged -f 'prettier --ignore-unknown --stdin --stdin-filepath \"{}\"' . && eslint . --ext .ts"
     }
   },
   "devDependencies": {
@@ -81,22 +81,22 @@
   },
   "description": "",
   "dependencies": {
-    "ws": "^7.3.0",
-    "upath": "^1.2.0",
-    "supports-color": "^7.1.0",
-    "supertest": "^4.0.2",
-    "source-map": "^0.7.3",
-    "mongodb": "^3.5.9",
-    "koa-router": "^9.1.0",
-    "koa-bodyparser": "^4.3.0",
-    "koa": "^2.13.0",
-    "fs-extra": "^8.1.0",
-    "debug": "^4.1.1",
-    "convert-source-map": "^1.7.0",
-    "chalk": "^4.1.0",
-    "axios": "^0.19.2",
+    "@koa/cors": "^3.1.0",
     "@types/koa__cors": "^3.0.1",
-    "@koa/cors": "^3.1.0"
+    "axios": "^0.19.2",
+    "chalk": "^4.1.0",
+    "convert-source-map": "^1.7.0",
+    "debug": "^4.1.1",
+    "fs-extra": "^8.1.0",
+    "koa": "^2.13.0",
+    "koa-bodyparser": "^4.3.0",
+    "koa-router": "^9.1.0",
+    "mongodb": "^3.5.9",
+    "source-map": "^0.7.3",
+    "supertest": "^4.0.2",
+    "supports-color": "^7.1.0",
+    "upath": "^1.2.0",
+    "ws": "^7.3.0"
   },
   "author": ""
 }

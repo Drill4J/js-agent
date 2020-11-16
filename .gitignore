@@ -4,3 +4,4 @@ coverage-entries/
 sourceMaps/
 .env
 coverage
+bundles

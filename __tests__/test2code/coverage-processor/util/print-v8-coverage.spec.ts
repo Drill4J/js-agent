@@ -23,6 +23,7 @@ let suppressedLog;
 beforeEach(() => {
   suppressedLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 });
+// TODO fix tests
 it('must not mutate inputs', () => {
   try {
     const { coverage, scriptSources } = (args[2] as unknown) as { coverage: V8Coverage; scriptSources: ScriptSources };
