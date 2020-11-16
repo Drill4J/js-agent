@@ -44,7 +44,7 @@ export async function get(): Promise<unknown[]> {
 
 async function connect() {
   const token = await getAuthToken();
-  const socketApiUrl = `ws://${process.env.DRILL_ADMIN_HOST}/ws/drill-admin-socket?token=${token}`;
+  const socketApiUrl = `${process.env.DRILL_ADMIN_PROTOCOL}://${process.env.DRILL_ADMIN_HOST}/ws/drill-admin-socket?token=${token}`;
   const connection = new Websocket(socketApiUrl);
   await socketEvent(connection, 'open');
   return connection;
@@ -52,7 +52,7 @@ async function connect() {
 
 async function getAuthToken() {
   // TODO add non-hardcoded protocol & https support
-  const url = `http://${process.env.DRILL_ADMIN_HOST}/api`;
+  const url = `${process.env.DRILL_ADMIN_PROTOCOL}://${process.env.DRILL_ADMIN_HOST}/api`;
   const response = await axios.post(`${url}/login`);
   if (response.status !== 200) {
     throw new Error('failed to authorize');

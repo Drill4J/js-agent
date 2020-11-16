@@ -7,9 +7,7 @@
   },
   "watch": ["dist/"],
   "env": {
-    "DEBUG_TARGET_SCRIPT_URL": "http://localhost/js/Application.js",
-    "COVERAGE_SOURCE_APPEND_PREFIX": "js/",
-    "DRILL_ADMIN_PROTOCOL": "ws",
+    "DRILL_ADMIN_PROTOCOL": "http",
     "DRILL_ADMIN_HOST": "localhost:8090",
     "MONGO_HOST": "localhost:27017",
     "MONGO_DBNAME": "js-agent",
