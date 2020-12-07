@@ -29,7 +29,7 @@ export async function get(): Promise<unknown[]> {
   const connection = await connect();
   const agentsInfo = await getData(connection);
   return agentsInfo
-    .filter(x => x.status === AgentStatus.ONLINE)
+    .filter(x => x.status === AgentStatus.OFFLINE)
     .map(x => ({
       data: {
         id: x.id,
