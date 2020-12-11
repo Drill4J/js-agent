@@ -169,6 +169,7 @@ export class Agent {
 
     await this.stop();
     this.data = agentData;
+    this.needSync = true;
     await this.start();
   }
 
