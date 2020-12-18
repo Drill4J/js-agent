@@ -68,11 +68,11 @@ export function formatForBackend(data) {
       name,
       methods: file.methods.map(x => {
         const method: any = {
-        name: x.name,
-        params: x.params,
-        returnType: x.returnType,
-        probes: x.probes,
-        count: x.count,
+          name: x.name,
+          params: x.params,
+          returnType: x.returnType,
+          probes: x.probes,
+          count: x.count,
         };
         if (x.checksum) {
           method.checksum = x.checksum;
