@@ -66,14 +66,19 @@ export function formatForBackend(data) {
     return {
       path,
       name,
-      methods: file.methods.map(x => ({
+      methods: file.methods.map(x => {
+        const method: any = {
         name: x.name,
         params: x.params,
         returnType: x.returnType,
         probes: x.probes,
         count: x.count,
-        checksum: x.checksum,
-      })),
+        };
+        if (x.checksum) {
+          method.checksum = x.checksum;
+        }
+        return method;
+      }),
     };
   });
 }
