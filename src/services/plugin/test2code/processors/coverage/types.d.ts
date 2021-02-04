@@ -44,8 +44,8 @@ export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
 
 export type Test = {
-  testType: TestType;
-  testName: TestName;
+  testType: string;
+  testName: string;
 };
 
 export type TestType = Opaque<'TestType', string>;

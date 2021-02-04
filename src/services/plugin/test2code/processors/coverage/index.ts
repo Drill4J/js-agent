@@ -28,14 +28,12 @@ export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 export default async function processCoverage(
   sourceMapPath: string,
   astEntities: AstEntity[],
-  rawData: { coverage: V8Coverage; scriptSources: ScriptSources },
-  test: Test,
+  rawData: { coverage: V8Coverage; scriptSources: ScriptSources; testName: string },
   bundlePath: string,
   bundleHashes: BundleHashes,
   bundleScriptNames: BundleScriptNames,
 ): Promise<ExecClassData[]> {
-  const { coverage, scriptSources } = rawData;
-  const { testName } = test;
+  const { testName } = rawData;
 
   if (coverage.length === 0) {
     logger.warning('received empty coverage');
@@ -60,10 +58,7 @@ export default async function processCoverage(
     logger.warning('all coverage was filtered');
     return [];
   }
-  if (process.env.DEBUG_TARGET_SCRIPT_URL) {
-    printV8Coverage(v8coverage, process.env.DEBUG_TARGET_SCRIPT_URL);
-  }
-  const execClassesData = await convert(v8coverage, sourceMapPath, astEntities, testName);
+  const execClassesData = await convert(v8coverage, sourceMapPath, astEntities, testName, cache);
   return execClassesData;
 }
 
