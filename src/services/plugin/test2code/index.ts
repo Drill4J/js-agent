@@ -203,7 +203,6 @@ export class Test2CodePlugin extends Plugin {
     await this.ensureActiveSession(sessionId);
     try {
       const rawData = JSON.parse(stringifiedData);
-      const { data: test } = await storage.getSession(this.agentId, sessionId); // TODO just return data?
       const astTree = await storage.getAst(this.agentId);
       const bundleMeta = await storage.getBundleMeta(this.agentId);
       const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
@@ -219,7 +218,6 @@ export class Test2CodePlugin extends Plugin {
         `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
         ast,
         rawData,
-        test,
         bundlePath,
         bundleMeta,
         bundleScriptsNames,

@@ -16,12 +16,12 @@
 /* eslint-disable import/no-unresolved */
 import { ExecClassData } from '@drill4j/test2code-types';
 import normalizeScriptPath from '../../../../../../util/normalize-script-path';
-import { AstEntity, OriginalSourceCoverage, TestName } from '../types';
+import { AstEntity, OriginalSourceCoverage } from '../types';
 
 export default function toExecClass(
   originalSourceCoverage: OriginalSourceCoverage[],
   astEntity: AstEntity,
-  testName: TestName,
+  testName: string,
 ): ExecClassData {
   const entityCoverage = originalSourceCoverage.filter(x => x.source === astEntity.filePath);
   if (entityCoverage.length === 0) return null;

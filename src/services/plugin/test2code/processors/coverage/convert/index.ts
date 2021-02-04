@@ -31,7 +31,7 @@ export default async function convert(
   v8coverage: V8ScriptCoverage[],
   sourceMapPath: string,
   astEntities: AstEntity[],
-  testName: TestName,
+  testName: string,
 ): Promise<ExecClassData[]> {
   const originalSourceCoverage = (
     await Promise.all(
