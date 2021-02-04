@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { RawSourceMap, SourceMapConsumer } from 'source-map';
-import { OriginalSourceCoverage, RawSource, RawSourceCoverage } from '../types';
+import { SourceMapConsumer } from 'source-map';
+import { OriginalSourceCoverage, RawSourceString, RawSourceCoverage } from '../types';
 import Source from './lib/source';
 
-export default async function rawToOriginal(
-  rawSource: RawSource,
-  sourceMap: RawSourceMap,
+export default function rawToOriginal(
+  rawSource: RawSourceString,
+  sourceMapConsumer: SourceMapConsumer,
   ranges: RawSourceCoverage[],
-): Promise<OriginalSourceCoverage[]> {
+  cache: Record<string, any>,
+): OriginalSourceCoverage[] {
   const source = new Source(rawSource);
-  const sourceMapConsumer = await new SourceMapConsumer(sourceMap);
 
   const convertedCoverage = ranges
     .map(range => ({ ...range, rangeString: rawSource.substring(range.startOffset, range.endOffset) }))
@@ -35,14 +35,25 @@ export default async function rawToOriginal(
       const leadingWhitespacesCount = rangeString.length - rangeString.trimLeft().length;
       const trailingWhitespacesCount = rangeString.length - rangeString.trimRight().length;
 
-      // ignore whitespace coverage
+      // ignore coverage for whitespaces around range
       const startOffset = leadingWhitespacesCount > 0 ? range.startOffset + leadingWhitespacesCount : range.startOffset;
       const endOffset = trailingWhitespacesCount > 0 ? range.endOffset - trailingWhitespacesCount : range.endOffset;
 
-      const originalPosition = source.offsetToOriginalRelative(sourceMapConsumer, startOffset, endOffset);
+      // get position in original source
+      let originalPosition;
+      if (cache[`${startOffset}/${endOffset}`]) {
+        originalPosition = cache[`${startOffset}/${endOffset}`];
+      } else {
+        originalPosition = source.offsetToOriginalRelative(sourceMapConsumer, startOffset, endOffset);
+        // eslint-disable-next-line no-param-reassign
+        cache[`${startOffset}/${endOffset}`] = originalPosition;
+      }
 
       const rangeNotInOriginalSource = Object.keys(originalPosition).length === 0;
-      if (rangeNotInOriginalSource) return null;
+      if (rangeNotInOriginalSource) {
+        return null;
+      }
+
       return {
         ...originalPosition,
         count: range.count,
@@ -51,6 +62,6 @@ export default async function rawToOriginal(
     // filter ranges not present in the original source files (e.g. bundler generated boilerplate code)
     // filter not-covered ranges
     .filter(range => range && range.count > 0);
-  sourceMapConsumer.destroy();
+
   return convertedCoverage;
 }

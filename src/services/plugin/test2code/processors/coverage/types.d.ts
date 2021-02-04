@@ -37,9 +37,9 @@ export type OriginalSourceCoverage = {
   source?: string;
 };
 
-export type ScriptSources = Record<string, RawSource>;
+export type ScriptSources = Record<string, RawSourceString>;
 
-export type RawSource = Opaque<'RawSource', string>;
+export type RawSourceString = Opaque<'SourceString', string>;
 export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
 
@@ -48,15 +48,14 @@ export type Test = {
   testName: string;
 };
 
-export type TestType = Opaque<'TestType', string>;
-export type TestName = Opaque<'TestName', string>;
-
 export type V8Coverage = V8ScriptCoverage[];
 
 export interface V8ScriptCoverage {
   functions: V8FunctionCoverage[];
   url: ScriptUrl;
-  source?: RawSource;
+  scriptId: string;
+  source?: RawSourceString;
+  sourceHash?: string;
 }
 
 export interface V8FunctionCoverage {

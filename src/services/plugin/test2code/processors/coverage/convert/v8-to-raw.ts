@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-disable no-plusplus */
+/* eslint-disable for-direction */
 import { RawSourceCoverage, V8FunctionCoverage } from '../types';
 
 /*
@@ -29,7 +31,8 @@ import { RawSourceCoverage, V8FunctionCoverage } from '../types';
 export default function v8ToRaw(functions: V8FunctionCoverage[]): RawSourceCoverage[] {
   return functions.reduce((acc, fn) => {
     return fn.ranges.reduce((acc2, range) => {
-      return mergeRange(acc2, range);
+      const result = mergeRange(acc2, range);
+      return result;
     }, acc);
   }, <RawSourceCoverage[]>[]);
 }
@@ -40,13 +43,21 @@ function mergeRange(successiveRanges: RawSourceCoverage[], newRange: RawSourceCo
     return rangesToInsert;
   }
 
-  const intersectionIndex = successiveRanges.findIndex(
-    range => range.startOffset <= newRange.startOffset && range.endOffset >= newRange.endOffset,
-  );
+  const intersectionIndex = binarySearchRange(successiveRanges, newRange.startOffset); // only startOffset alters coverage?
 
+  // FIXME check that
+  // const intersectionIndexLeft = binarySearchRange(successiveRanges, newRange.startOffset);
+  // const intersectionIndexRight = binarySearchRange(successiveRanges, newRange.endOffset);
+  // if (intersectionIndexLeft !== intersectionIndexRight) {
+  //   throw new Error('new range spans across multiple ranges');
+  // }
+  // const intersectionIndex = intersectionIndexRight;
+
+  // FIXME can a newRange span across multiple successive ranges?
   if (intersectionIndex === -1) {
     const rightNeighboringRange = successiveRanges.findIndex(range => range.startOffset >= newRange.endOffset) > -1;
     if (rightNeighboringRange) {
+      // TODO measure on larger test sets (never "true" on simple page refresh on Report Portal)
       return [newRange, ...successiveRanges];
     }
     return [...successiveRanges, newRange];
@@ -82,9 +93,46 @@ function mergeRange(successiveRanges: RawSourceCoverage[], newRange: RawSourceCo
     });
   }
 
-  const resultingRanges = [...successiveRanges];
-  resultingRanges.splice(intersectionIndex, 1, ...rangesToInsert);
-  return resultingRanges;
+  spliceOriginal(successiveRanges, rangesToInsert, intersectionIndex, 1);
+  return successiveRanges;
+}
+
+function spliceOriginal(original, newEntries, insertionIndex, spliceCount) {
+  // eslint-disable-next-line no-param-reassign
+  original.length += newEntries.length - spliceCount;
+
+  // move values "forward"
+  for (let i = original.length - 1; i >= insertionIndex + newEntries.length; i--) {
+    // eslint-disable-next-line no-param-reassign
+    original[i] = original[i - newEntries.length + spliceCount];
+  }
+
+  // insert arr2 values
+  for (let i = 0; i < newEntries.length; i++) {
+    // eslint-disable-next-line no-param-reassign
+    original[i + insertionIndex] = newEntries[i];
+  }
+
+  return original;
+}
+
+export function binarySearchRange(successiveRanges: RawSourceCoverage[], offset: number): number {
+  let start = 0;
+  let end = successiveRanges.length - 1;
+
+  while (start <= end) {
+    const mid = Math.floor((start + end) / 2);
+
+    if (successiveRanges[mid].startOffset <= offset && successiveRanges[mid].endOffset >= offset) return mid;
+
+    if (successiveRanges[mid].endOffset < offset) {
+      start = mid + 1;
+    } else {
+      end = mid - 1;
+    }
+  }
+
+  return -1;
 }
 
 /* testblock:start */
