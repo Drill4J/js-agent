@@ -45,7 +45,7 @@ export interface AgentInfo {
   id: string;
   agentType: string;
   buildVersion: string;
-  serviceGroup?: string;
+  group?: string;
   instanceIds?: string[];
   plugins: PluginInfo[];
   status: 'ONLINE' | 'OFFLINE' | 'NOT_REGISTERED';
