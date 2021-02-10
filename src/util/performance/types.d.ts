@@ -13,9 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import chalk from 'chalk';
-import { ScriptName } from './types';
 
-export function extractScriptNameFromUrl(url: string): ScriptName {
-  return url.substring(url.lastIndexOf('/') + 1) as ScriptName;
+export {};
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      prf: {
+        mark: (name: string) => string;
+        measure: (id: string) => void;
+        print: () => void;
+        flush: () => void;
+      };
+    }
+  }
 }

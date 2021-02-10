@@ -17,11 +17,12 @@
 import { ExecClassData } from '@drill4j/test2code-types';
 import * as upath from 'upath';
 import fsExtra from 'fs-extra';
+import chalk from 'chalk';
 import LoggerProvider from '../../../../../util/logger';
 import { checkScriptNames } from './checks';
 import convert from './convert';
-import { AstEntity, BundleHashes, BundleScriptNames, RawSource, ScriptSources, Test, V8Coverage } from './types';
-import { extractScriptNameFromUrl, printV8Coverage } from './util';
+import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, ScriptSources, Test, V8Coverage } from './types';
+import { extractScriptNameFromUrl } from './util';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
@@ -32,15 +33,23 @@ export default async function processCoverage(
   bundlePath: string,
   bundleHashes: BundleHashes,
   bundleScriptNames: BundleScriptNames,
+  cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
+  const initialFilterMark = global.prf.mark('initial-filter');
+  const {
+    coverage,
+    scriptSources: { hashToUrl, urlToHash },
+  } = rawData;
   const { testName } = rawData;
 
-  if (coverage.length === 0) {
+  if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
+    return [];
   }
 
-  const coverageUrls = bundleHashes.map(x => scriptSources[x.hash]).filter(x => !!x);
+  const coverageUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
 
+  // FIXME move sourceMapConsumer & Source class "preparation" & caching here
   const v8coverage = (
     await Promise.all(
       coverage
@@ -48,6 +57,7 @@ export default async function processCoverage(
         .map(async x => ({
           ...x,
           source: await getScriptSource(bundlePath, x.url),
+          sourceHash: urlToHash[x.url],
         })),
     )
   )
@@ -58,18 +68,22 @@ export default async function processCoverage(
     logger.warning('all coverage was filtered');
     return [];
   }
+  global.prf.measure(initialFilterMark);
+
+  const convertMark = global.prf.mark('convert');
   const execClassesData = await convert(v8coverage, sourceMapPath, astEntities, testName, cache);
+  global.prf.measure(convertMark);
   return execClassesData;
 }
 
-async function getScriptSource(bundlePath, url): Promise<RawSource | null> {
+async function getScriptSource(bundlePath, url): Promise<RawSourceString | null> {
   try {
     const scriptName = extractScriptNameFromUrl(url);
     const source = (await fsExtra.readFile(upath.join(bundlePath, scriptName))).toString('utf8');
     if (!source) {
       logger.warning(`unknown script: ${url}`);
     }
-    return source as RawSource;
+    return source as RawSourceString;
   } catch (e) {
     logger.warning(`failed to obtain source of script: ${url}`);
     return null;
