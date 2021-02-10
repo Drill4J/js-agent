@@ -7,13 +7,29 @@
   },
   "watch": ["dist/"],
   "env": {
+    "dis_DEBUG_TARGET_SCRIPT_URL": "http://localhost:3000/main.app.1dc802.js",
+    "DEBUG_TARGET_SCRIPT_URL": "http://localhost:8084/js/Application.js",
+
+    "PERF_MEASUREMENT_ENABLED": "true",
+    "PERF_DIFFS_ENABLED": "true",
+
+    "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
+    "___COVERAGE_SOURCE_APPEND_PREFIX": "js/",
+
     "DRILL_ADMIN_PROTOCOL": "http",
+
+    "dis_DRILL_ADMIN_HOST": "ecse0050029e.epam.com:8443",
+    "dis_DRILL_ADMIN_HOST": "ecse005009ba.epam.com:8443",
+
     "DRILL_ADMIN_HOST": "localhost:8090",
+
+    "dis_DRILL_ADMIN_HOST": "localhost:9090",
+
     "MONGO_HOST": "localhost:27017",
     "MONGO_DBNAME": "js-agent",
     "SOURCE_MAP_FOLDER": "./sourceMaps",
     "DEBUG_AGENT_SERVICE_CONNECTION": "true",
-    "DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH": "2000",
+    "DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH": "400",
     "DEBUG": "drill:*",
     "DEBUG_COLORS": "true",
     "FORCE_COLOR": "3",

@@ -18,6 +18,7 @@ import { Connection, DataPackage, ConfirmationPackage } from '../common/types';
 import { isTest2CodePlugin } from '../plugin/guards';
 import { Plugin, Plugins, IPluginConstructor } from '../plugin';
 import parseJsonRecursive from '../../util/parse-json-recursive';
+import '../../util/performance';
 
 export interface AgentsMap {
   [agentId: string]: Agent;
@@ -133,7 +134,7 @@ export class Agent {
 
       await connectionEstablished;
     } catch (e) {
-      const msg = `failed to establish connection!\n    error: ${e.message}\n    stack: ${e.stack}`;
+      const msg = `failed to establish connection!\n    error: ${e?.message}\n    stack: ${e.stack}`;
       this.logger.error(msg);
       throw new Error(msg);
     }
@@ -269,7 +270,7 @@ export class Agent {
       }
       return exportedMembers.default as IPluginConstructor;
     } catch (e) {
-      this.logger.error(e.message);
+      this.logger.error(e?.message);
       const msg = `Failed to import plugin with id ${pluginId}. Plugin is malformed or does not exist.`;
       this.logger.error(msg);
       throw new Error(msg);

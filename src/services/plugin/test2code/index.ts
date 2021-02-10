@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-disable import/no-unresolved */ // TODO configure local-module-first resolution (for development purposes)
+/* eslint-disable import/no-unresolved */
 import {
-  // Models
   InitScopePayload,
   CoverDataPart,
-  // Messages
   InitInfo,
   InitDataPart,
   Initialized,
@@ -46,6 +44,8 @@ import { Plugin } from '..';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
+
+  public cache: Record<string, any> = {};
 
   public async init(): Promise<void> {
     this.logger.info('init');
@@ -199,15 +199,14 @@ export class Test2CodePlugin extends Plugin {
   }
 
   async processCoverage(sessionId, stringifiedData): Promise<void> {
+    const prepMark = global.prf.mark('prepare');
     this.logger.info('process coverage', sessionId);
     await this.ensureActiveSession(sessionId);
     try {
       const rawData = JSON.parse(stringifiedData);
-      const { data: test } = await storage.getSession(this.agentId, sessionId); // TODO just return data?
       const astTree = await storage.getAst(this.agentId);
       const bundleMeta = await storage.getBundleMeta(this.agentId);
       const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
-
       if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
         // TODO extend error and dispatch it in centralized error handler
         throw new Error('Bundle script names not found. You are probably missing source maps?');
@@ -215,19 +214,25 @@ export class Test2CodePlugin extends Plugin {
       const { data: ast } = astTree;
 
       const bundlePath = this.getBundlePath();
+      global.prf.measure(prepMark);
+
+      const processCoverage = global.prf.mark('process');
       const data = await coverageProcessor(
         `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
         ast,
         rawData,
-        test,
         bundlePath,
         bundleMeta,
         bundleScriptsNames,
+        this.cache, // FIXME clear cache on new build
       );
+      global.prf.measure(processCoverage);
+      global.prf.print();
+      global.prf.flush();
 
       await this.sendTestResults(sessionId, data);
     } catch (e) {
-      this.logger.warning(`failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
+      this.logger.warning(`failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}`);
     }
   }
 
@@ -244,7 +249,7 @@ export class Test2CodePlugin extends Plugin {
 
       super.send(sessionFinishedMessage);
     } catch (e) {
-      this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e.message}`);
+      this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}`);
       await this.cancelSession(sessionId); // TODO that might fail as well, e.g. due to storage failure
     }
   }
