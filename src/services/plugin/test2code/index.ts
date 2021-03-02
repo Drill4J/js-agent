@@ -115,12 +115,12 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  private async getAst() {
-    const ast = await storage.getAst(this.agentId);
+  private getAst() {
+    const ast = storage.getAst(this.agentId);
     return ast && ast.data;
   }
 
-  private async setActiveScope(payload: InitScopePayload) {
+  private setActiveScope(payload: InitScopePayload) {
     this.logger.info('init active scope %o', payload);
     const { id, name, prevId } = payload;
     this.activeScope = {
@@ -129,7 +129,7 @@ export class Test2CodePlugin extends Plugin {
       prevId,
       ts: Date.now(),
     };
-    await storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
+    // storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
 
     const scopeInitializedMessage: ScopeInitialized = {
       type: 'SCOPE_INITIALIZED',
@@ -168,13 +168,13 @@ export class Test2CodePlugin extends Plugin {
       }),
     );
     // TODO save bundle hashes info with scriptnames from sourcemaps
-    await storage.saveBundleMeta(this.agentId, meta);
+    storage.saveBundleMeta(this.agentId, meta);
   }
 
   public async updateAst(rawAst: unknown[]): Promise<void> {
     this.logger.info('update ast');
     const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
-    await storage.saveAst(this.agentId, ast); // TODO abstract storage
+    storage.saveAst(this.agentId, ast); // TODO abstract storage
   }
 
   public async updateSourceMaps(sourceMaps): Promise<void> {
@@ -183,10 +183,10 @@ export class Test2CodePlugin extends Plugin {
     await sourcemapUtil.save(this.agentId, sourceMaps);
   }
 
-  public async startSession(payload: StartSessionPayload): Promise<void> {
+  public startSession(payload: StartSessionPayload): void {
     this.logger.info('start session', JSON.stringify(payload));
     const { testType, sessionId } = payload;
-    await storage.saveSession(this.agentId, sessionId, payload);
+    // storage.saveSession(this.agentId, sessionId, payload);
 
     const sessionStartedMessage: SessionStarted = {
       type: 'SESSION_STARTED',
@@ -201,12 +201,12 @@ export class Test2CodePlugin extends Plugin {
   async processCoverage(sessionId, stringifiedData): Promise<void> {
     const prepMark = global.prf.mark('prepare');
     this.logger.info('process coverage', sessionId);
-    await this.ensureActiveSession(sessionId);
+    // this.ensureActiveSession(sessionId);
     try {
       const rawData = JSON.parse(stringifiedData);
-      const astTree = await storage.getAst(this.agentId);
-      const bundleMeta = await storage.getBundleMeta(this.agentId);
-      const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
+      const astTree = storage.getAst(this.agentId);
+      const bundleMeta = storage.getBundleMeta(this.agentId);
+      const bundleScriptsNames = storage.getBundleScriptsNames(this.agentId);
       if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
         // TODO extend error and dispatch it in centralized error handler
         throw new Error('Bundle script names not found. You are probably missing source maps?');
@@ -236,11 +236,11 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  public async finishSession(sessionId: string): Promise<void> {
+  public finishSession(sessionId: string): void {
     this.logger.info('finish session', sessionId);
-    await this.ensureActiveSession(sessionId);
+    // this.ensureActiveSession(sessionId);
     try {
-      await storage.removeSession(this.agentId, sessionId);
+      // storage.removeSession(this.agentId, sessionId);
       const sessionFinishedMessage: SessionFinished = {
         type: 'SESSION_FINISHED',
         sessionId,
@@ -250,13 +250,13 @@ export class Test2CodePlugin extends Plugin {
       super.send(sessionFinishedMessage);
     } catch (e) {
       this.logger.warning(`failed to finish session. Session will be canceled.\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}`);
-      await this.cancelSession(sessionId); // TODO that might fail as well, e.g. due to storage failure
+      // this.cancelSession(sessionId); // TODO that might fail as well, e.g. due to storage failure
     }
   }
 
-  public async cancelSession(sessionId: string): Promise<void> {
+  public cancelSession(sessionId: string): void {
     this.logger.info('cancel session', sessionId);
-    await storage.removeSession(this.agentId, sessionId);
+    // storage.removeSession(this.agentId, sessionId);
     const sessionCanceledMessage: SessionCancelled = {
       type: 'SESSION_CANCELLED',
       sessionId,
@@ -266,13 +266,13 @@ export class Test2CodePlugin extends Plugin {
     super.send(sessionCanceledMessage);
   }
 
-  private async ensureActiveSession(sessionId): Promise<any> {
-    const session = await storage.getSession(this.agentId, sessionId);
-    if (!session) {
-      throw new Error(`Session with id ${sessionId} not found!`);
-    }
-    return session;
-  }
+  // private ensureActiveSession(sessionId): any {
+  //   const session = storage.getSession(this.agentId, sessionId);
+  //   if (!session) {
+  //     throw new Error(`Session with id ${sessionId} not found!`);
+  //   }
+  //   return session;
+  // }
 
   async sendTestResults(sessionId, data) {
     const coverDataPartMessage: CoverDataPart = {
