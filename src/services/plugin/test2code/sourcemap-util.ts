@@ -34,5 +34,5 @@ export async function save(agentId: string, sourcemaps: { sourcemap: RawSourceMa
 
   const scriptsNames = sourcemaps.map(x => upath.basename(x.sourcemap.file));
 
-  await storage.saveBundleScriptsNames(agentId, scriptsNames);
+  storage.saveBundleScriptsNames(agentId, scriptsNames);
 }

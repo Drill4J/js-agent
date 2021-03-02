@@ -26,7 +26,7 @@ const startupLogger = LoggerProvider.getLogger('drill', 'startup');
 async function start(): Promise<void> {
   startupLogger.info('starting');
 
-  await storage.init();
+  storage.init();
 
   const agentHubConfig: AgentHubConfig = {
     loggerProvider: LoggerProvider,
