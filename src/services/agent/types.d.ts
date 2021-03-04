@@ -22,6 +22,7 @@ export interface AgentData {
   instanceId: string; // TODO what is that for and how it should be configured
   buildVersion: string;
   serviceGroupId?: string;
+  // buildMetadata: Record<string, any>;
 }
 
 export interface AgentConfig {

@@ -65,6 +65,7 @@ export default async function processCoverage(
     .filter(scriptCoverage => checkScriptNames(scriptCoverage, bundleScriptNames));
 
   if (v8coverage.length === 0) {
+    global.prf.measure(initialFilterMark);
     logger.warning('all coverage was filtered');
     return [];
   }

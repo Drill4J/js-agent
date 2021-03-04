@@ -10,11 +10,16 @@
     "dis_DEBUG_TARGET_SCRIPT_URL": "http://localhost:3000/main.app.1dc802.js",
     "DEBUG_TARGET_SCRIPT_URL": "http://localhost:8084/js/Application.js",
 
+    "SKIP_SOURCE_MAPPING": "false",
+    "dis_SOURCE_ROOT": "file:///C:/epm/chrome-coverage-playground/",
+    "SOURCE_ROOT": "file:///C:/epm/todomvc/examples/typescript-angular/",
+
     "PERF_MEASUREMENT_ENABLED": "true",
     "PERF_DIFFS_ENABLED": "true",
 
     "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
-    "___COVERAGE_SOURCE_APPEND_PREFIX": "js/",
+    "COVERAGE_SOURCE_APPEND_PREFIX": "js/",
+    "__COVERAGE_SOURCE_APPEND_PREFIX": "src/",
 
     "DRILL_ADMIN_PROTOCOL": "http",
 

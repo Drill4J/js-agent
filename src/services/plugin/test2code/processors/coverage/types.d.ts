@@ -19,8 +19,26 @@ import * as Test2Code from '@drill4j/test2code-types';
 export interface AstEntity extends Test2Code.AstEntity {
   filePath: string;
   suffix: string;
-  methods: Test2Code.AstMethod[];
+  methods: AstMethod[];
 }
+
+export interface AstMethod extends Test2Code.AstMethod {
+  probes: Probe[];
+  location: MethodLocation;
+  range: [number, number];
+}
+
+export type MethodLocation = {
+  start: Location;
+  end: Location;
+};
+
+type Probe = Location;
+
+export type Location = {
+  line: number;
+  column: number;
+};
 
 export type RawSourceCoverage = {
   startOffset: number;
@@ -34,6 +52,8 @@ export type OriginalSourceCoverage = {
   relStartCol?: number;
   endLine?: number;
   relEndCol?: number;
+  // absStartCol?: number;
+  // absEndCol?: number;
   source?: string;
 };
 
