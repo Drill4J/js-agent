@@ -235,14 +235,14 @@ declare module '@drill4j/test2code-types' {
     path: string;
     name: string;
     methods: AstMethod[];
-    probes?: number[];
+    // probes?: number[];
   }
   export interface AstMethod {
     name: string;
     params: string[];
     returnType: string;
     count?: number;
-    probes?: number[];
+    // probes?: number[];
     checksum: string; // TODO update test2code.d.ts
   }
   export interface CancelSession {

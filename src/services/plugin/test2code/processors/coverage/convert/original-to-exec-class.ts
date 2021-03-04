@@ -39,7 +39,15 @@ export default function toExecClass(
 function mapCoverageToEntityProbes(file: AstEntity, fileCoverage: OriginalSourceCoverage[]) {
   return file.methods.reduce((result, method) => {
     return method.probes.reduce((acc, probe) => {
-      acc.push(fileCoverage.findIndex(sourceRange => sourceRange.startLine <= probe && probe <= sourceRange.endLine) > -1);
+      acc.push(
+        fileCoverage.findIndex(
+          sourceRange =>
+            sourceRange.startLine <= probe.line &&
+            sourceRange.relStartCol <= probe.column &&
+            sourceRange.endLine >= probe.line &&
+            sourceRange.relEndCol >= probe.column,
+        ) > -1,
+      );
       return acc;
     }, result);
   }, []);

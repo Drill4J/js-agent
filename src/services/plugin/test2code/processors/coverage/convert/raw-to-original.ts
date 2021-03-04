@@ -19,25 +19,27 @@ import Source from './lib/source';
 
 export default function rawToOriginal(
   rawSource: RawSourceString,
+  source: Source,
   sourceMapConsumer: SourceMapConsumer,
   ranges: RawSourceCoverage[],
   cache: Record<string, any>,
 ): OriginalSourceCoverage[] {
-  const source = new Source(rawSource);
+  // const source = new Source(rawSource);
 
   const convertedCoverage = ranges
     .map(range => ({ ...range, rangeString: rawSource.substring(range.startOffset, range.endOffset) }))
     // ignore whitespace-only ranges
     .filter(range => range.rangeString.trim())
     .map(range => {
-      const { rangeString } = range;
+      // const { rangeString } = range;
 
-      const leadingWhitespacesCount = rangeString.length - rangeString.trimLeft().length;
-      const trailingWhitespacesCount = rangeString.length - rangeString.trimRight().length;
+      // const leadingWhitespacesCount = rangeString.length - rangeString.trimLeft().length;
+      // const trailingWhitespacesCount = rangeString.length - rangeString.trimRight().length;
 
-      // ignore coverage for whitespaces around range
-      const startOffset = leadingWhitespacesCount > 0 ? range.startOffset + leadingWhitespacesCount : range.startOffset;
-      const endOffset = trailingWhitespacesCount > 0 ? range.endOffset - trailingWhitespacesCount : range.endOffset;
+      // // ignore coverage for whitespaces around range
+      // const startOffset = leadingWhitespacesCount > 0 ? range.startOffset + leadingWhitespacesCount : range.startOffset;
+      // const endOffset = trailingWhitespacesCount > 0 ? range.endOffset - trailingWhitespacesCount : range.endOffset;
+      const { startOffset, endOffset } = range;
 
       // get position in original source
       let originalPosition;

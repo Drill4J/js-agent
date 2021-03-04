@@ -25,7 +25,7 @@ export default class CovSource {
   eof: number;
 
   constructor(sourceRawUntrimmed: string) {
-    const sourceRaw = sourceRawUntrimmed.trimRight();
+    const sourceRaw = sourceRawUntrimmed; // .trimRight();
     this.lines = [];
     this.eof = sourceRaw.length;
     this._buildLines(sourceRaw);
@@ -33,22 +33,41 @@ export default class CovSource {
 
   _buildLines(source: string): void {
     let position = 0;
-    for (const [i, lineStr] of source.split(/(?<=\r?\n)/u).entries()) {
+    const raw = source.split(/(?<=\r?\n)/u);
+    for (const [i, lineStr] of raw.entries()) {
       const line = new CovLine(i + 1, position, lineStr);
       this.lines.push(line);
       position += lineStr.length;
     }
   }
 
+  offsetOriginalToRelativeNoSourcemap(startCol: number, endCol: number, source) {
+    const lineStartIndex = binarySearchLine(this.lines, startCol);
+    const lineEndIndex = binarySearchLine(this.lines, endCol - 1);
+
+    if (lineStartIndex === -1 || lineEndIndex === -1) return {};
+
+    const start = this.lines[lineStartIndex];
+    const end = this.lines[lineEndIndex];
+
+    return {
+      startLine: start.line,
+      relStartCol: startCol - start.startCol,
+      endLine: end.line,
+      relEndCol: endCol - end.startCol,
+      source,
+    };
+  }
+
   // given a start column and end column in absolute offsets within
   // a source file (0 - EOF), returns the relative line column positions.
   offsetToOriginalRelative(sourceMap, startCol: number, endCol: number) {
     const lineStartIndex = binarySearchLine(this.lines, startCol);
-    const lineEndIndex = binarySearchLine(this.lines, endCol);
+    const lineEndIndex = binarySearchLine(this.lines, endCol - 1);
 
     if (lineStartIndex === -1 || lineEndIndex === -1) return {};
 
-    const lines = this.lines.slice(lineStartIndex, lineEndIndex + 1);
+    const lines = this.lines.slice(lineStartIndex, lineEndIndex + 1); // TODO remove unnecessary slice (only 0 and last elements are used)
 
     if (!lines.length) return {};
 
@@ -83,6 +102,8 @@ export default class CovSource {
       relStartCol: start.column,
       endLine: end.line,
       relEndCol: end.column,
+      absStartCol: lines[0].startCol,
+      absEndCol: lastLine.endCol,
       source: end.source,
     };
   }
