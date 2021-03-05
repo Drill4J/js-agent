@@ -63,10 +63,12 @@ export class Plugin {
   }
 
   protected send(message) {
-    const argsString = JSON.stringify(message);
+    const messageString = JSON.stringify(message);
     const maxArgsLength = parseInt(process.env.DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH, 10) || 2000;
     this.logger.silly(
-      `send ${argsString.length <= maxArgsLength ? message : `${argsString.substring(0, maxArgsLength)}...message too long...`}`,
+      `send ${
+        messageString.length <= maxArgsLength ? messageString : `${messageString.substring(0, maxArgsLength)}...message too long...`
+      }`,
     );
     const data = {
       type: 'PLUGIN_DATA',
