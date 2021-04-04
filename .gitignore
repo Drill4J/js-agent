@@ -8,3 +8,5 @@ coverage/clover.xml
 coverage/coverage-final.json
 coverage/lcov.info
 bundles
+/out
+.history
