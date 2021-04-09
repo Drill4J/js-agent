@@ -21,17 +21,24 @@ export default class CovLine {
 
   endCol: number;
 
+  // newlineLength: number;
+
+  str: string;
+
   // count: number;
 
   constructor(line: number, startCol: number, lineStr: string) {
+    this.str = lineStr;
     this.line = line;
     // note that startCol and endCol are absolute positions
     // within a file, not relative to the line.
     this.startCol = startCol;
 
-    // const matchedNewLineChar = lineStr.match(/\r?\n$/u);
-    // const newLineLength = matchedNewLineChar ? matchedNewLineChar[0].length : 0;
+    // const matchedNewlineChar = lineStr.match(/\r?\n$/u);
+    // this.newlineLength = matchedNewlineChar ? matchedNewlineChar[0].length : 0;
 
-    this.endCol = startCol + lineStr.length - 1; // -1 because columns are zero-based // - newLineLength;
+    // subtract 1 because columns are zero-based
+    // subtract newLineLength because V8 does not send coverage for newline characters
+    this.endCol = startCol + lineStr.length; // - this.newlineLength;
   }
 }

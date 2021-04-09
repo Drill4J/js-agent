@@ -24,17 +24,7 @@ import fsExtra from 'fs-extra';
 import convertSourceMap from 'convert-source-map';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '../../../../../../util/logger';
-import {
-  AstEntity,
-  RawSourceString,
-  ScriptName,
-  V8CoverageRange,
-  V8FunctionCoverage,
-  V8ScriptCoverage,
-  OriginalSourceCoverage,
-  Location,
-  MethodLocation,
-} from '../types';
+import { AstEntity, RawSourceString, ScriptName, V8CoverageRange, V8FunctionCoverage, V8ScriptCoverage } from '../types';
 import { extractScriptNameFromUrl } from '../util';
 import Source from './lib/source';
 import normalizeScriptPath from '../../../../../../util/normalize-script-path';
@@ -108,14 +98,14 @@ export default async function convert(
     } else {
       /*
         Each entityCoverage element represents coverage of file/class from
-        independent V8 isolates - completely separate instances of V8 engine.
+        independent V8 isolates - completely separate "javascript worlds".
 
         They must be mapped onto AST entity probes __independently__.
         
         __After that__ mapping results can be merged to represent
         "the whole picture" of entity coverage.
       */
-      const probesArrays = entityCoverage.map(cov => mapCoverageToEntityProbes(astEntity, cov, cache));
+      const probesArrays = entityCoverage.map(x => mapCoverageToEntityProbes(astEntity, x, cache));
       probes = mergeArrays(probesArrays, (a, b) => a || b);
     }
     return {
@@ -162,7 +152,7 @@ function convertOffsetsWithSourcemap(
               location?.source &&
               fn.ranges
                 .map(range => rangeMapWithSourcemap(range, cache[sourceHash]))
-                // .filter(range => range && range.source && !range.source.includes('node_modules'))
+                .filter(range => range && range.source && !range.source.includes('node_modules'))
                 // 3. Apply source path transformations if needed
                 // FIXME move conditional "up", to avoid evaluation each time ranges are mapped (it's pointless)
                 .map(R.when(isPrefixOmissionEnabled, range => ({ ...range, source: omitPrefix(range.source) })))
@@ -241,10 +231,8 @@ function mapCoverageToEntityProbes(entity: AstEntity, entityCoverage, cache: any
     // HACK because estree parser yields end position as position for character AFTER the node, even if there are no characters ahead
     //      that causes a root node to have the end pos residing at an empty line (with no characters at all)
     //      V8 + current sourcemapping implementation yeilds end pos on the previous line (only column is chaged)
-    const methodCoverage = entityCoverage.filter(fn =>
-      method.name === 'GLOBAL'
-        ? fn.location.startLine === method.location.start.line && fn.location.relStartCol === method.location.start.column
-        : compareLocations(fn.location, method.location),
+    const methodCoverage = entityCoverage.filter(
+      fn => fn.location.startLine === method.location.start.line && fn.location.relStartCol === method.location.start.column,
     );
     // if (methodCoverage.length === 0) return [...result, ...method.probes.map(probe => ({ [`${probe.line}:${probe.column}`]: false }))];
     if (methodCoverage.length === 0) return [...result, ...new Array(method.probes.length).fill(false)];
@@ -256,14 +244,6 @@ function mapCoverageToEntityProbes(entity: AstEntity, entityCoverage, cache: any
       return acc;
     }, result);
   }, []);
-}
-
-function compareLocations(a, b) {
-  // eslint-disable-next-line max-len
-  // return a.start.line === b.start.line && a.start.column === b.start.column && a.end.line === b.end.line && a.end.column === b.end.column;
-  if (b.start.column === 'Infinity') b.start.column = Infinity;
-  if (b.end.column === 'Infinity') b.end.column = Infinity;
-  return a.startLine === b.start.line && a.relStartCol === b.start.column && a.endLine === b.end.line && a.relEndCol === b.end.column;
 }
 
 function isProbeInsideRange(probe, range) {
