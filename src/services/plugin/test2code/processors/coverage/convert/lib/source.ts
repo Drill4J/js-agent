@@ -25,7 +25,7 @@ export default class CovSource {
   eof: number;
 
   constructor(sourceRawUntrimmed: string) {
-    const sourceRaw = sourceRawUntrimmed; // .trimRight();
+    const sourceRaw = sourceRawUntrimmed;
     this.lines = [];
     this.eof = sourceRaw.length;
     this._buildLines(sourceRaw);
@@ -43,7 +43,7 @@ export default class CovSource {
 
   offsetOriginalToRelativeNoSourcemap(startCol: number, endCol: number, source) {
     const lineStartIndex = binarySearchLine(this.lines, startCol);
-    const lineEndIndex = binarySearchLine(this.lines, endCol - 1);
+    const lineEndIndex = binarySearchLine(this.lines, endCol);
 
     if (lineStartIndex === -1 || lineEndIndex === -1) return {};
 
@@ -63,7 +63,7 @@ export default class CovSource {
   // a source file (0 - EOF), returns the relative line column positions.
   offsetToOriginalRelative(sourceMap, startCol: number, endCol: number) {
     const lineStartIndex = binarySearchLine(this.lines, startCol);
-    const lineEndIndex = binarySearchLine(this.lines, endCol - 1);
+    const lineEndIndex = binarySearchLine(this.lines, endCol);
 
     if (lineStartIndex === -1 || lineEndIndex === -1) return {};
 
@@ -90,8 +90,8 @@ export default class CovSource {
 
     if (start.line === end.line && start.column === end.column) {
       end = sourceMap.originalPositionFor({
-        line: lines[lines.length - 1].line,
-        column: endCol - lines[lines.length - 1].startCol,
+        line: lastLine.line,
+        column: endCol - lastLine.startCol,
         bias: LEAST_UPPER_BOUND,
       });
       end.column -= 1;
@@ -102,8 +102,6 @@ export default class CovSource {
       relStartCol: start.column,
       endLine: end.line,
       relEndCol: end.column,
-      absStartCol: lines[0].startCol,
-      absEndCol: lastLine.endCol,
       source: end.source,
     };
   }
@@ -136,7 +134,7 @@ function originalEndPositionFor(sourceMap, line, column) {
   // generated file end location. Note however that this position on its
   // own is not useful because it is the position of the _start_ of the range
   // on the original file, and we want the _end_ of the range.
-  const beforeEndMapping = originalPositionTryBoth(sourceMap, line, Math.max(column - 1, 1));
+  const beforeEndMapping = originalPositionTryBoth(sourceMap, line, Math.max(column, 1));
 
   if (beforeEndMapping.source === null) {
     return null;
@@ -164,22 +162,23 @@ function originalEndPositionFor(sourceMap, line, column) {
       column: Infinity,
     };
   }
+  return beforeEndMapping;
 
-  // Convert the end mapping into the real original position.
-  const originalPosForAfterEndMapping = sourceMap.originalPositionFor(afterEndMapping);
+  // // Convert the end mapping into the real original position.
+  // const originalPosForAfterEndMapping = sourceMap.originalPositionFor(afterEndMapping);
 
-  if (originalPosForAfterEndMapping.line !== beforeEndMapping.line) {
-    // If these don't match, it means that the call to
-    // 'generatedPositionFor' didn't find any other original mappings on
-    // the line we gave, so consider the binding to extend to infinity.
-    return {
-      source: beforeEndMapping.source,
-      line: beforeEndMapping.line,
-      column: Infinity,
-    };
-  }
+  // if (originalPosForAfterEndMapping.line !== beforeEndMapping.line) {
+  //   // If these don't match, it means that the call to
+  //   // 'generatedPositionFor' didn't find any other original mappings on
+  //   // the line we gave, so consider the binding to extend to infinity.
+  //   return {
+  //     source: beforeEndMapping.source,
+  //     line: beforeEndMapping.line,
+  //     column: Infinity,
+  //   };
+  // }
 
-  return originalPosForAfterEndMapping;
+  // return originalPosForAfterEndMapping;
 }
 
 function originalPositionTryBoth(sourceMap, line, column) {
