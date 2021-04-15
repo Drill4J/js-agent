@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Plugin } from './index';
+import Plugin from './plugin';
 import { Test2CodePlugin } from './test2code';
 
 export function isTest2CodePlugin(plugin: Plugin): plugin is Test2CodePlugin {

@@ -15,6 +15,8 @@
  */
 import { PluginConfig } from './types';
 import { Connection } from '../common/types';
+import Plugin from './plugin';
+import test2code from './test2code';
 
 export interface IPluginConstructor {
   new (pluginId: string, agentId: string, connection: Connection, config: PluginConfig): Plugin;
@@ -24,58 +26,8 @@ export interface Plugins {
   [pluginId: string]: Plugin;
 }
 
-export class Plugin {
-  protected id: string;
+export { default as Plugin } from './plugin';
 
-  protected agentId: string;
-
-  protected config: PluginConfig;
-
-  protected logger: any;
-  // protected initialized: boolean;
-
-  // protected initializing: Promise<unknown>;
-
-  private connection: Connection;
-
-  constructor(id: string, agentId: string, connection: Connection, config: PluginConfig) {
-    this.id = id;
-    this.agentId = agentId;
-    this.connection = connection;
-    this.config = config;
-    this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentId}:${this.id}`);
-  }
-
-  public async init() {
-    throw new Error(`${this.id} init not implemented`);
-  }
-
-  public async stop() {
-    throw new Error(`${this.id} stop not implemented`);
-  }
-
-  public hasMatchingId(someId: string) {
-    return this.id === someId;
-  }
-
-  public handleAction(data) {
-    throw new Error(`${this.id} handle action not implemented`);
-  }
-
-  protected send(message) {
-    const argsString = JSON.stringify(message);
-    const maxArgsLength = parseInt(process.env.DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH, 10) || 2000;
-    this.logger.silly(
-      `send ${argsString.length <= maxArgsLength ? message : `${argsString.substring(0, maxArgsLength)}...message too long...`}`,
-    );
-    const data = {
-      type: 'PLUGIN_DATA',
-      text: JSON.stringify({
-        pluginId: this.id,
-        drillMessage: { content: JSON.stringify(message) },
-      }),
-    };
-    const stringData = JSON.stringify(data);
-    this.connection.send(stringData);
-  }
-}
+export const AvailablePlugins = {
+  test2code,
+};
