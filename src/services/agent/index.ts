@@ -16,7 +16,7 @@
 import { AgentData, AgentConfig, PluginInfo, Message } from './types';
 import { Connection, DataPackage, ConfirmationPackage } from '../common/types';
 import { isTest2CodePlugin } from '../plugin/guards';
-import { Plugin, Plugins, IPluginConstructor } from '../plugin';
+import { AvailablePlugins, Plugin, Plugins, IPluginConstructor } from '../plugin';
 import parseJsonRecursive from '../../util/parse-json-recursive';
 import '../../util/performance';
 
@@ -263,18 +263,7 @@ export class Agent {
       this.logger.error(msg);
       throw new Error(msg);
     }
-    try {
-      const exportedMembers = await import(`../plugin/${pluginId}`);
-      if (!exportedMembers.default) {
-        throw new Error(`Plugin ${pluginId} has no member exported by default. Please, export default member to support dynamic imports.`);
-      }
-      return exportedMembers.default as IPluginConstructor;
-    } catch (e) {
-      this.logger.error(e?.message);
-      const msg = `Failed to import plugin with id ${pluginId}. Plugin is malformed or does not exist.`;
-      this.logger.error(msg);
-      throw new Error(msg);
-    }
+    return AvailablePlugins[pluginId];
   }
 
   public async togglePlugin(pluginId: string): Promise<void> {

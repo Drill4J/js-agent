@@ -40,7 +40,7 @@ import { Scope, Test2CodeAction } from './types';
 import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
-import { Plugin } from '..';
+import Plugin from '../plugin';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
