@@ -15,13 +15,17 @@
  */
 /* eslint-disable import/no-unresolved */
 import { ExecClassData } from '@drill4j/test2code-types';
-import * as upath from 'upath';
 import fsExtra from 'fs-extra';
+import upath from 'upath';
+import convertSourceMap from 'convert-source-map';
+import R, { andThen } from 'ramda';
+import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import chalk from 'chalk';
 import LoggerProvider from '../../../../../util/logger';
 import { checkScriptNames } from './checks';
 import convert from './convert';
-import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, ScriptSources, Test, V8Coverage } from './types';
+import Source from './convert/lib/source';
+import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
 import { extractScriptNameFromUrl } from './util';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
@@ -29,64 +33,143 @@ export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 export default async function processCoverage(
   sourceMapPath: string,
   astEntities: AstEntity[],
-  rawData: { coverage: V8Coverage; scriptSources: ScriptSources; testName: string },
+  rawData: { coverage: V8Coverage; scriptSources: any; testName: string },
   bundlePath: string,
   bundleHashes: BundleHashes,
   bundleScriptNames: BundleScriptNames,
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const initialFilterMark = global.prf.mark('initial-filter');
   const {
+    testName,
     coverage,
     scriptSources: { hashToUrl, urlToHash },
   } = rawData;
-  const { testName } = rawData;
 
   if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
 
-  const coverageUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
+  const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
 
-  // FIXME move sourceMapConsumer & Source class "preparation" & caching here
-  const v8coverage = (
-    await Promise.all(
-      coverage
-        .filter(scriptCoverage => scriptCoverage.url && coverageUrls.includes(scriptCoverage.url as any))
-        .map(async x => ({
-          ...x,
-          source: await getScriptSource(bundlePath, x.url),
-          sourceHash: urlToHash[x.url],
-        })),
-    )
-  )
-    .filter(x => x.source)
-    .filter(scriptCoverage => checkScriptNames(scriptCoverage, bundleScriptNames));
-
-  if (v8coverage.length === 0) {
-    global.prf.measure(initialFilterMark);
+  const scriptCovs = R.filter(hashFilter)(coverage);
+  if (R.isEmpty(scriptCovs)) {
     logger.warning('all coverage was filtered');
     return [];
   }
-  global.prf.measure(initialFilterMark);
 
-  const convertMark = global.prf.mark('convert');
-  const execClassesData = await convert(v8coverage, sourceMapPath, astEntities, testName, cache);
-  global.prf.measure(convertMark);
-  return execClassesData;
+  const createMappingFn = prepMappingFn(sourceMapPath, bundlePath, cache, urlToHash);
+  const transformSource = createSourceTransformer();
+
+  // R.tap((...x) => {
+  //   console.log(x);
+  // }),
+
+  const c2 = await Promise.all(
+    R.map(async (script: V8ScriptCoverage) => {
+      const mappingFn = await createMappingFn(script.url);
+      return R.map(
+        R.pipe(
+          R.prop('functions'),
+          R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, mappingFn, transformSource))),
+          R.filter(R.pipe(R.prop('location'), sourceIsNotNil)),
+          R.map(
+            computeProperty('ranges')(
+              R.pipe(
+                R.prop('ranges'),
+                R.map(mappingFn),
+                R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
+                R.map(transformSource),
+              ),
+            ),
+          ),
+        ),
+      )(scriptCovs); // TODO :( do not pass data twice
+    })(scriptCovs),
+  );
+
+  return [];
 }
 
-async function getScriptSource(bundlePath, url): Promise<RawSourceString | null> {
-  try {
-    const scriptName = extractScriptNameFromUrl(url);
-    const source = (await fsExtra.readFile(upath.join(bundlePath, scriptName))).toString('utf8');
-    if (!source) {
-      logger.warning(`unknown script: ${url}`);
-    }
-    return source as RawSourceString;
-  } catch (e) {
-    logger.warning(`failed to obtain source of script: ${url}`);
-    return null;
+const computeProperty = name => comp => data => {
+  return {
+    ...data,
+    [name]: comp(data),
+  };
+};
+
+const sourceIsNotNil = (x: any) => !R.isNil(x?.source);
+
+const sourceIsNotInNodeModules = (x: any) => !x.source.includes('node_modules');
+
+const stringIncludes = str => search => str.includes(search);
+
+function isPrefixOmissionEnabled() {
+  return !!process.env.COVERAGE_SOURCE_OMIT_PREFIX;
+}
+
+function omitPrefix(str) {
+  return str.replace(process.env.COVERAGE_SOURCE_OMIT_PREFIX, '');
+}
+
+function isPrefixAppendageEnabled() {
+  return !!process.env.COVERAGE_SOURCE_APPEND_PREFIX;
+}
+
+function appendPrefix(str) {
+  return `${process.env.COVERAGE_SOURCE_APPEND_PREFIX}${str}`;
+}
+
+const createSourceTransformer = () => {
+  const ap = (x: any) => ({ ...x, source: appendPrefix(x.source) });
+  const op = (x: any) => ({ ...x, source: omitPrefix(x.source) });
+
+  if (isPrefixOmissionEnabled() && isPrefixAppendageEnabled()) {
+    return R.pipe(ap, op);
   }
-}
+
+  if (isPrefixAppendageEnabled()) {
+    return ap;
+  }
+
+  if (isPrefixOmissionEnabled()) {
+    return op;
+  }
+
+  return R.identity;
+};
+
+const createHashFilter = bundleHashes => hashToUrl => {
+  const coverageUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
+  return scriptCoverageUrl => scriptCoverageUrl && coverageUrls.includes(scriptCoverageUrl);
+};
+
+const prepMappingFn = (sourceMapPath, bundlePath, cache, urlToHash) => async url => {
+  const mapper = await getSourceMapper(sourceMapPath, bundlePath, cache, urlToHash)(url);
+  return ({ startOffset, endOffset }) => mapper.getOriginalPosition(startOffset, endOffset);
+};
+
+const getSourceMapper = (sourceMapPath, bundlePath, cache, urlToHashObj) => async (url): Promise<Source> => {
+  const sourceHash = urlToHashObj[url];
+  if (cache[sourceHash]) return cache[sourceHash];
+
+  const scriptName = extractScriptName(url);
+  const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
+  const rawSource = buf.toString('utf8');
+  // eslint-disable-next-line no-param-reassign
+  cache[sourceHash] = new Source(rawSource, await new SourceMapConsumer(getSourceMap(sourceMapPath)(rawSource)));
+  // TODO
+  // const sourceMapExists = sourceMap?.sourcemap?.file?.includes(scriptName);
+  // if (!sourceMapExists) {
+  //   logger.warning(`there is no source map for ${scriptName}`);
+  // }
+  return cache[sourceHash];
+};
+
+const getSourceMap = (sourceMapPath: string) => (source: string): RawSourceMap =>
+  convertSourceMap.fromMapFileSource(source, sourceMapPath).sourcemap;
+
+const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || undefined;
+
+// const scriptNameFilter = R.pipe(R.prop('url'), extractScriptName, createScriptNameFilter(bundleScriptNames));
+// const createScriptNameFilter = (scriptNames: string[]) => R.includes(R.__, scriptNames);
