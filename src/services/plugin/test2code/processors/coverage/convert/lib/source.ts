@@ -24,11 +24,17 @@ export default class CovSource {
 
   eof: number;
 
-  constructor(sourceRawUntrimmed: string) {
-    const sourceRaw = sourceRawUntrimmed;
+  sourceMap: SourceMapConsumer;
+
+  mappings: Map<string, any>;
+
+  constructor(sourceRaw: string, sourceMap: SourceMapConsumer) {
     this.lines = [];
     this.eof = sourceRaw.length;
     this._buildLines(sourceRaw);
+
+    this.mappings = new Map();
+    this.sourceMap = sourceMap;
   }
 
   _buildLines(source: string): void {
@@ -59,9 +65,19 @@ export default class CovSource {
     };
   }
 
+  getOriginalPosition(startCol: number, endCol: number) {
+    const key = `${startCol}/${endCol}`;
+    if (this.mappings.has(key)) {
+      return this.mappings.get(key);
+    }
+    const mapping = this._offsetToOriginalRelative(startCol, endCol);
+    this.mappings.set(key, mapping);
+    return mapping;
+  }
+
   // given a start column and end column in absolute offsets within
   // a source file (0 - EOF), returns the relative line column positions.
-  offsetToOriginalRelative(sourceMap, startCol: number, endCol: number) {
+  _offsetToOriginalRelative(startCol: number, endCol: number) {
     const lineStartIndex = binarySearchLine(this.lines, startCol);
     const lineEndIndex = binarySearchLine(this.lines, endCol);
 
@@ -71,10 +87,10 @@ export default class CovSource {
 
     if (!lines.length) return {};
 
-    const start = originalPositionTryBoth(sourceMap, lines[0].line, Math.max(0, startCol - lines[0].startCol));
+    const start = this.originalPositionTryBoth(lines[0].line, Math.max(0, startCol - lines[0].startCol));
 
     const lastLine = lines[lines.length - 1];
-    let end = originalEndPositionFor(sourceMap, lastLine.line, endCol - lastLine.startCol);
+    let end = this.originalEndPositionFor(lastLine.line, endCol - lastLine.startCol);
 
     if (!(start && end)) {
       return {};
@@ -89,7 +105,7 @@ export default class CovSource {
     }
 
     if (start.line === end.line && start.column === end.column) {
-      end = sourceMap.originalPositionFor({
+      end = this.sourceMap.originalPositionFor({
         line: lastLine.line,
         column: endCol - lastLine.startCol,
         bias: LEAST_UPPER_BOUND,
@@ -105,96 +121,96 @@ export default class CovSource {
       source: end.source,
     };
   }
-}
 
-// this implementation is pulled over from istanbul-lib-sourcemap:
-// https://github.com/istanbuljs/istanbuljs/blob/master/packages/istanbul-lib-source-maps/lib/get-mapping.js
-//
-/**
- * AST ranges are inclusive for start positions and exclusive for end positions.
- * Source maps are also logically ranges over text, though interacting with
- * them is generally achieved by working with explicit positions.
- *
- * When finding the _end_ location of an AST item, the range behavior is
- * important because what we're asking for is the _end_ of whatever range
- * corresponds to the end location we seek.
- *
- * This boils down to the following steps, conceptually, though the source-map
- * library doesn't expose primitives to do this nicely:
- *
- * 1. Find the range on the generated file that ends at, or exclusively
- *    contains the end position of the AST node.
- * 2. Find the range on the original file that corresponds to
- *    that generated range.
- * 3. Find the _end_ location of that original range.
- */
-function originalEndPositionFor(sourceMap, line, column) {
-  // Given the generated location, find the original location of the mapping
-  // that corresponds to a range on the generated file that overlaps the
-  // generated file end location. Note however that this position on its
-  // own is not useful because it is the position of the _start_ of the range
-  // on the original file, and we want the _end_ of the range.
-  const beforeEndMapping = originalPositionTryBoth(sourceMap, line, Math.max(column, 1));
+  // this implementation is pulled over from istanbul-lib-sourcemap:
+  // https://github.com/istanbuljs/istanbuljs/blob/master/packages/istanbul-lib-source-maps/lib/get-mapping.js
+  //
+  /**
+   * AST ranges are inclusive for start positions and exclusive for end positions.
+   * Source maps are also logically ranges over text, though interacting with
+   * them is generally achieved by working with explicit positions.
+   *
+   * When finding the _end_ location of an AST item, the range behavior is
+   * important because what we're asking for is the _end_ of whatever range
+   * corresponds to the end location we seek.
+   *
+   * This boils down to the following steps, conceptually, though the source-map
+   * library doesn't expose primitives to do this nicely:
+   *
+   * 1. Find the range on the generated file that ends at, or exclusively
+   *    contains the end position of the AST node.
+   * 2. Find the range on the original file that corresponds to
+   *    that generated range.
+   * 3. Find the _end_ location of that original range.
+   */
+  originalEndPositionFor(line, column) {
+    // Given the generated location, find the original location of the mapping
+    // that corresponds to a range on the generated file that overlaps the
+    // generated file end location. Note however that this position on its
+    // own is not useful because it is the position of the _start_ of the range
+    // on the original file, and we want the _end_ of the range.
+    const beforeEndMapping = this.originalPositionTryBoth(line, Math.max(column, 1));
 
-  if (beforeEndMapping.source === null) {
-    return null;
-  }
+    if (beforeEndMapping.source === null) {
+      return null;
+    }
 
-  // Convert that original position back to a generated one, with a bump
-  // to the right, and a rightward bias. Since 'generatedPositionFor' searches
-  // for mappings in the original-order sorted list, this will find the
-  // mapping that corresponds to the one immediately after the
-  // beforeEndMapping mapping.
-  const afterEndMapping = sourceMap.generatedPositionFor({
-    // TODO this runs very slow. Why?
-    source: beforeEndMapping.source,
-    line: beforeEndMapping.line,
-    column: beforeEndMapping.column + 1,
-    bias: LEAST_UPPER_BOUND,
-  });
-
-  if (afterEndMapping.line === null) {
-    // If this is null, it means that we've hit the end of the file,
-    // so we can use Infinity as the end column.
-    return {
+    // Convert that original position back to a generated one, with a bump
+    // to the right, and a rightward bias. Since 'generatedPositionFor' searches
+    // for mappings in the original-order sorted list, this will find the
+    // mapping that corresponds to the one immediately after the
+    // beforeEndMapping mapping.
+    const afterEndMapping = this.sourceMap.generatedPositionFor({
+      // TODO this runs very slow. Why?
       source: beforeEndMapping.source,
       line: beforeEndMapping.line,
-      column: Infinity,
-    };
-  }
-  return beforeEndMapping;
-
-  // // Convert the end mapping into the real original position.
-  // const originalPosForAfterEndMapping = sourceMap.originalPositionFor(afterEndMapping);
-
-  // if (originalPosForAfterEndMapping.line !== beforeEndMapping.line) {
-  //   // If these don't match, it means that the call to
-  //   // 'generatedPositionFor' didn't find any other original mappings on
-  //   // the line we gave, so consider the binding to extend to infinity.
-  //   return {
-  //     source: beforeEndMapping.source,
-  //     line: beforeEndMapping.line,
-  //     column: Infinity,
-  //   };
-  // }
-
-  // return originalPosForAfterEndMapping;
-}
-
-function originalPositionTryBoth(sourceMap, line, column) {
-  const original = sourceMap.originalPositionFor({
-    line,
-    column,
-    bias: GREATEST_LOWER_BOUND,
-  });
-  if (original.line === null) {
-    return sourceMap.originalPositionFor({
-      line,
-      column,
+      column: beforeEndMapping.column + 1,
       bias: LEAST_UPPER_BOUND,
     });
+
+    if (afterEndMapping.line === null) {
+      // If this is null, it means that we've hit the end of the file,
+      // so we can use Infinity as the end column.
+      return {
+        source: beforeEndMapping.source,
+        line: beforeEndMapping.line,
+        column: Infinity,
+      };
+    }
+    return beforeEndMapping;
+
+    // // Convert the end mapping into the real original position.
+    // const originalPosForAfterEndMapping = this.sourceMap.originalPositionFor(afterEndMapping);
+
+    // if (originalPosForAfterEndMapping.line !== beforeEndMapping.line) {
+    //   // If these don't match, it means that the call to
+    //   // 'generatedPositionFor' didn't find any other original mappings on
+    //   // the line we gave, so consider the binding to extend to infinity.
+    //   return {
+    //     source: beforeEndMapping.source,
+    //     line: beforeEndMapping.line,
+    //     column: Infinity,
+    //   };
+    // }
+
+    // return originalPosForAfterEndMapping;
   }
-  return original;
+
+  originalPositionTryBoth(line, column) {
+    const original = this.sourceMap.originalPositionFor({
+      line,
+      column,
+      bias: GREATEST_LOWER_BOUND,
+    });
+    if (original.line === null) {
+      return this.sourceMap.originalPositionFor({
+        line,
+        column,
+        bias: LEAST_UPPER_BOUND,
+      });
+    }
+    return original;
+  }
 }
 
 // TODO think of an other way to expose functions for testing
