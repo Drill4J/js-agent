@@ -18,15 +18,11 @@ import { ExecClassData } from '@drill4j/test2code-types';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
 import convertSourceMap from 'convert-source-map';
-import R, { andThen } from 'ramda';
+import R from 'ramda';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
-import chalk from 'chalk';
 import LoggerProvider from '../../../../../util/logger';
-import { checkScriptNames } from './checks';
-import convert from './convert';
 import Source from './convert/lib/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
-import { extractScriptNameFromUrl } from './util';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
@@ -52,118 +48,121 @@ export default async function processCoverage(
 
   const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
 
-  const scriptCovs = R.filter(hashFilter)(coverage);
-  if (R.isEmpty(scriptCovs)) {
+  const scriptsCoverage = R.filter(hashFilter)(coverage);
+  if (R.isEmpty(scriptsCoverage)) {
     logger.warning('all coverage was filtered');
     return [];
   }
 
-  const createMappingFn = prepMappingFn(sourceMapPath, bundlePath, cache, urlToHash);
+  const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(scriptsCoverage);
+
+  const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
+
   const transformSource = createSourceTransformer();
 
-  // R.tap((...x) => {
-  //   console.log(x);
-  // }),
-
-  const c2 = await Promise.all(
-    R.map(async (script: V8ScriptCoverage) => {
-      const mappingFn = await createMappingFn(script.url);
-      return R.map(
-        R.pipe(
-          R.prop('functions'),
-          R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, mappingFn, transformSource))),
-          R.filter(R.pipe(R.prop('location'), sourceIsNotNil)),
-          R.map(
-            computeProperty('ranges')(
-              R.pipe(
-                R.prop('ranges'),
-                R.map(mappingFn),
-                R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
-                R.map(transformSource),
-              ),
-            ),
+  const transformCoverage = rangeMappingFn =>
+    R.pipe(
+      R.prop('functions'),
+      R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, rangeMappingFn, transformSource))),
+      R.filter(R.pipe(R.prop('location'), sourceIsNotNil)),
+      R.map(
+        computeProperty('ranges')(
+          R.pipe(
+            R.prop('ranges'),
+            R.map(rangeMappingFn),
+            R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
+            R.map(transformSource),
           ),
         ),
-      )(scriptCovs); // TODO :( do not pass data twice
-    })(scriptCovs),
-  );
+      ),
+    );
+
+  const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
+  const obtainMappingFunction = R.pipe(R.prop('url'), getMappingFnByUrl);
+  const fnCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(scriptsCoverage);
+
+  // const createAstEntityMapper = (fnCoverage: any[]) => (astEntities: AstEntity[]) {
+  //   R.map(R.pipe(R.prop('filePath'), pathFilter, R.filter))
+  // }
+  // const pathFilter = fn => astEntityPath => fn.location?.source.includes(astEntityPath);
+  // const mapToAst = createAstEntityMapper(sourcemappedCoverage);
+
+  // TODO use groupWith instead?
+  const create = coverage => entity =>
+    R.pipe(
+      R.map(
+        R.filter((covPart: any) => {
+          return covPart.location.source === entity.filePath;
+        }),
+      ),
+      R.filter((x: any) => x.length > 0),
+    )(coverage);
+
+  const mapper = create(fnCoverage);
+  const res = R.map(R.pipe(mapper, R.tap(console.log)))(astEntities);
 
   return [];
 }
 
-const computeProperty = name => comp => data => {
-  return {
-    ...data,
-    [name]: comp(data),
-  };
-};
-
-const sourceIsNotNil = (x: any) => !R.isNil(x?.source);
-
-const sourceIsNotInNodeModules = (x: any) => !x.source.includes('node_modules');
-
-const stringIncludes = str => search => str.includes(search);
-
-function isPrefixOmissionEnabled() {
-  return !!process.env.COVERAGE_SOURCE_OMIT_PREFIX;
-}
+const computeProperty = name => comp => data => ({
+  ...data,
+  [name]: comp(data),
+});
 
 function omitPrefix(str) {
   return str.replace(process.env.COVERAGE_SOURCE_OMIT_PREFIX, '');
-}
-
-function isPrefixAppendageEnabled() {
-  return !!process.env.COVERAGE_SOURCE_APPEND_PREFIX;
 }
 
 function appendPrefix(str) {
   return `${process.env.COVERAGE_SOURCE_APPEND_PREFIX}${str}`;
 }
 
+const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => async scriptsUrls => {
+  await Promise.all(
+    R.map(async (url: string) => {
+      if (cache[urlToHash[url]]) return;
+      const scriptName = extractScriptName(url);
+      const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
+      const rawSource = buf.toString('utf8');
+      // eslint-disable-next-line no-param-reassign
+      cache[urlToHash[url]] = new Source(rawSource, await new SourceMapConsumer(getSourceMap(sourceMapPath)(rawSource)));
+      // TODO
+      // const sourceMapExists = sourceMap?.sourcemap?.file?.includes(scriptName);
+      // if (!sourceMapExists) {
+      //   logger.warning(`there is no source map for ${scriptName}`);
+      // }
+    })(scriptsUrls),
+  );
+
+  return url => ({ startOffset, endOffset }) => cache[urlToHash[url]].getOriginalPosition(startOffset, endOffset);
+};
+
+const sourceIsNotNil = (x: any) => !R.isNil(x?.source);
+
+const sourceIsNotInNodeModules = (x: any) => !x.source.includes('node_modules');
+
 const createSourceTransformer = () => {
-  const ap = (x: any) => ({ ...x, source: appendPrefix(x.source) });
-  const op = (x: any) => ({ ...x, source: omitPrefix(x.source) });
+  const mustOmitPrefix = !!process.env.COVERAGE_SOURCE_OMIT_PREFIX;
+  const mustAppendPrefix = !!process.env.COVERAGE_SOURCE_APPEND_PREFIX;
 
-  if (isPrefixOmissionEnabled() && isPrefixAppendageEnabled()) {
-    return R.pipe(ap, op);
+  if (mustOmitPrefix && mustAppendPrefix) {
+    return computeProperty('source')(R.pipe(R.prop('source'), appendPrefix, omitPrefix));
   }
 
-  if (isPrefixAppendageEnabled()) {
-    return ap;
+  if (mustAppendPrefix) {
+    return computeProperty('source')(R.pipe(R.prop('source'), appendPrefix));
   }
 
-  if (isPrefixOmissionEnabled()) {
-    return op;
+  if (mustOmitPrefix) {
+    return computeProperty('source')(R.pipe(R.prop('source'), omitPrefix));
   }
 
   return R.identity;
 };
 
 const createHashFilter = bundleHashes => hashToUrl => {
-  const coverageUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
-  return scriptCoverageUrl => scriptCoverageUrl && coverageUrls.includes(scriptCoverageUrl);
-};
-
-const prepMappingFn = (sourceMapPath, bundlePath, cache, urlToHash) => async url => {
-  const mapper = await getSourceMapper(sourceMapPath, bundlePath, cache, urlToHash)(url);
-  return ({ startOffset, endOffset }) => mapper.getOriginalPosition(startOffset, endOffset);
-};
-
-const getSourceMapper = (sourceMapPath, bundlePath, cache, urlToHashObj) => async (url): Promise<Source> => {
-  const sourceHash = urlToHashObj[url];
-  if (cache[sourceHash]) return cache[sourceHash];
-
-  const scriptName = extractScriptName(url);
-  const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
-  const rawSource = buf.toString('utf8');
-  // eslint-disable-next-line no-param-reassign
-  cache[sourceHash] = new Source(rawSource, await new SourceMapConsumer(getSourceMap(sourceMapPath)(rawSource)));
-  // TODO
-  // const sourceMapExists = sourceMap?.sourcemap?.file?.includes(scriptName);
-  // if (!sourceMapExists) {
-  //   logger.warning(`there is no source map for ${scriptName}`);
-  // }
-  return cache[sourceHash];
+  const scriptsUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
+  return url => url && scriptsUrls.includes(url);
 };
 
 const getSourceMap = (sourceMapPath: string) => (source: string): RawSourceMap =>
