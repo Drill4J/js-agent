@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /* eslint-disable import/no-unresolved */
-import { ExecClassData } from '@drill4j/test2code-types';
+import { AstMethod, ExecClassData } from '@drill4j/test2code-types';
 import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
@@ -49,14 +49,14 @@ export default async function processCoverage(
   }
 
   const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
-  const scriptsCoverage = R.filter(hashFilter)(coverage);
-  if (R.isEmpty(scriptsCoverage)) {
+  const rawScriptsCoverage = R.filter(hashFilter)(coverage);
+  if (R.isEmpty(rawScriptsCoverage)) {
     // TODO think of a more descriptive message
     logger.warning('all coverage was filtered');
     return [];
   }
 
-  const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(scriptsCoverage);
+  const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(rawScriptsCoverage);
   const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
 
   const transformCoverage = rangeMappingFn =>
@@ -79,52 +79,34 @@ export default async function processCoverage(
 
   const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
   const obtainMappingFunction = R.pipe(R.prop('url'), getMappingFnByUrl);
-  const fnCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(scriptsCoverage);
+  const scriptsCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(rawScriptsCoverage);
 
-  // const createAstEntityMapper = (fnCoverage: any[]) => (astEntities: AstEntity[]) {
-  //   R.map(R.pipe(R.prop('filePath'), pathFilter, R.filter))
-  // }
-  // const pathFilter = fn => astEntityPath => fn.location?.source.includes(astEntityPath);
-  // const mapToAst = createAstEntityMapper(sourcemappedCoverage);
-  const create = coverage => (result, entity) =>
-    R.append(
-      {
-        id: undefined,
-        className: normalizeScriptPath(entity.filePath) + (entity.suffix ? `.${entity.suffix}` : ''),
-        testName,
-        probes: R.pipe(
-          R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
-          R.filter(isNotEmpty),
+  const createProbeMapper = scriptsCoverage => entity =>
+    R.pipe(
+      R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
+      R.filter(isNotEmpty),
+      R.ifElse(
+        R.isEmpty,
+        () => new Array(entity.methods.reduce((a, x) => a + x.probes.length, 0)).fill(false),
+        R.pipe(
           R.map(mapCoverageToEntityProbes(entity)),
-          mergeArrays((a, b) => a || b),
-        )(coverage),
-      },
-      result,
-    );
-  const create2 = coverage => entity => ({
+          mergeProbeCoverage, // TODO a better name. Merge script coverage? Overlay script coverage?
+        ),
+      ),
+    )(scriptsCoverage);
+
+  // FIXME convoluted and pointless scriptsCoverage passing around
+  const createAstMapper = scriptsCoverage => entity => ({
     id: undefined,
     className: normalizeScriptPath(entity.filePath) + (entity.suffix ? `.${entity.suffix}` : ''),
     testName,
-    probes: R.pipe(
-      R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
-      R.filter(isNotEmpty),
-      R.map(mapCoverageToEntityProbes(entity)),
-      mergeArrays((a, b) => a || b),
-    )(coverage),
+    probes: createProbeMapper(scriptsCoverage)(entity),
   });
 
-  // R.applySpec({
-  //   id: undefined,
-  //   className: normalizeScriptPath(entity.filePath) + (entity.suffix ? `.${entity.suffix}` : ''),
-  // })
+  const mapCoverageToAst = createAstMapper(scriptsCoverage);
+  const result = R.pipe(R.map(mapCoverageToAst))(astEntities);
 
-  const mapCoverageToProbes = create(fnCoverage);
-  const mapCoverageToProbes2 = create2(fnCoverage);
-
-  const res2 = R.pipe(R.map(mapCoverageToProbes2), R.reduce(R.append, []))(astEntities);
-  const res = R.reduceBy(mapCoverageToProbes, [], R.prop('filePath'))(astEntities);
-
-  return [];
+  return result;
 }
 
 // TODO refactor using lens? https://ramdajs.com/docs/#lens
@@ -152,7 +134,7 @@ const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => asy
 
   return url => ({ startOffset, endOffset, count }) => ({
     ...cache[urlToHash[url]].getOriginalPosition(startOffset, endOffset),
-    count, // TODO hack-ish but fast
+    count, // TODO preserves count. hack-ish but fast
   });
 };
 
@@ -198,24 +180,41 @@ const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || unde
 // const scriptNameFilter = R.pipe(R.prop('url'), extractScriptName, createScriptNameFilter(bundleScriptNames));
 // const createScriptNameFilter = (scriptNames: string[]) => R.includes(R.__, scriptNames);
 
-const mapCoverageToEntityProbes = (entity: AstEntity) => entityCoverage => {
-  return entity.methods.reduce((result, method) => {
-    // HACK because estree parser yields end position as position for character AFTER the node, even if there are no characters ahead
-    //      that causes a root node to have the end pos residing at an empty line (with no characters at all)
-    //      V8 + current sourcemapping implementation yeilds end pos on the previous line (only column is chaged)
-    const methodCoverage = entityCoverage.filter(
-      fn => fn.location.startLine === method.location.start.line && fn.location.relStartCol === method.location.start.column,
-    );
-    // if (methodCoverage.length === 0) return [...result, ...method.probes.map(probe => ({ [`${probe.line}:${probe.column}`]: false }))];
-    if (methodCoverage.length === 0) return [...result, ...new Array(method.probes.length).fill(false)];
+const mapMethodProbes = entityCoverage => method =>
+  R.pipe(
+    R.filter(
+      (fnCoverage: any) =>
+        fnCoverage.location.startLine === method.location.start.line && fnCoverage.location.relStartCol === method.location.start.column,
+    ),
+    R.tap(x => {
+      // TODO That should never happen. Delete after testing on multiple apps
+      if (x.length > 1) {
+        console.log(entityCoverage, method);
+        throw new Error(`method ${method.name} coverage represented by multiple functions in a single script data`);
+      }
+    }),
+    R.ifElse(
+      R.isEmpty,
+      R.pipe(() => new Array(method.probes.length).fill(false)),
+      R.pipe(
+        R.pluck('ranges'),
+        R.flatten,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        R.filter(R.propEq('count', 0)),
+        R.ifElse(
+          R.isEmpty,
+          () => new Array(method.probes.length).fill(true),
+          R.pipe((notCoveredRanges: any) =>
+            method.probes.map(probe => notCoveredRanges.findIndex(range => isProbeInsideRange(probe, range)) === -1),
+          ),
+        ),
+      ),
+    ),
+  )(entityCoverage);
 
-    const notCoveredRanges = methodCoverage.reduce((acc, part) => [...acc, ...part.ranges.filter(range => range.count === 0)], []);
-    return method.probes.reduce((acc, probe) => {
-      acc.push(notCoveredRanges.findIndex(range => isProbeInsideRange(probe, range)) === -1);
-      // acc.push({ [`${probe.line}:${probe.column}`]: notCoveredRanges.findIndex(range => isProbeInsideRange(probe, range)) === -1 });
-      return acc;
-    }, result);
-  }, []);
+const mapCoverageToEntityProbes = entity => entityCoverage => {
+  return R.pipe(R.map(mapMethodProbes(entityCoverage)), R.flatten)(entity.methods);
 };
 
 function isProbeInsideRange(probe, range) {
@@ -250,3 +249,5 @@ const mergeArrays = elementMerger => arrays => {
     return acc.map((probe, i) => elementMerger(probe, arr[i]));
   }, arrays[0]);
 };
+
+const mergeProbeCoverage = mergeArrays((a, b) => a || b);
