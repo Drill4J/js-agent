@@ -19,7 +19,7 @@ import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
 import convertSourceMap from 'convert-source-map';
-import R, { tap } from 'ramda';
+import R from 'ramda';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '../../../../../util/logger';
 import Source from './convert/lib/source';
@@ -59,55 +59,53 @@ export default async function processCoverage(
   const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(rawScriptsCoverage);
   const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
 
-  const transformCoverage = rangeMappingFn =>
-    R.pipe(
-      R.prop('functions'),
-      R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, rangeMappingFn))), // TODO this is getting hard to read
-      R.filter(R.pipe(R.prop('location'), R.allPass([sourceIsNotNil, sourceIsNotInNodeModules]))),
-      R.map(computeProperty('location')(R.pipe(R.prop('location'), transformSource))),
-      R.map(
-        computeProperty('ranges')(
-          R.pipe(
-            R.prop('ranges'),
-            R.map(rangeMappingFn),
-            R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
-            R.map(transformSource),
-          ),
-        ),
-      ),
-    );
-
-  const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
   const obtainMappingFunction = R.pipe(R.prop('url'), getMappingFnByUrl);
   const scriptsCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(rawScriptsCoverage);
 
-  const createProbeMapper = scriptsCoverage => entity =>
-    R.pipe(
-      R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
-      R.filter(isNotEmpty),
-      R.ifElse(
-        R.isEmpty,
-        () => new Array(entity.methods.reduce((a, x) => a + x.probes.length, 0)).fill(false),
-        R.pipe(
-          R.map(mapCoverageToEntityProbes(entity)),
-          mergeProbeCoverage, // TODO a better name. Merge script coverage? Overlay script coverage?
-        ),
-      ),
-    )(scriptsCoverage);
-
-  // FIXME convoluted and pointless scriptsCoverage passing around
-  const createAstMapper = scriptsCoverage => entity => ({
+  const mapEntityProbes = createProbeMapper(scriptsCoverage);
+  const result = R.map((entity: AstEntity) => ({
     id: undefined,
-    className: normalizeScriptPath(entity.filePath) + (entity.suffix ? `.${entity.suffix}` : ''),
+    className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
     testName,
-    probes: createProbeMapper(scriptsCoverage)(entity),
-  });
-
-  const mapCoverageToAst = createAstMapper(scriptsCoverage);
-  const result = R.pipe(R.map(mapCoverageToAst))(astEntities);
+    probes: mapEntityProbes(entity),
+  }))(astEntities);
 
   return result;
 }
+
+const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
+
+const transformCoverage = rangeMappingFn =>
+  R.pipe(
+    R.prop('functions'),
+    R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, rangeMappingFn))), // TODO this is getting hard to read
+    R.filter(R.pipe(R.prop('location'), R.allPass([sourceIsNotNil, sourceIsNotInNodeModules]))),
+    R.map(computeProperty('location')(R.pipe(R.prop('location'), transformSource))),
+    R.map(
+      computeProperty('ranges')(
+        R.pipe(
+          R.prop('ranges'),
+          R.map(rangeMappingFn),
+          R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
+          R.map(transformSource),
+        ),
+      ),
+    ),
+  );
+
+const createProbeMapper = scriptsCoverage => entity =>
+  R.pipe(
+    R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
+    R.filter(passNotEmpty),
+    R.ifElse(
+      R.isEmpty,
+      () => new Array(entity.methods.reduce((a, x) => a + x.probes.length, 0)).fill(false),
+      R.pipe(
+        R.map(mapCoverageToEntity(entity)),
+        mergeProbeCoverage, // TODO a better name. Merge script coverage? Overlay script coverage?
+      ),
+    ),
+  )(scriptsCoverage);
 
 // TODO refactor using lens? https://ramdajs.com/docs/#lens
 const computeProperty = name => comp => data => ({
@@ -140,7 +138,7 @@ const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => asy
 
 const sourceIsNotNil = (x: any) => !R.isNil(x?.source);
 
-const isNotEmpty = R.complement(R.isEmpty);
+const passNotEmpty = R.complement(R.isEmpty);
 
 const sourceIsNotInNodeModules = (x: any) => !x.source.includes('node_modules');
 
@@ -180,14 +178,19 @@ const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || unde
 // const scriptNameFilter = R.pipe(R.prop('url'), extractScriptName, createScriptNameFilter(bundleScriptNames));
 // const createScriptNameFilter = (scriptNames: string[]) => R.includes(R.__, scriptNames);
 
-const mapMethodProbes = entityCoverage => method =>
+const passNotCovered = R.propEq('count', 0);
+
+const passSameLocation = method => functionCoverage =>
+  functionCoverage.location.startLine === method.location.start.line &&
+  functionCoverage.location.relStartCol === method.location.start.column;
+
+const allMethodProbesAre = method => (value: boolean) => () => new Array(method.probes.length).fill(value);
+
+const mapCoverageToMethod = entityCoverage => method =>
   R.pipe(
-    R.filter(
-      (fnCoverage: any) =>
-        fnCoverage.location.startLine === method.location.start.line && fnCoverage.location.relStartCol === method.location.start.column,
-    ),
+    R.filter(passSameLocation(method)),
     R.tap(x => {
-      // TODO That should never happen. Delete after testing on multiple apps
+      // TODO That should never happen. Delete after testing
       if (x.length > 1) {
         console.log(entityCoverage, method);
         throw new Error(`method ${method.name} coverage represented by multiple functions in a single script data`);
@@ -195,27 +198,24 @@ const mapMethodProbes = entityCoverage => method =>
     }),
     R.ifElse(
       R.isEmpty,
-      R.pipe(() => new Array(method.probes.length).fill(false)),
+      allMethodProbesAre(method)(false),
       R.pipe(
         R.pluck('ranges'),
         R.flatten,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        R.filter(R.propEq('count', 0)),
-        R.ifElse(
-          R.isEmpty,
-          () => new Array(method.probes.length).fill(true),
-          R.pipe((notCoveredRanges: any) =>
-            method.probes.map(probe => notCoveredRanges.findIndex(range => isProbeInsideRange(probe, range)) === -1),
-          ),
-        ),
+        R.filter(passNotCovered),
+        R.ifElse(R.isEmpty, allMethodProbesAre(method)(true), mapRangesToProbes(method.probes)),
       ),
     ),
   )(entityCoverage);
 
-const mapCoverageToEntityProbes = entity => entityCoverage => {
-  return R.pipe(R.map(mapMethodProbes(entityCoverage)), R.flatten)(entity.methods);
+const mapCoverageToEntity = entity => entityCoverage => {
+  return R.pipe(R.map(mapCoverageToMethod(entityCoverage)), R.flatten)(entity.methods);
 };
+
+const mapRangesToProbes = (probes: any) => (ranges: any) =>
+  probes.map(probe => ranges.findIndex(range => isProbeInsideRange(probe, range)) === -1);
 
 function isProbeInsideRange(probe, range) {
   const isProbeLineInsideRange = probe.line >= range.startLine && probe.line <= range.endLine;
