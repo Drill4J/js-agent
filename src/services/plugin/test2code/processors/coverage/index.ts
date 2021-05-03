@@ -22,7 +22,7 @@ import convertSourceMap from 'convert-source-map';
 import R from 'ramda';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '../../../../../util/logger';
-import Source from './convert/lib/source';
+import Source from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
 import normalizeScriptPath from '../../../../../util/normalize-script-path';
 

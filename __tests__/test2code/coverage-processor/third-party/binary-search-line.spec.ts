@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { binarySearchLine } from '../../../../src/services/plugin/test2code/processors/coverage/convert/lib/source';
+import { binarySearchLine } from '../../../../src/services/plugin/test2code/processors/coverage/third-party/source';
 
 it('must return line index when presented with column at the start of the line', () => {
   const lines = [{ line: 1, startCol: 0, endCol: 100, count: 1 }];
