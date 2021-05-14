@@ -70,8 +70,23 @@ export default async function processCoverage(
     probes: mapEntityProbes(entity),
   }))(astEntities);
 
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(result, testName);
   return result;
 }
+
+const writeAndStripDebugInfo = async (data, testName): Promise<ExecClassData[]> => {
+  const ts = Date.now();
+  const result = stripDebugInfoFromProbes(data);
+  await fsExtra.ensureDir(`./out/${ts}`);
+  await fsExtra.writeJSON(`./out/${ts}/${testName}-debug.json`, data, { spaces: 2 });
+  await fsExtra.writeJSON(`./out/${ts}/${testName}.json`, result, { spaces: 2 });
+  return result;
+};
+
+const filterEmpty =
+  process.env.DEBUG_PROBES_ENABLED === 'true'
+    ? (x: boolean[]) => x.some((probe: any) => probe.isCovered === true)
+    : (x: boolean[]) => x.includes(true);
 
 const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
 
@@ -99,7 +114,7 @@ const createProbeMapper = scriptsCoverage => entity =>
     R.filter(passNotEmpty),
     R.ifElse(
       R.isEmpty,
-      () => new Array(entity.methods.reduce((a, x) => a + x.probes.length, 0)).fill(false),
+      allEntityProbesAre(entity)(false), // TODO is always filtered anyway? replace with () => null?
       R.pipe(
         R.map(mapCoverageToEntity(entity)),
         mergeProbeCoverage, // TODO a better name. Merge script coverage? Overlay script coverage?
@@ -184,28 +199,46 @@ const passSameLocation = method => functionCoverage =>
   functionCoverage.location.startLine === method.location.start.line &&
   functionCoverage.location.relStartCol === method.location.start.column;
 
-const allMethodProbesAre = method => (value: boolean) => () => new Array(method.probes.length).fill(value);
+const allMethodProbesAre =
+  process.env.DEBUG_PROBES_ENABLED === 'true'
+    ? method => (value: boolean) => () => method.probes.map(probeDebugInfo(value))
+    : method => value => () => createArray(method.probes.length)(value);
 
+const allEntityProbesAre =
+  process.env.DEBUG_PROBES_ENABLED === 'true'
+    ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      entity => value => () => R.pipe(R.prop('methods'), R.pluck('probes'), R.flatten, R.map(probeDebugInfo(value)))(entity)
+    : entity => (value: boolean) => () => createArray(entity.methods.reduce((a, x) => a + x.probes.length, 0))(value);
+
+const createArray = length => value => new Array(length).fill(value);
+
+const probeDebugInfo = isCovered => probe => ({ ...probe, isCovered });
+
+/* HACK-ish implementation
+    In most cases there is 1-to-1 mapping from transpiled function to the original function
+    The relation is establish by __the function starting location__ (the exact line:column) obtained from sourcemap
+
+    __Sometimes__ a single function in the original code may get transpiled to __multiple__ nested functions
+    Example: https://babeljs.io/docs/en/babel-plugin-transform-regenerator
+
+    All wrapping functions:
+      - are sourcemapped to __the same original function starting position__
+      - have 100% coverage
+    
+    That collides with the "real" probes placed in the original code (because of the same location)
+
+    The solution: map coverage only from the innermost function
+*/
 const mapCoverageToMethod = entityCoverage => method =>
   R.pipe(
     R.filter(passSameLocation(method)),
-    R.tap(x => {
-      // TODO That should never happen. Delete after testing
-      if (x.length > 1) {
-        console.log(entityCoverage, method);
-        throw new Error(`method ${method.name} coverage represented by multiple functions in a single script data`);
-      }
-    }),
     R.ifElse(
       R.isEmpty,
       allMethodProbesAre(method)(false),
       R.pipe(
-        R.pluck('ranges'),
-        R.flatten,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        R.filter(passNotCovered),
-        R.ifElse(R.isEmpty, allMethodProbesAre(method)(true), mapRangesToProbes(method.probes)),
+        R.last,
+        R.pipe(R.prop('ranges'), R.filter(passNotCovered), R.ifElse(R.isEmpty, allMethodProbesAre(method)(true), mapProbes(method.probes))),
       ),
     ),
   )(entityCoverage);
@@ -214,8 +247,12 @@ const mapCoverageToEntity = entity => entityCoverage => {
   return R.pipe(R.map(mapCoverageToMethod(entityCoverage)), R.flatten)(entity.methods);
 };
 
-const mapRangesToProbes = (probes: any) => (ranges: any) =>
-  probes.map(probe => ranges.findIndex(range => isProbeInsideRange(probe, range)) === -1);
+const mapProbes =
+  process.env.DEBUG_PROBES_ENABLED === 'true'
+    ? probes => notCoveredRanges => probes.map(probe => probeDebugInfo(isProbeCovered(notCoveredRanges)(probe))(probe)) // TODO ugly
+    : probes => notCoveredRanges => probes.map(isProbeCovered(notCoveredRanges));
+
+const isProbeCovered = ranges => probe => ranges.findIndex(range => isProbeInsideRange(probe, range)) === -1;
 
 function isProbeInsideRange(probe, range) {
   const isProbeLineInsideRange = probe.line >= range.startLine && probe.line <= range.endLine;
@@ -250,4 +287,11 @@ const mergeArrays = elementMerger => arrays => {
   }, arrays[0]);
 };
 
-const mergeProbeCoverage = mergeArrays((a, b) => a || b);
+const mergeProbeCoverage =
+  process.env.DEBUG_PROBES_ENABLED === 'true'
+    ? mergeArrays((a, b) => ({ ...a, isCovered: a.isCovered || b.isCovered }))
+    : mergeArrays((a, b) => a || b);
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const stripDebugInfoFromProbes = R.map(computeProperty('probes')(R.pipe(R.prop('probes'), R.map(R.prop('isCovered')))));
