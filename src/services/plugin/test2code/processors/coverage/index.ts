@@ -63,16 +63,21 @@ export default async function processCoverage(
   const scriptsCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(rawScriptsCoverage);
 
   const mapEntityProbes = createProbeMapper(scriptsCoverage);
-  const result = R.map((entity: AstEntity) => ({
-    id: undefined,
-    className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
-    testName,
-    probes: mapEntityProbes(entity),
-  }))(astEntities);
+  const result = R.pipe(
+    R.map((entity: AstEntity) => ({
+      id: undefined,
+      className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
+      testName,
+      probes: mapEntityProbes(entity),
+    })),
+    R.filter(passProbesNotNull),
+  )(astEntities);
 
   if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(result, testName);
   return result;
 }
+
+const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
 const writeAndStripDebugInfo = async (data, testName): Promise<ExecClassData[]> => {
   const ts = Date.now();
@@ -82,11 +87,6 @@ const writeAndStripDebugInfo = async (data, testName): Promise<ExecClassData[]> 
   await fsExtra.writeJSON(`./out/${ts}/${testName}.json`, result, { spaces: 2 });
   return result;
 };
-
-const filterEmpty =
-  process.env.DEBUG_PROBES_ENABLED === 'true'
-    ? (x: boolean[]) => x.some((probe: any) => probe.isCovered === true)
-    : (x: boolean[]) => x.includes(true);
 
 const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
 
@@ -114,7 +114,7 @@ const createProbeMapper = scriptsCoverage => entity =>
     R.filter(passNotEmpty),
     R.ifElse(
       R.isEmpty,
-      allEntityProbesAre(entity)(false), // TODO is always filtered anyway? replace with () => null?
+      () => null,
       R.pipe(
         R.map(mapCoverageToEntity(entity)),
         mergeProbeCoverage, // TODO a better name. Merge script coverage? Overlay script coverage?
