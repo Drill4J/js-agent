@@ -137,13 +137,20 @@ const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => asy
       const scriptName = extractScriptName(url);
       const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
       const rawSource = buf.toString('utf8');
-      // eslint-disable-next-line no-param-reassign
-      cache[urlToHash[url]] = new Source(rawSource, await new SourceMapConsumer(getSourceMap(sourceMapPath)(rawSource)));
-      // TODO
-      // const sourceMapExists = sourceMap?.sourcemap?.file?.includes(scriptName);
-      // if (!sourceMapExists) {
-      //   logger.warning(`there is no source map for ${scriptName}`);
+      const sourcemap = getSourceMap(sourceMapPath, rawSource);
+
+      if (!sourcemap) {
+        logger.error(`source map for not found for ${scriptName}`);
+        return;
+      }
+
+      // TODO using ".includes" is wrong, use transformSource instead
+      // if (sourcemap && sourcemap.file && !sourcemap.file.includes(scriptName)) {
+      //   logger.warning(`source map for ${scriptName} found, but source map does not list it in the "file" field`);
       // }
+
+      // eslint-disable-next-line no-param-reassign
+      cache[urlToHash[url]] = new Source(rawSource, await new SourceMapConsumer(sourcemap));
     })(scriptsUrls),
   );
 
@@ -187,8 +194,8 @@ const createHashFilter = bundleHashes => hashToUrl => {
   return url => url && scriptsUrls.includes(url);
 };
 
-const getSourceMap = (sourceMapPath: string) => (source: string): RawSourceMap =>
-  convertSourceMap.fromMapFileSource(source, sourceMapPath).sourcemap;
+const getSourceMap = (sourceMapPath: string, source: string): RawSourceMap | null =>
+  convertSourceMap.fromMapFileSource(source, sourceMapPath)?.sourcemap;
 
 const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || undefined;
 
