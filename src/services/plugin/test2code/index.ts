@@ -36,7 +36,6 @@ import fsExtra from 'fs-extra';
 import * as upath from 'upath';
 import * as sourcemapUtil from './sourcemap-util';
 import { Scope, Test2CodeAction } from './types';
-// TODO abstract ast processor, coverage processor and storage provider
 import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
@@ -45,41 +44,29 @@ import Plugin from '../plugin';
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
 
-  public cache: Record<string, any> = {};
+  private cache: Record<string, any> = {};
 
   public async init(): Promise<void> {
     this.logger.info('init');
-    // this.initialized = true;
-    // starts test2code initialization (gotta send InitDataPart message to complete it)
+
     const initInfoMessage: InitInfo = {
       type: 'INIT',
-      // classesCount - legacy parameter from Java agent implementation, expected to send actuall class count
-      // js introduces lots of differences such as:
-      //  - multiple classes per file
-      //  - functions instead of classes
-      // it is set to 0 for the time being
-      classesCount: 0,
+      classesCount: 0, // legacy param from Java agent implementation
       message: `Initializing plugin ${this.id}`,
       init: true,
     };
     super.send(initInfoMessage);
 
     const ast = await this.getAst();
-    // sends AST
-    //    non-Java agent AST initialization
-    //    it is workaround due to legacy reasons
-    //    it differs from Java agent's implementation (you won't find INIT_DATA_PART in java agent sourcecode)
     const initDataPartMessage: InitDataPart = {
       type: 'INIT_DATA_PART',
       astEntities: astProcessor.formatForBackend(ast),
     };
     super.send(initDataPartMessage);
 
-    // "launches" test2code plugin with AST & params prepared beforehand
     const initializedMessage: Initialized = { type: 'INITIALIZED', msg: '' };
     super.send(initializedMessage);
 
-    // TODO memorize "agentId - initiated plugin" to define if
     this.logger.debug('init: done');
   }
 
@@ -151,7 +138,7 @@ export class Test2CodePlugin extends Plugin {
     return upath.join(bundlesDir, this.agentId);
   }
 
-  public async updateBundleFiles(data: { file: string; source: string; hash: string }[]): Promise<void> {
+  private async updateBundleFiles(data: { file: string; source: string; hash: string }[]): Promise<void> {
     this.logger.info('update bundle files');
     const bundlePath = this.getBundlePath();
 
@@ -171,19 +158,19 @@ export class Test2CodePlugin extends Plugin {
     await storage.saveBundleMeta(this.agentId, meta);
   }
 
-  public async updateAst(rawAst: unknown[]): Promise<void> {
+  private async updateAst(rawAst: unknown[]): Promise<void> {
     this.logger.info('update ast');
-    const ast = await astProcessor.formatAst(rawAst); // TODO abstract AST processor
-    await storage.saveAst(this.agentId, ast); // TODO abstract storage
+    const ast = await astProcessor.formatAst(rawAst);
+    await storage.saveAst(this.agentId, ast);
   }
 
-  public async updateSourceMaps(sourceMaps): Promise<void> {
+  private async updateSourceMaps(sourceMaps): Promise<void> {
     this.logger.info('update source maps');
     // await coverage
     await sourcemapUtil.save(this.agentId, sourceMaps);
   }
 
-  public async startSession(payload: StartSessionPayload): Promise<void> {
+  private async startSession(payload: StartSessionPayload): Promise<void> {
     this.logger.info('start session', JSON.stringify(payload));
     const { testType, sessionId } = payload;
     await storage.saveSession(this.agentId, sessionId, payload);
@@ -198,7 +185,7 @@ export class Test2CodePlugin extends Plugin {
     super.send(sessionStartedMessage);
   }
 
-  async processCoverage(sessionId, stringifiedData): Promise<void> {
+  private async processCoverage(sessionId, stringifiedData): Promise<void> {
     const prepMark = global.prf.mark('prepare');
     this.logger.info('process coverage', sessionId);
     await this.ensureActiveSession(sessionId);
@@ -224,7 +211,7 @@ export class Test2CodePlugin extends Plugin {
         bundlePath,
         bundleMeta,
         bundleScriptsNames,
-        this.cache, // FIXME clear cache on new build
+        this.cache,
       );
       global.prf.measure(processCoverage);
       global.prf.print();
@@ -236,7 +223,7 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  public async finishSession(sessionId: string): Promise<void> {
+  private async finishSession(sessionId: string): Promise<void> {
     this.logger.info('finish session', sessionId);
     await this.ensureActiveSession(sessionId);
     try {
@@ -254,7 +241,7 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  public async cancelSession(sessionId: string): Promise<void> {
+  private async cancelSession(sessionId: string): Promise<void> {
     this.logger.info('cancel session', sessionId);
     await storage.removeSession(this.agentId, sessionId);
     const sessionCanceledMessage: SessionCancelled = {
@@ -274,7 +261,7 @@ export class Test2CodePlugin extends Plugin {
     return session;
   }
 
-  async sendTestResults(sessionId, data) {
+  private async sendTestResults(sessionId, data) {
     const coverDataPartMessage: CoverDataPart = {
       type: 'COVERAGE_DATA_PART',
       sessionId,

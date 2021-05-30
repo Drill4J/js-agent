@@ -57,8 +57,6 @@ export type OriginalSourceCoverage = {
   source?: string;
 };
 
-export type ScriptSources = Record<string, RawSourceString>;
-
 export type RawSourceString = Opaque<'SourceString', string>;
 export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
