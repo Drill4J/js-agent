@@ -14,6 +14,8 @@
     "dis_SOURCE_ROOT": "file:///C:/epm/chrome-coverage-playground/",
     "SOURCE_ROOT": "file:///C:/epm/todomvc/examples/typescript-angular/",
 
+    "DEBUG_PROBES_ENABLED": "true",
+
     "PERF_MEASUREMENT_ENABLED": "true",
     "PERF_DIFFS_ENABLED": "true",
 
