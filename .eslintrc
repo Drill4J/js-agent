@@ -21,7 +21,7 @@
     ],
     "import/extensions": 0,
     "indent": "off",
-    "@typescript-eslint/indent": ["error", 2],
+    // "@typescript-eslint/indent": ["error", 2], // disabled due to https://github.com/typescript-eslint/typescript-eslint/issues/1824
     "no-shadow": "off",
     // "@typescript-eslint/no-shadow": ["error"], // TODO fix no-shadow https://github.com/typescript-eslint/typescript-eslint/issues/2466#issuecomment-685876323
     "no-warning-comments": [1, { "terms": ["fixme"], "location": "start" }],
