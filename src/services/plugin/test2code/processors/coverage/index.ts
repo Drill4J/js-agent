@@ -73,16 +73,18 @@ export default async function processCoverage(
     R.filter(passProbesNotNull),
   )(astEntities);
 
-  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(result, testName);
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(rawData, result, testName);
   return result;
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
-const writeAndStripDebugInfo = async (data, testName): Promise<ExecClassData[]> => {
+const writeAndStripDebugInfo = async (rawData, data, rawTestName): Promise<ExecClassData[]> => {
   const ts = Date.now();
+  const testName = rawTestName.replace(/[/\\?%*:|"<>]/g, '-');
   const result = stripDebugInfoFromProbes(data);
   await fsExtra.ensureDir(`./out/${ts}`);
+  await fsExtra.writeJSON(`./out/${ts}/${testName}-rawData.json`, rawData, { spaces: 2 });
   await fsExtra.writeJSON(`./out/${ts}/${testName}-debug.json`, data, { spaces: 2 });
   await fsExtra.writeJSON(`./out/${ts}/${testName}.json`, result, { spaces: 2 });
   return result;
