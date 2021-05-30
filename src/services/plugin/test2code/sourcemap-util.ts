@@ -17,6 +17,9 @@ import fsExtra from 'fs-extra';
 import { RawSourceMap } from 'source-map';
 import * as upath from 'upath';
 import storage from '../../../storage';
+import Logger from '../../../util/logger';
+
+const logger = Logger.getLogger('drill', 'sourcemap-util');
 
 export const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
@@ -32,7 +35,27 @@ export async function save(agentId: string, sourcemaps: { sourcemap: RawSourceMa
     }),
   );
 
-  const scriptsNames = sourcemaps.map(x => upath.basename(x.sourcemap.file));
+  const scriptsNames = sourcemaps
+    .map(x => {
+      if (x.sourcemap.file) {
+        return upath.basename(x.sourcemap.file);
+      }
+      if (x.fileName) {
+        logger.warning(
+          `no "file" field found in source map.
+          \n\tTrimming the ".map" suffix from the sourcemap name "${x.fileName}" to infere the related file name`,
+        );
+        const regex = /\.map$/i;
+        return x.fileName.replace(regex, '');
+      }
+      return null;
+    })
+    .filter(x => !!x);
+
+  if (scriptsNames.length === 0) {
+    logger.error(`failed to match sourcemap with any bundle file: no "file" field or the respective file name is found.\n
+    Check source map generation or JS AST Parser CLI config to fix the issue`);
+  }
 
   await storage.saveBundleScriptsNames(agentId, scriptsNames);
 }
