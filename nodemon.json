@@ -7,31 +7,17 @@
   },
   "watch": ["dist/"],
   "env": {
-    "dis_DEBUG_TARGET_SCRIPT_URL": "http://localhost:3000/main.app.1dc802.js",
-    "DEBUG_TARGET_SCRIPT_URL": "http://localhost:8084/js/Application.js",
-
-    "SKIP_SOURCE_MAPPING": "false",
-    "dis_SOURCE_ROOT": "file:///C:/epm/chrome-coverage-playground/",
-    "SOURCE_ROOT": "file:///C:/epm/todomvc/examples/typescript-angular/",
-
     "DEBUG_PROBES_ENABLED": "true",
+
+    "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
+    "COVERAGE_SOURCE_APPEND_PREFIX": "src/js/",
+    "__COVERAGE_SOURCE_APPEND_PREFIX": "js/",
+    "__COVERAGE_SOURCE_APPEND_PREFIX": "src/",
 
     "PERF_MEASUREMENT_ENABLED": "true",
     "PERF_DIFFS_ENABLED": "true",
-
-    "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
-    "COVERAGE_SOURCE_APPEND_PREFIX": "js/",
-    "__COVERAGE_SOURCE_APPEND_PREFIX": "src/",
-
-    "DRILL_ADMIN_PROTOCOL": "http",
-
-    "dis_DRILL_ADMIN_HOST": "ecse0050029e.epam.com:8443",
-    "dis_DRILL_ADMIN_HOST": "ecse005009ba.epam.com:8443",
-
     "DRILL_ADMIN_HOST": "localhost:8090",
-
-    "dis_DRILL_ADMIN_HOST": "localhost:9090",
-
+    "DRILL_ADMIN_PROTOCOL": "http",
     "MONGO_HOST": "localhost:27017",
     "MONGO_DBNAME": "js-agent",
     "SOURCE_MAP_FOLDER": "./sourceMaps",
