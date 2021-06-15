@@ -15,6 +15,7 @@
  */
 /* eslint-disable import/no-unresolved */
 import { AstMethod, ExecClassData } from '@drill4j/test2code-types';
+import isEmpty from 'lodash.isempty';
 import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
@@ -37,11 +38,8 @@ export default async function processCoverage(
   bundleScriptNames: BundleScriptNames,
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const {
-    testName,
-    coverage,
-    scriptSources: { hashToUrl, urlToHash },
-  } = rawData;
+  const { testName, coverage, scriptSources } = rawData;
+  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources);
 
   if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
@@ -75,6 +73,28 @@ export default async function processCoverage(
 
   if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(rawData, result, testName);
   return result;
+}
+
+let cache: any;
+function getUrlToHashMappings(data) {
+  const isData = !isEmpty(data) && !isEmpty(data.hashToUrl) && !isEmpty(data.urlToHash);
+
+  if (process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && isData) {
+    if (cache) {
+      logger.warning('overwriting url to hash map cache');
+    }
+    cache = data;
+  }
+
+  if (isData) {
+    return data;
+  }
+
+  if (!isData && process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && cache) {
+    return cache;
+  }
+
+  throw new Error('Url to hash maps are not available');
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
