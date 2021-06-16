@@ -39,7 +39,7 @@ export default async function processCoverage(
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
   const { testName, coverage, scriptSources } = rawData;
-  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources);
+  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
 
   if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
@@ -75,23 +75,27 @@ export default async function processCoverage(
   return result;
 }
 
-let cache: any;
-function getUrlToHashMappings(data) {
-  const isData = !isEmpty(data) && !isEmpty(data.hashToUrl) && !isEmpty(data.urlToHash);
+// TODO this looks verbose and clunky. Come up with a better solution
+// TODO do not pass the whole cache object
+function getUrlToHashMappings(data, cache) {
+  const areMapsAvailable = !isEmpty(data?.hashToUrl) && !isEmpty(data?.urlToHash);
 
-  if (process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && isData) {
-    if (cache) {
+  if (process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && areMapsAvailable) {
+    // TODO "urlToHashMappings" sounds confusing (in context of source mapped cached values)
+    if (cache.urlToHashMappings) {
       logger.warning('overwriting url to hash map cache');
     }
-    cache = data;
+    // eslint-disable-next-line no-param-reassign
+    cache.urlToHashMappings = data;
   }
 
-  if (isData) {
+  if (areMapsAvailable) {
     return data;
   }
 
-  if (!isData && process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && cache) {
-    return cache;
+  const isCacheAvailable = !isEmpty(cache?.urlToHashMappings?.hashToUrl) && !isEmpty(cache?.urlToHashMappings?.urlToHash);
+  if (!areMapsAvailable && process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && isCacheAvailable) {
+    return cache.urlToHashMappings;
   }
 
   throw new Error('Url to hash maps are not available');
