@@ -22,6 +22,7 @@ import responseHandler from './middleware/response.handler';
 
 import loggerMiddleware from './middleware/logger';
 import populateCtxWithPlugin from './middleware/populate.req.with.plugin';
+import populateCtxWithAgent from './middleware/populate.req.with.agent';
 
 import { ILogger } from './util/logger';
 import { AppConfig } from './app.types';
@@ -42,6 +43,7 @@ export class App {
 
   constructor(config: AppConfig, agentHub: AgentHub) {
     this.middlewares = {
+      populateCtxWithAgent: populateCtxWithAgent.bind(this),
       responseHandler: responseHandler.bind(this),
     };
 
@@ -113,6 +115,15 @@ export class App {
         const { test2Code } = ctx.state.drill;
         const { data } = ctx.request.body;
         await test2Code.updateBuildInfo(data);
+      },
+    );
+
+    router.get(
+      '/agents/:agentId/plugins/:pluginId/ast',
+      this.middlewares.populateCtxWithAgent,
+      populateCtxWithPlugin,
+      async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
+        ctx.response.body = await ctx.state.drill.test2Code.getAst();
       },
     );
 
