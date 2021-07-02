@@ -58,10 +58,12 @@ Build executable using the following lines
   rm -rf node_modules
   rm -rf dist
   npm install
+  npx webpack
   pkg ./dist/index.js
 ```
 
 > You can specify targets with `-t` option (refer to `pkg --help` and examples on [pkg's npm](https://www.npmjs.com/package/pkg))
+> e.g. use `pkg -t node14-win-x64 ./dist/index.js` to build for Node14, Windows x64
 
 ### Launch executable
 
