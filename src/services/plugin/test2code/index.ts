@@ -102,7 +102,7 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  private async getAst() {
+  public async getAst() {
     const ast = await storage.getAst(this.agentId);
     return ast && ast.data;
   }
