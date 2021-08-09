@@ -19,13 +19,14 @@ import isEmpty from 'lodash.isempty';
 import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
-import convertSourceMap from 'convert-source-map';
 import R from 'ramda';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '../../../../../util/logger';
 import Source from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
 import normalizeScriptPath from '../../../../../util/normalize-script-path';
+import { fsReplaceRestrictedCharacters } from '../../../../../util/misc';
+import { getSourceMap } from '../../sourcemap-util';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
@@ -105,7 +106,7 @@ const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
 const writeAndStripDebugInfo = async (rawData, data, rawTestName): Promise<ExecClassData[]> => {
   const ts = Date.now();
-  const testName = rawTestName.replace(/[/\\?%*:|"<>]/g, '-');
+  const testName = fsReplaceRestrictedCharacters(rawTestName);
   const result = stripDebugInfoFromProbes(data);
   await fsExtra.ensureDir(`./out/${ts}`);
   await fsExtra.writeJSON(`./out/${ts}/${testName}-rawData.json`, rawData, { spaces: 2 });
@@ -217,9 +218,6 @@ const createHashFilter = bundleHashes => hashToUrl => {
   const scriptsUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
   return url => url && scriptsUrls.includes(url);
 };
-
-const getSourceMap = (sourceMapPath: string, source: string): RawSourceMap | null =>
-  convertSourceMap.fromMapFileSource(source, sourceMapPath)?.sourcemap;
 
 const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || undefined;
 

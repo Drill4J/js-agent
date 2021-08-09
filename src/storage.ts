@@ -39,22 +39,22 @@ export class Storage {
     this.db = await this.connect();
   }
 
-  public async saveBundleMeta(agentId, data) {
-    await this.upsertToDb('bundlemeta', { agentId, data }, { agentId });
+  public async saveBundleMeta(agentId, buildVersion, data) {
+    await this.upsertToDb('bundlemeta', { agentId, buildVersion, data }, { agentId, buildVersion });
   }
 
-  public async getBundleMeta(agentId): Promise<any> {
-    const res = await this.getFromDb('bundlemeta', { agentId });
+  public async getBundleMeta(agentId, buildVersion): Promise<any> {
+    const res = await this.getFromDb('bundlemeta', { agentId, buildVersion });
     return res && res[0].data;
   }
 
   // #region AST
-  public async saveAst(agentId, data) {
-    await this.upsertToDb('ast', { agentId, data }, { agentId });
+  public async saveAst(agentId, version, data) {
+    await this.upsertToDb('ast', { agentId, version, data }, { agentId, version });
   }
 
-  public async getAst(agentId): Promise<any> {
-    const asts = await this.getFromDb('ast', { agentId });
+  public async getAst(agentId, version): Promise<any> {
+    const asts = await this.getFromDb('ast', { agentId, version });
     return asts && asts[0];
   }
 
@@ -105,12 +105,12 @@ export class Storage {
   // #endregion
 
   // #region sourcemaps (mainScriptNames)
-  public async saveBundleScriptsNames(agentId, names) {
-    await this.upsertToDb('scriptnames', { agentId, names }, { agentId });
+  public async saveBundleScriptsNames(agentId, buildVersion, names) {
+    await this.upsertToDb('scriptnames', { agentId, buildVersion, names }, { agentId, buildVersion });
   }
 
-  public async getBundleScriptsNames(agentId): Promise<BundleScriptNames> {
-    const data = await this.getFromDb('scriptnames', { agentId });
+  public async getBundleScriptsNames(agentId, buildVersion): Promise<BundleScriptNames> {
+    const data = await this.getFromDb('scriptnames', { agentId, buildVersion });
     return data[0]?.names;
   }
 

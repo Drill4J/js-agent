@@ -13,21 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { PluginConfig } from './types';
-import { Connection } from '../common/types';
-import Plugin from './plugin';
-import test2code from './test2code';
 
-export interface IPluginConstructor {
-  new (pluginId: string, agentId: string, buildVersion: string, connection: Connection, config: PluginConfig): Plugin;
+// Replace characters restricted for Windows OSs
+// reference https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+export function fsReplaceRestrictedCharacters(str: string, replacer = ''): string {
+  return str.replace(/[/\\?%*:|"<>]/g, replacer);
 }
-
-export interface Plugins {
-  [pluginId: string]: Plugin;
-}
-
-export { default as Plugin } from './plugin';
-
-export const AvailablePlugins = {
-  test2code,
-};
