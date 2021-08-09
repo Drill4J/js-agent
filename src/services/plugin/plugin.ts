@@ -21,6 +21,8 @@ export default class Plugin {
 
   protected agentId: string;
 
+  protected currentBuildVersion: string;
+
   protected config: PluginConfig;
 
   protected logger: any;
@@ -30,9 +32,10 @@ export default class Plugin {
 
   private connection: Connection;
 
-  constructor(id: string, agentId: string, connection: Connection, config: PluginConfig) {
+  constructor(id: string, agentId: string, currentBuildVersion: string, connection: Connection, config: PluginConfig) {
     this.id = id;
     this.agentId = agentId;
+    this.currentBuildVersion = currentBuildVersion;
     this.connection = connection;
     this.config = config;
     this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentId}:${this.id}`);

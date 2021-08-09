@@ -113,17 +113,17 @@ export class App {
       populateCtxWithPlugin,
       async (ctx: ExtendableContext) => {
         const { test2Code } = ctx.state.drill;
-        const { data } = ctx.request.body;
-        await test2Code.updateBuildInfo(data);
+        const { data, version } = ctx.request.body;
+        await test2Code.updateBuildInfo(version, data);
       },
     );
 
     router.get(
-      '/agents/:agentId/plugins/:pluginId/ast',
+      '/agents/:agentId/build/:buildVersion/plugins/:pluginId/ast',
       this.middlewares.populateCtxWithAgent,
       populateCtxWithPlugin,
       async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
-        ctx.response.body = await ctx.state.drill.test2Code.getAst();
+        ctx.response.body = await ctx.state.drill.test2Code.getAst(ctx.params.buildVersion);
       },
     );
 

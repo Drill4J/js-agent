@@ -40,6 +40,7 @@ import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
 import Plugin from '../plugin';
+import { fsReplaceRestrictedCharacters } from '../../../util/misc';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
@@ -56,8 +57,7 @@ export class Test2CodePlugin extends Plugin {
       init: true,
     };
     super.send(initInfoMessage);
-
-    const ast = await this.getAst();
+    const ast = await this.getAst(this.currentBuildVersion);
     const initDataPartMessage: InitDataPart = {
       type: 'INIT_DATA_PART',
       astEntities: astProcessor.formatForBackend(ast),
@@ -102,8 +102,8 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  public async getAst() {
-    const ast = await storage.getAst(this.agentId);
+  public async getAst(buildVersion) {
+    const ast = await storage.getAst(this.agentId, buildVersion);
     return ast && ast.data;
   }
 
@@ -125,22 +125,22 @@ export class Test2CodePlugin extends Plugin {
     super.send(scopeInitializedMessage);
   }
 
-  public async updateBuildInfo(buildInfo): Promise<void> {
+  public async updateBuildInfo(version, buildInfo): Promise<void> {
     const { bundleFiles, sourcemaps, data } = buildInfo;
     // TODO transaction
-    await this.updateAst(data);
-    await this.updateBundleFiles(bundleFiles);
-    await this.updateSourceMaps(sourcemaps);
+    await this.updateAst(version, data);
+    await this.updateBundleFiles(version, bundleFiles);
+    await this.updateSourceMaps(version, sourcemaps);
   }
 
-  private getBundlePath() {
+  private getBundlePath(buildVersion) {
     const bundlesDir = process.env.BUNDLES_FOLDER || 'bundles';
-    return upath.join(bundlesDir, this.agentId);
+    return upath.join(bundlesDir, fsReplaceRestrictedCharacters(this.agentId), fsReplaceRestrictedCharacters(buildVersion));
   }
 
-  private async updateBundleFiles(data: { file: string; source: string; hash: string }[]): Promise<void> {
+  private async updateBundleFiles(buildVersion: string, data: { file: string; source: string; hash: string }[]): Promise<void> {
     this.logger.info('update bundle files');
-    const bundlePath = this.getBundlePath();
+    const bundlePath = this.getBundlePath(buildVersion);
 
     await fsExtra.remove(bundlePath);
     await fsExtra.ensureDir(bundlePath);
@@ -155,19 +155,19 @@ export class Test2CodePlugin extends Plugin {
       }),
     );
     // TODO save bundle hashes info with scriptnames from sourcemaps
-    await storage.saveBundleMeta(this.agentId, meta);
+    await storage.saveBundleMeta(this.agentId, buildVersion, meta);
   }
 
-  private async updateAst(rawAst: unknown[]): Promise<void> {
+  private async updateAst(buildVersion, rawAst: unknown[]): Promise<void> {
     this.logger.info('update ast');
     const ast = await astProcessor.formatAst(rawAst);
-    await storage.saveAst(this.agentId, ast);
+    await storage.saveAst(this.agentId, buildVersion, ast);
   }
 
-  private async updateSourceMaps(sourceMaps): Promise<void> {
+  private async updateSourceMaps(buildVersion, sourceMaps): Promise<void> {
     this.logger.info('update source maps');
     // await coverage
-    await sourcemapUtil.save(this.agentId, sourceMaps);
+    await sourcemapUtil.save(this.agentId, buildVersion, sourceMaps);
   }
 
   private async startSession(payload: StartSessionPayload): Promise<void> {
@@ -191,21 +191,22 @@ export class Test2CodePlugin extends Plugin {
     await this.ensureActiveSession(sessionId);
     try {
       const rawData = JSON.parse(stringifiedData);
-      const astTree = await storage.getAst(this.agentId);
-      const bundleMeta = await storage.getBundleMeta(this.agentId);
-      const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId);
+      // TODO use own method "getAst" instead
+      const astTree = await storage.getAst(this.agentId, this.currentBuildVersion);
+      const bundleMeta = await storage.getBundleMeta(this.agentId, this.currentBuildVersion);
+      const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId, this.currentBuildVersion);
       if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
         // TODO extend error and dispatch it in centralized error handler
         throw new Error('Bundle script names not found. You are probably missing source maps?');
       }
       const { data: ast } = astTree;
 
-      const bundlePath = this.getBundlePath();
+      const bundlePath = this.getBundlePath(this.currentBuildVersion);
       global.prf.measure(prepMark);
 
       const processCoverage = global.prf.mark('process');
       const data = await coverageProcessor(
-        `${sourcemapUtil.sourceMapFolder}${upath.sep}${this.agentId}`,
+        sourcemapUtil.getSourcemapStoragePath(this.agentId, this.currentBuildVersion),
         ast,
         rawData,
         bundlePath,

@@ -16,20 +16,29 @@
 import fsExtra from 'fs-extra';
 import { RawSourceMap } from 'source-map';
 import * as upath from 'upath';
+import convertSourceMap from 'convert-source-map';
 import storage from '../../../storage';
+import { fsReplaceRestrictedCharacters } from '../../../util/misc';
 import Logger from '../../../util/logger';
 
 const logger = Logger.getLogger('drill', 'sourcemap-util');
 
 export const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
-export async function save(agentId: string, sourcemaps: { sourcemap: RawSourceMap; fileName: string }[]): Promise<void> {
-  const dirPath = `${sourceMapFolder}${upath.sep}${agentId}`;
+export async function save(
+  agentId: string,
+  buildVersion: string,
+  sourcemaps: { sourcemap: RawSourceMap; fileName: string }[],
+): Promise<void> {
+  const dirPath = getSourcemapStoragePath(agentId, buildVersion);
   await fsExtra.ensureDir(dirPath);
 
   await Promise.all(
     sourcemaps.map(async x => {
       const { sourcemap, fileName } = x;
+
+      // TODO add fsReplaceRestrictedCharacters(fileName)
+      // once getSourceMap is fixed as well
       const fullPath = upath.join(dirPath, fileName);
       await fsExtra.writeJSON(fullPath, sourcemap);
     }),
@@ -57,5 +66,14 @@ export async function save(agentId: string, sourcemaps: { sourcemap: RawSourceMa
     Check source map generation or JS AST Parser CLI config to fix the issue`);
   }
 
-  await storage.saveBundleScriptsNames(agentId, scriptsNames);
+  await storage.saveBundleScriptsNames(agentId, buildVersion, scriptsNames);
+}
+
+export function getSourcemapStoragePath(agentId: string, buildVersion: string) {
+  return upath.join(sourceMapFolder, fsReplaceRestrictedCharacters(agentId), fsReplaceRestrictedCharacters(buildVersion));
+}
+
+// TODO use fsReplaceRestrictedCharacters
+export function getSourceMap(sourceMapPath: string, source: string): RawSourceMap | null {
+  return convertSourceMap.fromMapFileSource(source, sourceMapPath)?.sourcemap;
 }
