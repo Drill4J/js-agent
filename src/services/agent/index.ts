@@ -192,6 +192,8 @@ export class Agent {
           message: { pluginId },
         } = data;
         await this.togglePlugin(pluginId);
+        // HACK for multiple plugin registration. Remove after EPMDJ-8233 will be implemented  
+        this.sendDeliveryConfirmation(`/agent/plugin/${pluginId}/toggle`);
         break;
       }
 
