@@ -250,15 +250,15 @@ export class Agent {
 
   private async instantiatePlugin(pluginId: string): Promise<Plugin> {
     this.logger.info('instantiate plugin', pluginId);
-    const PluginConstructor = await this.importPluginConstructor(pluginId);
-    const plugin = new PluginConstructor(pluginId, this.data.id, this.connection, {
+    const PluginConstructor = this.getPluginConstructor(pluginId);
+    const plugin = new PluginConstructor(pluginId, this.data.id, this.data.buildVersion, this.connection, {
       loggerProvider: this.config.loggerProvider,
     });
     this.plugins[pluginId] = plugin;
     return plugin;
   }
 
-  private async importPluginConstructor(rawPluginId: string): Promise<IPluginConstructor> {
+  private getPluginConstructor(rawPluginId: string): IPluginConstructor {
     const pluginId = rawPluginId.toLowerCase().replace(/[^a-zA-Z-\d]/, '');
     if (pluginId !== rawPluginId) {
       const msg = 'Failed to import plugin: pluginId is missing or malformed. Only lowercase kebab-cased-names are allowed';
