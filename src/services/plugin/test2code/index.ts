@@ -41,6 +41,7 @@ import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
 import Plugin from '../plugin';
 import { fsReplaceRestrictedCharacters } from '../../../util/misc';
+import chromehash from './third-party/chromehash';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;
@@ -147,10 +148,12 @@ export class Test2CodePlugin extends Plugin {
     const meta = await Promise.all(
       data.map(async x => {
         const fileName = upath.join(bundlePath, upath.basename(x.file));
+        const buf = Buffer.from(x.source, 'utf-8');
+        const hash = chromehash.hash(buf);
         await fsExtra.writeFile(fileName, x.source);
         return {
           file: x.file,
-          hash: x.hash,
+          hash,
         };
       }),
     );

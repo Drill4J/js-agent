@@ -27,6 +27,7 @@ import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Co
 import normalizeScriptPath from '../../../../../util/normalize-script-path';
 import { fsReplaceRestrictedCharacters } from '../../../../../util/misc';
 import { getSourceMap } from '../../sourcemap-util';
+import chromehash from '../../third-party/chromehash';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
 
@@ -40,20 +41,28 @@ export default async function processCoverage(
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
   const { testName, coverage, scriptSources } = rawData;
-  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
 
   if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
 
-  const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
-  const rawScriptsCoverage = R.filter(hashFilter)(coverage);
-  if (R.isEmpty(rawScriptsCoverage)) {
-    // TODO think of a more descriptive message
-    logger.warning('all coverage was filtered');
-    return [];
-  }
+  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
+  // const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
+  // const rawScriptsCoverage = R.filter(hashFilter)(coverage);
+  // if (R.isEmpty(rawScriptsCoverage)) {
+  //   // TODO think of a more descriptive message
+  //   logger.warning('all coverage was filtered');
+  //   return [];
+  // }
+  const rawScriptsCoverage = coverage.filter(x => x.url.includes('http://localhost:4100/static/js'));
+
+  console.log('rawScriptsCoverage urls');
+  rawScriptsCoverage.map(x => x.url).forEach(x => console.log(x));
+  console.log('urlToHash');
+  logger.info(urlToHash);
+  console.log('missing');
+  rawScriptsCoverage.map(x => ({ url: x.url, inferedHash: urlToHash[x.url] }));
 
   const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(rawScriptsCoverage);
   const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
@@ -129,6 +138,9 @@ const transformCoverage = rangeMappingFn =>
           R.prop('ranges'),
           R.map(rangeMappingFn),
           R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
+          R.tap(x => {
+            console.log();
+          }),
           R.map(transformSource),
         ),
       ),
@@ -161,6 +173,7 @@ const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => asy
       if (cache[urlToHash[url]]) return;
       const scriptName = extractScriptName(url);
       const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
+      const hash = chromehash.hash(buf);
       const rawSource = buf.toString('utf8');
       const sourcemap = getSourceMap(sourceMapPath, rawSource);
 
