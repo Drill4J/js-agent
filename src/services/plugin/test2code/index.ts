@@ -193,7 +193,7 @@ export class Test2CodePlugin extends Plugin {
       const rawData = JSON.parse(stringifiedData);
       // TODO use own method "getAst" instead
       const astTree = await storage.getAst(this.agentId, this.currentBuildVersion);
-      const bundleMeta = await storage.getBundleMeta(this.agentId, this.currentBuildVersion);
+      // const bundleMeta = await storage.getBundleMeta(this.agentId, this.currentBuildVersion);
       const bundleScriptsNames = await storage.getBundleScriptsNames(this.agentId, this.currentBuildVersion);
       if (!Array.isArray(bundleScriptsNames) || bundleScriptsNames.length === 0) {
         // TODO extend error and dispatch it in centralized error handler
@@ -210,7 +210,7 @@ export class Test2CodePlugin extends Plugin {
         ast,
         rawData,
         bundlePath,
-        bundleMeta,
+        // bundleMeta,
         bundleScriptsNames,
         this.cache,
       );

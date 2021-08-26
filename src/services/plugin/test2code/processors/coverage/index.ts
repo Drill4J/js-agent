@@ -35,20 +35,23 @@ export default async function processCoverage(
   astEntities: AstEntity[],
   rawData: { coverage: V8Coverage; scriptSources: any; testName: string },
   bundlePath: string,
-  bundleHashes: BundleHashes,
+  // bundleHashes: BundleHashes,
   bundleScriptNames: BundleScriptNames,
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
   const { testName, coverage, scriptSources } = rawData;
-  const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
+  // const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
 
   if (!coverage || coverage.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
 
-  const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
-  const rawScriptsCoverage = R.filter(hashFilter)(coverage);
+  // const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
+  // const rawScriptsCoverage = R.filter(hashFilter)(coverage);
+  const createNameFilter = (scriptNames: string[]) => (url: string) => scriptNames.findIndex(x => url.includes(x)) > -1;
+  const scriptNameFilter = R.pipe(R.prop('url'), createNameFilter(bundleScriptNames));
+  const rawScriptsCoverage = R.filter(scriptNameFilter)(coverage);
   if (R.isEmpty(rawScriptsCoverage)) {
     // TODO think of a more descriptive message
     logger.warning('all coverage was filtered');
@@ -56,7 +59,8 @@ export default async function processCoverage(
   }
 
   const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(rawScriptsCoverage);
-  const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
+  // const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
+  const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(scriptsUrls);
 
   const obtainMappingFunction = R.pipe(R.prop('url'), getMappingFnByUrl);
   const scriptsCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(rawScriptsCoverage);
@@ -155,10 +159,10 @@ const computeProperty = name => comp => data => ({
   [name]: comp(data),
 });
 
-const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => async scriptsUrls => {
+const prepareMappingFns = (sourceMapPath, bundlePath, cache) => async scriptsUrls => {
   await Promise.all(
     R.map(async (url: string) => {
-      if (cache[urlToHash[url]]) return;
+      if (cache[url]) return;
       const scriptName = extractScriptName(url);
       const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
       const rawSource = buf.toString('utf8');
@@ -175,12 +179,12 @@ const prepareMappingFns = (sourceMapPath, bundlePath, cache) => urlToHash => asy
       // }
 
       // eslint-disable-next-line no-param-reassign
-      cache[urlToHash[url]] = new Source(rawSource, await new SourceMapConsumer(sourcemap));
+      cache[url] = new Source(rawSource, await new SourceMapConsumer(sourcemap));
     })(scriptsUrls),
   );
 
   return url => ({ startOffset, endOffset, count }) => ({
-    ...cache[urlToHash[url]].getOriginalPosition(startOffset, endOffset),
+    ...cache[url].getOriginalPosition(startOffset, endOffset),
     count, // TODO preserves count. hack-ish but fast
   });
 };
