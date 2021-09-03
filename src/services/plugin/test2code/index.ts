@@ -34,13 +34,13 @@ import {
 
 import fsExtra from 'fs-extra';
 import * as upath from 'upath';
+import { fsReplaceRestrictedCharacters } from '@util/misc';
 import * as sourcemapUtil from './sourcemap-util';
 import { Scope, Test2CodeAction } from './types';
 import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import storage from '../../../storage';
 import Plugin from '../plugin';
-import { fsReplaceRestrictedCharacters } from '../../../util/misc';
 
 export class Test2CodePlugin extends Plugin {
   private activeScope: Scope;

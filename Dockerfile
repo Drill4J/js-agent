@@ -25,4 +25,4 @@ RUN chmod +x /wait
 
 # Launch
 EXPOSE 8080
-CMD /wait && npm start
+CMD /wait && node .

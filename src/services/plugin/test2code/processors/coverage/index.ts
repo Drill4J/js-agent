@@ -21,11 +21,11 @@ import fsExtra from 'fs-extra';
 import upath from 'upath';
 import R from 'ramda';
 import { RawSourceMap, SourceMapConsumer } from 'source-map';
-import LoggerProvider from '../../../../../util/logger';
+import LoggerProvider from '@util/logger';
+import normalizeScriptPath from '@util/normalize-script-path';
+import { fsReplaceRestrictedCharacters } from '@util/misc';
 import Source from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
-import normalizeScriptPath from '../../../../../util/normalize-script-path';
-import { fsReplaceRestrictedCharacters } from '../../../../../util/misc';
 import { getSourceMap } from '../../sourcemap-util';
 
 export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');

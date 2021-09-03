@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import * as upath from 'upath';
-import normalizeScriptPath from '../../../../util/normalize-script-path';
+import normalizeScriptPath from '@util/normalize-script-path';
 
 export function formatAst(astTreeData) {
   return astTreeData.map(({ path, suffix, methods = [] }) => ({

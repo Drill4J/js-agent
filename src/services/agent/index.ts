@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import parseJsonRecursive from '@util/parse-json-recursive';
 import { AgentData, AgentConfig, PluginInfo, Message } from './types';
 import { Connection, DataPackage, ConfirmationPackage } from '../common/types';
 import { isTest2CodePlugin } from '../plugin/guards';
 import { AvailablePlugins, Plugin, Plugins, IPluginConstructor } from '../plugin';
-import parseJsonRecursive from '../../util/parse-json-recursive';
-import '../../util/performance';
+import '@util/performance';
 
 export interface AgentsMap {
   [agentId: string]: Agent;

@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ILoggerProvider } from '@util/logger';
 import { ConnectionProvider } from '../common/types';
-import { ILoggerProvider } from '../../util/logger';
 
 export interface AgentData {
   id: string;

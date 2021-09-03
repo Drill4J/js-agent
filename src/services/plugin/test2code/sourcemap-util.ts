@@ -17,9 +17,9 @@ import fsExtra from 'fs-extra';
 import { RawSourceMap } from 'source-map';
 import * as upath from 'upath';
 import convertSourceMap from 'convert-source-map';
+import { fsReplaceRestrictedCharacters } from '@util/misc';
+import Logger from '@util/logger';
 import storage from '../../../storage';
-import { fsReplaceRestrictedCharacters } from '../../../util/misc';
-import Logger from '../../../util/logger';
 
 const logger = Logger.getLogger('drill', 'sourcemap-util');
 

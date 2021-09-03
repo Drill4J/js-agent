@@ -1,20 +1,12 @@
 {
-  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "coverage": "jest -c jest.unit.js --coverage --colors",
-    "test": "jest -c jest.unit.js",
-    "start": "node .",
-    "predev": "npm run build",
-    "prebuild": "eslint . --ext .ts && rm -rf dist",
+    "build": "set NODE_ENV=production&& npx webpack --config webpack.config.js",
     "lint": "eslint . --ext .ts --fix",
-    "dev": "npx nodemon dist/index.js",
-    "debug": "npx nodemon --inspect dist/index.js",
-    "build": "tsc"
+    "test": "jest -c jest.unit.js"
   },
-  "name": "agent-js",
   "main": "dist/index.js",
   "license": "Apache-2.0",
-  "keywords": [],
   "jest": {
     "transform": {
       "^.+\\.(ts|tsx)$": "ts-jest"
@@ -75,6 +67,7 @@
     "ts-jest": "^24.3.0",
     "ts-loader": "^8.0.4",
     "ts-node": "^8.6.2",
+    "tsconfig-paths-webpack-plugin": "^3.5.1",
     "typescript": "^3.7.4",
     "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12",

@@ -15,7 +15,7 @@
  */
 import Websocket from 'ws';
 import axios from 'axios';
-import parseJsonRecursive from '../../util/parse-json-recursive';
+import parseJsonRecursive from '@util/parse-json-recursive';
 import { Message, AgentInfo } from '../agent/types';
 
 const AgentStatus = {

@@ -16,7 +16,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { StartSessionPayload } from '@drill4j/test2code-types';
 import { MongoClient } from 'mongodb';
-import { BundleScriptNames } from 'services/plugin/test2code/processors/coverage/types';
+import { BundleScriptNames } from './services/plugin/test2code/processors/coverage/types';
 
 export interface StorageSettings {
   host: string;
