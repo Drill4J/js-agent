@@ -108,7 +108,7 @@ export class Agent {
         };
       }
 
-      const connectionEstablished = new Promise((resolve, reject) => {
+      const connectionEstablished = new Promise<void>((resolve, reject) => {
         this.connection.on('open', () => {
           this.logger.info('connection established');
           resolve();
@@ -143,7 +143,7 @@ export class Agent {
   private async closeConnection() {
     if (this.connection && this.connection.readyState === CONNECTION_READY_STATE.OPEN) {
       this.connection.close();
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         this.connection.on('close', () => resolve());
         const timeout = parseInt(process.env.AGENT_CLOSE_CONNECTION_TIMEOUT_MS, 10) || 10000;
         setTimeout(() => reject(new Error('failed to close connection')), timeout);
