@@ -38,7 +38,7 @@ export default class Plugin {
     this.currentBuildVersion = currentBuildVersion;
     this.connection = connection;
     this.config = config;
-    this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentId}:${this.id}`);
+    this.logger = this.config.loggerProvider.getLogger('agent', agentId, this.id);
   }
 
   public async init() {

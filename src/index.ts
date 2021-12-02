@@ -21,7 +21,7 @@ import { AgentHub } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
 import * as AgentsInfoProvider from './services/agents-info-provider';
 
-const startupLogger = LoggerProvider.getLogger('drill', 'startup');
+const startupLogger = LoggerProvider.getLogger('startup');
 
 async function start(): Promise<void> {
   startupLogger.info('starting');

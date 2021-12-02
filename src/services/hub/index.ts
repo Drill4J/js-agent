@@ -34,7 +34,7 @@ export class AgentHub {
   constructor(agentsInfoProvider: AgentsInfoProvider, config: AgentHubConfig) {
     this.agentsInfoProvider = agentsInfoProvider;
     this.config = config;
-    this.logger = this.config.loggerProvider.getLogger('drill', 'agenthub');
+    this.logger = this.config.loggerProvider.getLogger('agenthub');
     this.initializing = this.init();
   }
 

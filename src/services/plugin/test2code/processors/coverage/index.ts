@@ -28,7 +28,7 @@ import Source from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
 import { getSourceMap } from '../../sourcemap-util';
 
-export const logger = LoggerProvider.getLogger('drill', 'coverage-processor');
+export const logger = LoggerProvider.getLogger('coverage-processor');
 
 export default async function processCoverage(
   sourceMapPath: string,

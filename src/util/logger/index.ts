@@ -26,20 +26,21 @@ export interface ILoggerProvider {
   getLogger(...args): ILogger;
 }
 
+const levels = {
+  0: { name: 'error', format: chalk.whiteBright, prefixFormat: chalk.whiteBright.bgRedBright },
+  1: { name: 'warning', format: chalk.whiteBright, prefixFormat: chalk.black.bgYellowBright },
+  2: { name: 'info', format: chalk.white },
+  3: { name: 'note', format: chalk.whiteBright, prefixFormat: chalk.black.bgWhite },
+  4: { name: 'debug', format: chalk.blueBright },
+  5: { name: 'silly', format: chalk.yellow },
+};
+
+const prefix = 'drill';
+
 export default class LoggerProvider {
-  public static getLogger(
-    prefix: string,
-    name: string,
-    levels = {
-      0: { name: 'error', format: chalk.whiteBright, prefixFormat: chalk.whiteBright.bgRedBright },
-      1: { name: 'warning', format: chalk.whiteBright, prefixFormat: chalk.black.bgYellowBright },
-      2: { name: 'info', format: chalk.white },
-      3: { name: 'debug', format: chalk.blueBright },
-      4: { name: 'silly', format: chalk.yellow },
-    },
-  ): ILogger {
+  public static getLogger(...names: string[]): ILogger {
     // TODO this is a terrible spaghetti, refactor it
-    const logFn = debug(`${prefix}:${name}`);
+    const logFn = debug(`${prefix}:${names.join(':')}`);
     const logger = {};
     const loggingLevel = parseInt(process.env.DEBUG_LOG_LEVEL, 10) || 1;
     Object.keys(levels).forEach(levelIndex => {

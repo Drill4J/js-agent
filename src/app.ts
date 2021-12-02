@@ -49,7 +49,7 @@ export class App {
 
     this.agentHub = agentHub;
     this.config = config;
-    this.logger = this.config.loggerProvider.getLogger('drill', 'webserver');
+    this.logger = this.config.loggerProvider.getLogger('webserver');
     this.app = new Koa();
 
     this.app.use(

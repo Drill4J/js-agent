@@ -56,7 +56,7 @@ export class Agent {
     this.enabledPlugins = plugins;
     this.config = config;
     this.needSync = needSync;
-    this.logger = this.config.loggerProvider.getLogger('drill', `agent:${agentInfo.data.id}`);
+    this.logger = this.config.loggerProvider.getLogger('agent', agentInfo.data.id);
     this.initializing = this.start();
   }
 
