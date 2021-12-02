@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 import fsExtra from 'fs-extra';
+import R from 'ramda';
 import { RawSourceMap } from 'source-map';
 import * as upath from 'upath';
 import convertSourceMap from 'convert-source-map';
 import { getDataPath } from '@util/misc';
 import Logger from '@util/logger';
 import storage from '../../../storage';
-
-const logger = Logger.getLogger('drill', 'sourcemap-util');
-
-export const sourceMapFolder = process.env.SOURCE_MAP_FOLDER || './sourceMaps';
 
 export async function save(
   agentId: string,
@@ -33,10 +30,11 @@ export async function save(
   const dirPath = getSourcemapStoragePath(agentId, buildVersion);
   await fsExtra.ensureDir(dirPath);
 
+  const logger = Logger.getLogger('agent', agentId, buildVersion);
+
   await Promise.all(
     sourcemaps.map(async x => {
       const { sourcemap, fileName } = x;
-
       // TODO add fsReplaceRestrictedCharacters(fileName)
       // once getSourceMap is fixed as well
       const fullPath = upath.join(dirPath, fileName);
@@ -44,26 +42,40 @@ export async function save(
     }),
   );
 
-  const scriptsNames = sourcemaps
-    .map(x => {
-      if (x.sourcemap.file) {
-        return upath.basename(x.sourcemap.file);
-      }
-      if (x.fileName) {
-        logger.warning(
-          `no "file" field found in source map.
-          \n\tTrimming the ".map" suffix from the sourcemap name "${x.fileName}" to infere the related file name`,
-        );
-        const regex = /\.map$/i;
-        return x.fileName.replace(regex, '');
-      }
-      return null;
-    })
-    .filter(x => !!x);
+  logger.info('updating source maps...');
+  if (process.env.SOURCEMAP_PREFER_FILE_FIELD) {
+    logger.note('SOURCEMAP_PREFER_FILE_FIELD=true is passed. Using "file" name from sourcemap files');
+  }
 
+  // TODO move that to js-parser
+  const getBundleFileName =
+    process.env.SOURCEMAP_PREFER_FILE_FIELD === 'true' ? x => upath.basename(x.sourcemap.file) : x => x.fileName.replace(/\.map$/i, '');
+
+  const scriptsNames = sourcemaps.map(
+    R.pipe(
+      R.tap(x => logger.note(`source map: ${x.fileName}`)),
+      getBundleFileName,
+      R.tap(x => logger.note(`file name : ${x}\n`)),
+    ),
+  );
+
+  logger.note(
+    'Tip (if you get no coverage): check that source maps match correct files in log above.' +
+      '\n' +
+      'If not, try changing env variable SOURCEMAP_PREFER_FILE_FIELD to either "false"/undefined or "true" ' +
+      `(default = undefined, current = ${process.env.SOURCEMAP_PREFER_FILE_FIELD})`,
+  );
+
+  scriptsNames.push(null);
+  if (scriptsNames.some(x => !x)) {
+    const msg = 'Some script names are empty. This should not happen. Check your js-parser config or contact Drill4J development team';
+    logger.error(msg);
+    throw new Error(msg);
+  }
   if (scriptsNames.length === 0) {
-    logger.error(`failed to match sourcemap with any bundle file: no "file" field or the respective file name is found.\n
-    Check source map generation or JS AST Parser CLI config to fix the issue`);
+    const msg = 'No script names found. This should not happen. Check your js-parser config or contact Drill4J development team';
+    logger.error(msg);
+    throw new Error(msg);
   }
 
   await storage.saveBundleScriptsNames(agentId, buildVersion, scriptsNames);
