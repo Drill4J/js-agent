@@ -20,10 +20,10 @@ import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import upath from 'upath';
 import R from 'ramda';
-import { RawSourceMap, SourceMapConsumer } from 'source-map';
+import { SourceMapConsumer } from 'source-map';
 import LoggerProvider from '@util/logger';
 import normalizeScriptPath from '@util/normalize-script-path';
-import { fsReplaceRestrictedCharacters } from '@util/misc';
+import { getDataPath } from '@util/misc';
 import Source from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
 import { getSourceMap } from '../../sourcemap-util';
@@ -108,14 +108,14 @@ function getUrlToHashMappings(data, cache) {
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
-const writeAndStripDebugInfo = async (rawData, data, rawTestName): Promise<ExecClassData[]> => {
+const writeAndStripDebugInfo = async (rawData, data, testName): Promise<ExecClassData[]> => {
   const ts = Date.now();
-  const testName = fsReplaceRestrictedCharacters(rawTestName);
   const result = stripDebugInfoFromProbes(data);
-  await fsExtra.ensureDir(`./out/${ts}`);
-  await fsExtra.writeJSON(`./out/${ts}/${testName}-rawData.json`, rawData, { spaces: 2 });
-  await fsExtra.writeJSON(`./out/${ts}/${testName}-debug.json`, data, { spaces: 2 });
-  await fsExtra.writeJSON(`./out/${ts}/${testName}.json`, result, { spaces: 2 });
+  const outFolderPath = getDataPath('out', ts.toString(), testName);
+  await fsExtra.ensureDir(outFolderPath);
+  await fsExtra.writeJSON(`${outFolderPath}/input.json`, rawData, { spaces: 2 });
+  await fsExtra.writeJSON(`${outFolderPath}/debug.json`, data, { spaces: 2 });
+  await fsExtra.writeJSON(`${outFolderPath}/output.json`, result, { spaces: 2 });
   return result;
 };
 

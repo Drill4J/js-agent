@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
+import upath from 'upath';
+
+export function getDataPath(...pathSegments: string[]): string {
+  const dataFolderPath = process.env.DATA_FOLDER || 'js-agent-data';
+  return upath.joinSafe(dataFolderPath, ...pathSegments.map(replaceRestrictedCharactersWith('')));
+}
+
 // Replace characters restricted for Windows OSs
 // reference https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-export function fsReplaceRestrictedCharacters(str: string, replacer = ''): string {
-  return str.replace(/[/\\?%*:|"<>]/g, replacer);
+function replaceRestrictedCharactersWith(replacer) {
+  return str => str.replace(/[/\\?%*:|"<>]/g, replacer);
 }

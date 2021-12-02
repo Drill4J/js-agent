@@ -34,7 +34,7 @@ import {
 
 import fsExtra from 'fs-extra';
 import * as upath from 'upath';
-import { fsReplaceRestrictedCharacters } from '@util/misc';
+import { getDataPath } from '@util/misc';
 import * as sourcemapUtil from './sourcemap-util';
 import { Scope, Test2CodeAction } from './types';
 import * as astProcessor from './processors/ast';
@@ -134,8 +134,7 @@ export class Test2CodePlugin extends Plugin {
   }
 
   private getBundlePath(buildVersion) {
-    const bundlesDir = process.env.BUNDLES_FOLDER || 'bundles';
-    return upath.join(bundlesDir, fsReplaceRestrictedCharacters(this.agentId), fsReplaceRestrictedCharacters(buildVersion));
+    return getDataPath(this.agentId, buildVersion, 'bundles');
   }
 
   private async updateBundleFiles(buildVersion: string, data: { file: string; source: string; hash: string }[]): Promise<void> {

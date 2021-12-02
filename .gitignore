@@ -1,12 +1,12 @@
 node_modules/
 dist/
 coverage-entries/
-sourceMaps/
 .env
+
 coverage/lcov-report
 coverage/clover.xml
 coverage/coverage-final.json
 coverage/lcov.info
-bundles
-/out
+
 .history
+js-agent-data

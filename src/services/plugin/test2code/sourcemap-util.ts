@@ -17,7 +17,7 @@ import fsExtra from 'fs-extra';
 import { RawSourceMap } from 'source-map';
 import * as upath from 'upath';
 import convertSourceMap from 'convert-source-map';
-import { fsReplaceRestrictedCharacters } from '@util/misc';
+import { getDataPath } from '@util/misc';
 import Logger from '@util/logger';
 import storage from '../../../storage';
 
@@ -69,8 +69,8 @@ export async function save(
   await storage.saveBundleScriptsNames(agentId, buildVersion, scriptsNames);
 }
 
-export function getSourcemapStoragePath(agentId: string, buildVersion: string) {
-  return upath.join(sourceMapFolder, fsReplaceRestrictedCharacters(agentId), fsReplaceRestrictedCharacters(buildVersion));
+export function getSourcemapStoragePath(agentId: string, buildVersion: string): string {
+  return getDataPath(agentId, buildVersion, 'source-maps');
 }
 
 // TODO use fsReplaceRestrictedCharacters
