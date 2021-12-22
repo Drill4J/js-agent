@@ -15,7 +15,6 @@
  */
 import Websocket from 'ws';
 import { App } from './app';
-import storage from './storage';
 import { AgentHubConfig } from './services/hub/types';
 import { AgentHub } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
@@ -25,8 +24,6 @@ const startupLogger = LoggerProvider.getLogger('startup');
 
 async function start(): Promise<void> {
   startupLogger.info('starting');
-
-  await storage.init();
 
   const agentHubConfig: AgentHubConfig = {
     loggerProvider: LoggerProvider,

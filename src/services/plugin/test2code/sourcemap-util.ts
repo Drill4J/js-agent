@@ -20,7 +20,6 @@ import * as upath from 'upath';
 import convertSourceMap from 'convert-source-map';
 import { getDataPath } from '@util/misc';
 import Logger from '@util/logger';
-import storage from '../../../storage';
 
 export async function save(
   agentId: string,
@@ -77,8 +76,6 @@ export async function save(
     logger.error(msg);
     throw new Error(msg);
   }
-
-  await storage.saveBundleScriptsNames(agentId, buildVersion, scriptsNames);
 }
 
 export function getSourcemapStoragePath(agentId: string, buildVersion: string): string {

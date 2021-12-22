@@ -50,22 +50,18 @@ export class Test2CodePlugin extends Plugin {
   public async init(): Promise<void> {
     this.logger.info('init');
 
-    const initInfoMessage: InitInfo = {
-      type: 'INIT',
-      classesCount: 0, // legacy param from Java agent implementation
-      message: `Initializing plugin ${this.id}`,
-      init: true,
-    };
-    super.send(initInfoMessage);
-    const ast = await this.getAst(this.currentBuildVersion);
-    const initDataPartMessage: InitDataPart = {
-      type: 'INIT_DATA_PART',
-      astEntities: astProcessor.formatForBackend(ast),
-    };
-    super.send(initDataPartMessage);
+    // classesCount: 0 - legacy param from Java agent implementation
+    super.send<InitInfo>({ type: 'INIT', classesCount: 0, message: `Initializing plugin ${this.id}`, init: true });
 
-    const initializedMessage: Initialized = { type: 'INITIALIZED', msg: '' };
-    super.send(initializedMessage);
+    const dataPath = getDataPath(this.agentId, this.currentBuildVersion);
+    const sourceAst = await fsExtra.readJSON(`${dataPath}/ast.json`);
+
+    super.send<InitDataPart>({
+      type: 'INIT_DATA_PART',
+      astEntities: astProcessor.formatForBackend(sourceAst),
+    });
+
+    super.send<Initialized>({ type: 'INITIALIZED', msg: '' });
 
     this.logger.debug('init: done');
   }
@@ -102,39 +98,21 @@ export class Test2CodePlugin extends Plugin {
     }
   }
 
-  public async getAst(buildVersion) {
-    const ast = await storage.getAst(this.agentId, buildVersion);
-    return ast && ast.data;
-  }
+  public async updateBuildInfo(buildVersion: string, buildInfo): Promise<void> {
+    const { bundleFiles, data } = buildInfo;
 
-  private async setActiveScope(payload: InitScopePayload) {
-    this.logger.info('init active scope %o', payload);
-    const { id, name, prevId } = payload;
-    this.activeScope = {
-      id,
-      name,
-      prevId,
-      ts: Date.now(),
-    };
-    await storage.deleteSessions(this.agentId); // TODO might wanna store active scope ID and delete/cancel sessions based on prevId
+    this.logger.info('build', buildVersion, 'saving data...');
 
-    const scopeInitializedMessage: ScopeInitialized = {
-      type: 'SCOPE_INITIALIZED',
-      ...this.activeScope,
-    };
-    super.send(scopeInitializedMessage);
-  }
+    const dataPath = getDataPath(this.agentId, buildVersion);
 
-  public async updateBuildInfo(version, buildInfo): Promise<void> {
-    const { bundleFiles, sourcemaps, data } = buildInfo;
-    // TODO transaction
-    await this.updateAst(version, data);
-    await this.updateBundleFiles(version, bundleFiles);
-    await this.updateSourceMaps(version, sourcemaps);
-  }
+    // prepare dir
+    await fsExtra.remove(dataPath);
+    await fsExtra.ensureDir(dataPath);
 
-  private getBundlePath(buildVersion) {
-    return getDataPath(this.agentId, buildVersion, 'bundles');
+    // save data
+    await fsExtra.writeJSON(`${dataPath}/bundle.json`, bundleFiles);
+    await fsExtra.writeJSON(`${dataPath}/ast.json`, formatAst(data));
+    this.logger.info('build', buildVersion, 'data saved!');
   }
 
   private async updateBundleFiles(buildVersion: string, data: { file: string; source: string; hash: string }[]): Promise<void> {

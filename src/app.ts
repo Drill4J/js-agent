@@ -118,15 +118,6 @@ export class App {
       },
     );
 
-    router.get(
-      '/agents/:agentId/build/:buildVersion/plugins/:pluginId/ast',
-      this.middlewares.populateCtxWithAgent,
-      populateCtxWithPlugin,
-      async (ctx: ExtendableContext & IRouterParamContext, next: Next) => {
-        ctx.response.body = await ctx.state.drill.test2Code.getAst(ctx.params.buildVersion);
-      },
-    );
-
     this.app.use(router.routes());
   }
 }
