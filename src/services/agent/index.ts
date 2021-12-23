@@ -69,7 +69,6 @@ export class Agent {
 
   private async stop(): Promise<void> {
     this.initialized = false;
-    await this.removePlugins();
     await this.closeConnection();
   }
 
@@ -155,12 +154,6 @@ export class Agent {
     if (this.enabledPlugins) {
       await Promise.all(this.enabledPlugins.map(pluginInfo => this.instantiatePlugin(pluginInfo.id)));
     }
-  }
-
-  private async removePlugins(): Promise<void> {
-    // TODO think about the sequence of actions necessary to "stop" a plugin
-    await Promise.all(Object.keys(this.plugins).map(pluginId => this.plugins[pluginId].stop()));
-    this.plugins = {};
   }
 
   public async updateBuildVersion(agentData: AgentData): Promise<void> {

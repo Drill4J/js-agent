@@ -7,11 +7,10 @@
   },
   "watch": ["dist/"],
   "env": {
-    "__DEBUG_PROBES_ENABLED": "true",
-
     "ENABLE_URL_TO_HASH_MAPS_CACHING": "true",
+    "DEBUG_PROBES_ENABLED": "true",
     "COVERAGE_SOURCE_OMIT_PREFIX": "webpack:///",
-    "COVERAGE_SOURCE_APPEND_PREFIX": "src/js/",
+    "__COVERAGE_SOURCE_APPEND_PREFIX": "src/js/",
     "__COVERAGE_SOURCE_APPEND_PREFIX": "js/",
     "__COVERAGE_SOURCE_APPEND_PREFIX": "src/",
 
@@ -19,8 +18,6 @@
     "PERF_DIFFS_ENABLED": "true",
     "DRILL_ADMIN_HOST": "localhost:8090",
     "DRILL_ADMIN_PROTOCOL": "http",
-    "MONGO_HOST": "localhost:27017",
-    "MONGO_DBNAME": "js-agent",
     "SOURCE_MAP_FOLDER": "./sourceMaps",
     "DEBUG_AGENT_SERVICE_CONNECTION": "true",
     "DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH": "400",

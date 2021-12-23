@@ -26,9 +26,6 @@ export default class Plugin {
   protected config: PluginConfig;
 
   protected logger: any;
-  // protected initialized: boolean;
-
-  // protected initializing: Promise<unknown>;
 
   private connection: Connection;
 
@@ -45,10 +42,6 @@ export default class Plugin {
     throw new Error(`${this.id} init not implemented`);
   }
 
-  public async stop() {
-    throw new Error(`${this.id} stop not implemented`);
-  }
-
   public hasMatchingId(someId: string) {
     return this.id === someId;
   }
@@ -57,7 +50,7 @@ export default class Plugin {
     throw new Error(`${this.id} handle action not implemented`);
   }
 
-  protected send(message) {
+  protected send<T>(message: T) {
     const argsString = JSON.stringify(message);
     const maxArgsLength = parseInt(process.env.DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH, 10) || 2000;
     this.logger.silly(

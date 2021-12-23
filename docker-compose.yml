@@ -13,7 +13,8 @@ services:
       - 6006:5006
     networks:
       - drill4j-dev-network
-
+    # volumes:
+    #   - drill-data:/work
   admin-ui:
     image: drill4j/admin-ui:${FRONT_VERSION}
     ports:
@@ -21,32 +22,25 @@ services:
     networks:
       - drill4j-dev-network
 
-  mongo:
-    image: mongo:3.4
-    hostname: mongo
-    ports:
-      - '28017:27017'
-    networks:
-      - drill4j-dev-network
+  # js-agent:
+  #   # image: drill4j/js-agent:${JS_AGENT_VERSION}
+  #   build: ./
+  #   ports:
+  #     - '9404:8080'
+  #   environment:
+  #     WAIT_HOSTS: mongo:27017, drill-admin:8090
+  #     DRILL_ADMIN_HOST: 'drill-admin:8090'
+  #     DRILL_ADMIN_PROTOCOL: 'ws'
+  #     DEBUG: 'drill:*'
+  #     DEBUG_COLORS: 'true'
+  #     FORCE_COLOR: '3'
+  #     DEBUG_LOG_LEVEL: '2'
+  #   networks:
+  #     - drill4j-dev-network
+  #   # volumes:
+  #   #   - js-agent-data:/usr/src/app
 
-  jsagent:
-    image: drill4j/js-agent:${JS_AGENT_VERSION}
-    hostname: jsagent
-    ports:
-      - '9404:9404'
-    environment:
-      APP_PORT: '9404'
-      WAIT_HOSTS: mongo:27017, drill-admin:8090
-      DRILL_ADMIN_PROTOCOL: 'ws'
-      DRILL_ADMIN_HOST: 'drill-admin:8090'
-      MONGO_HOST: 'mongo:27017'
-      MONGO_DBNAME: 'js-agent'
-      DEBUG: 'drill:*'
-      DEBUG_COLORS: 'true'
-      FORCE_COLOR: '3'
-      DEBUG_LOG_LEVEL: '2'
-    networks:
-      - drill4j-dev-network
-
+# volumes:
+  # js-agent-data:
 networks:
   drill4j-dev-network:
