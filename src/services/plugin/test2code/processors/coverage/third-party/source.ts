@@ -15,36 +15,26 @@
  */
 // original implementation https://github.com/istanbuljs/v8-to-istanbul/blob/master/lib/source.js
 import { SourceMapConsumer } from 'source-map';
-import CovLine from './line';
 
 const { GREATEST_LOWER_BOUND, LEAST_UPPER_BOUND } = SourceMapConsumer;
 
-export default class CovSource {
-  lines: CovLine[];
+export type Line = {
+  index: number;
+  startCol: number;
+  endCol: number;
+};
 
-  eof: number;
+export default class CovSource {
+  lines: Line[];
 
   sourceMap: SourceMapConsumer;
 
   mappings: Map<string, any>;
 
-  constructor(sourceRaw: string, sourceMap: SourceMapConsumer) {
-    this.lines = [];
-    this.eof = sourceRaw.length;
-    this._buildLines(sourceRaw);
-
+  constructor(lines: Line[], sourceMap: SourceMapConsumer) {
+    this.lines = lines;
     this.mappings = new Map();
     this.sourceMap = sourceMap;
-  }
-
-  _buildLines(source: string): void {
-    let position = 0;
-    const raw = source.split(/(?<=\r?\n)/u);
-    for (const [i, lineStr] of raw.entries()) {
-      const line = new CovLine(i + 1, position, lineStr);
-      this.lines.push(line);
-      position += lineStr.length;
-    }
   }
 
   offsetOriginalToRelativeNoSourcemap(startCol: number, endCol: number, source) {
@@ -57,9 +47,9 @@ export default class CovSource {
     const end = this.lines[lineEndIndex];
 
     return {
-      startLine: start.line,
+      startLine: start.index,
       relStartCol: startCol - start.startCol,
-      endLine: end.line,
+      endLine: end.index,
       relEndCol: endCol - end.startCol,
       source,
     };
@@ -87,10 +77,10 @@ export default class CovSource {
 
     if (!lines.length) return {};
 
-    const start = this.originalPositionTryBoth(lines[0].line, Math.max(0, startCol - lines[0].startCol));
+    const start = this.originalPositionTryBoth(lines[0].index, Math.max(0, startCol - lines[0].startCol));
 
     const lastLine = lines[lines.length - 1];
-    let end = this.originalEndPositionFor(lastLine.line, endCol - lastLine.startCol);
+    let end = this.originalEndPositionFor(lastLine.index, endCol - lastLine.startCol);
 
     if (!(start && end)) {
       return {};
@@ -106,7 +96,7 @@ export default class CovSource {
 
     if (start.line === end.line && start.column === end.column) {
       end = this.sourceMap.originalPositionFor({
-        line: lastLine.line,
+        line: lastLine.index,
         column: endCol - lastLine.startCol,
         bias: LEAST_UPPER_BOUND,
       });
@@ -213,9 +203,7 @@ export default class CovSource {
   }
 }
 
-// TODO think of an other way to expose functions for testing
-// strip-code plugins mess up source maps and break TS debugging
-export function binarySearchLine(lines: CovLine[], col: number): number {
+export function binarySearchLine(lines: Line[], col: number): number {
   let start = 0;
   let end = lines.length - 1;
 

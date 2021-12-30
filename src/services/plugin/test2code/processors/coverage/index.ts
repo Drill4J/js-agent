@@ -18,54 +18,65 @@ import { AstMethod, ExecClassData } from '@drill4j/test2code-types';
 import isEmpty from 'lodash.isempty';
 import { assert } from 'console';
 import fsExtra from 'fs-extra';
-import upath from 'upath';
 import R from 'ramda';
-import { SourceMapConsumer } from 'source-map';
+import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '@util/logger';
 import normalizeScriptPath from '@util/normalize-script-path';
 import { getDataPath } from '@util/misc';
-import Source from './third-party/source';
+import Source, { Line } from './third-party/source';
 import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
-import { getSourceMap } from '../../sourcemap-util';
 
 export const logger = LoggerProvider.getLogger('coverage-processor');
 
+type BundleFileData = {
+  file: string;
+  linesMetadata: Line[];
+  hash: string;
+  rawSourceMap: RawSourceMap;
+};
+
+type ScriptSourceData = {
+  urlToHash: Record<string, string>;
+  hashToUrl: Record<string, string>;
+};
+
 export default async function processCoverage(
-  sourceMapPath: string,
   astEntities: AstEntity[],
-  rawData: { coverage: V8Coverage; scriptSources: any; testName: string },
-  bundlePath: string,
-  // bundleHashes: BundleHashes,
-  bundleScriptNames: BundleScriptNames,
+  bundleData: BundleFileData[],
+  targetData: { coverage: V8Coverage; scriptSources: ScriptSourceData; testName: string },
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const { testName, coverage, scriptSources } = rawData;
-  // const { hashToUrl, urlToHash } = getUrlToHashMappings(scriptSources, cache);
+  const { testName, coverage: coverageUnfiltered } = targetData;
 
-  if (!coverage || coverage.length === 0) {
+  if (!coverageUnfiltered || coverageUnfiltered.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
 
-  // const hashFilter = R.pipe(R.prop('url'), createHashFilter(bundleHashes)(hashToUrl));
-  // const rawScriptsCoverage = R.filter(hashFilter)(coverage);
-  const createNameFilter = (scriptNames: string[]) => (url: string) => scriptNames.findIndex(x => url.includes(x)) > -1;
-  const scriptNameFilter = R.pipe(R.prop('url'), createNameFilter(bundleScriptNames));
-  const rawScriptsCoverage = R.filter(scriptNameFilter)(coverage);
-  if (R.isEmpty(rawScriptsCoverage)) {
-    // TODO think of a more descriptive message
+  // STEP#1 - Filter coverage of irrelevant files by checking hashes
+  //  Compares
+  //  hashes received _from browser_ (target)
+  //  with
+  //  hashes provided _by @drill4j/js-parser_
+  const bundleMap = arrayToMap('hash')<Record<string, BundleFileData>>(bundleData); // TODO infer return type from data
+  const coverageBundle = targetData.coverage
+    .filter(x => !!targetData.scriptSources.urlToHash[x.url]) // TODO make it more readable
+    .map(x => ({ ...x, hash: targetData.scriptSources.urlToHash[x.url] }))
+    .filter(x => !!bundleMap[targetData.scriptSources.urlToHash[x.url]]);
+
+  if (R.isEmpty(coverageBundle)) {
     logger.warning('all coverage was filtered');
     return [];
   }
 
-  const scriptsUrls = R.pipe(R.pluck('url'), R.uniq)(rawScriptsCoverage);
-  // const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(urlToHash)(scriptsUrls);
-  const getMappingFnByUrl = await prepareMappingFns(sourceMapPath, bundlePath, cache)(scriptsUrls);
+  // STEP#2 - Map coverage of raw bundle files to original source files
+  const hashes = R.pipe(R.pluck('hash'), R.uniq)(coverageBundle);
+  const getMappingFnByHash = await prepareMappingFns(bundleMap, cache)(hashes);
+  const obtainMappingFunction = R.pipe(R.prop('hash'), getMappingFnByHash);
+  const coverageSourceMapped = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(coverageBundle);
 
-  const obtainMappingFunction = R.pipe(R.prop('url'), getMappingFnByUrl);
-  const scriptsCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(rawScriptsCoverage);
-
-  const mapEntityProbes = createProbeMapper(scriptsCoverage);
+  // STEP#3 - Map source mapped coverage onto Drill4J entity format
+  const mapEntityProbes = createProbeMapper(coverageSourceMapped);
   const result = R.pipe(
     R.map((entity: AstEntity) => ({
       id: undefined,
@@ -76,34 +87,12 @@ export default async function processCoverage(
     R.filter(passProbesNotNull),
   )(astEntities);
 
-  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(rawData, result, testName);
+  if (result.length === 0) {
+    printPathTroubleshootingGuide(coverageSourceMapped, astEntities);
+  }
+
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, result, testName);
   return result;
-}
-
-// TODO this looks verbose and clunky. Come up with a better solution
-// TODO do not pass the whole cache object
-function getUrlToHashMappings(data, cache) {
-  const areMapsAvailable = !isEmpty(data?.hashToUrl) && !isEmpty(data?.urlToHash);
-
-  if (process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && areMapsAvailable) {
-    // TODO "urlToHashMappings" sounds confusing (in context of source mapped cached values)
-    if (cache.urlToHashMappings) {
-      logger.warning('overwriting url to hash map cache');
-    }
-    // eslint-disable-next-line no-param-reassign
-    cache.urlToHashMappings = data;
-  }
-
-  if (areMapsAvailable) {
-    return data;
-  }
-
-  const isCacheAvailable = !isEmpty(cache?.urlToHashMappings?.hashToUrl) && !isEmpty(cache?.urlToHashMappings?.urlToHash);
-  if (!areMapsAvailable && process.env.ENABLE_URL_TO_HASH_MAPS_CACHING === 'true' && isCacheAvailable) {
-    return cache.urlToHashMappings;
-  }
-
-  throw new Error('Url to hash maps are not available');
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
@@ -159,33 +148,22 @@ const computeProperty = name => comp => data => ({
   [name]: comp(data),
 });
 
-const prepareMappingFns = (sourceMapPath, bundlePath, cache) => async scriptsUrls => {
+// Prepare and cache mapping functions
+// 1 bundle file -> 1 sourcemap -> N original files
+// building SourceMapConsumer takes a lot of time, hence, the caching
+const prepareMappingFns = (bundleFilesHashMap: Record<string, BundleFileData>, cache) => async bundleHashes => {
   await Promise.all(
-    R.map(async (url: string) => {
-      if (cache[url]) return;
-      const scriptName = extractScriptName(url);
-      const buf = await fsExtra.readFile(upath.join(bundlePath, scriptName));
-      const rawSource = buf.toString('utf8');
-      const sourcemap = getSourceMap(sourceMapPath, rawSource);
-
-      if (!sourcemap) {
-        logger.error(`source map for not found for ${scriptName}`);
-        return;
-      }
-
-      // TODO using ".includes" is wrong, use transformSource instead
-      // if (sourcemap && sourcemap.file && !sourcemap.file.includes(scriptName)) {
-      //   logger.warning(`source map for ${scriptName} found, but source map does not list it in the "file" field`);
-      // }
-
+    R.map(async (hash: string) => {
+      if (cache[hash]) return;
+      const bundleFile = bundleFilesHashMap[hash];
       // eslint-disable-next-line no-param-reassign
-      cache[url] = new Source(rawSource, await new SourceMapConsumer(sourcemap));
-    })(scriptsUrls),
+      cache[hash] = new Source(bundleFile.linesMetadata, await new SourceMapConsumer(bundleFile.rawSourceMap));
+    })(bundleHashes),
   );
 
-  return url => ({ startOffset, endOffset, count }) => ({
-    ...cache[url].getOriginalPosition(startOffset, endOffset),
-    count, // TODO preserves count. hack-ish but fast
+  return hash => ({ startOffset, endOffset, count }) => ({
+    ...cache[hash].getOriginalPosition(startOffset, endOffset),
+    count,
   });
 };
 
@@ -216,17 +194,7 @@ const omitPrefix = prefix => str => str.replace(prefix, '');
 const appendPrefix = prefix => str => `${prefix}${str}`;
 
 // TODO set prefix to omit/new prefix in agent's settings (either in admin panel or ast-parser config)
-const transformSource = createSourceTransformer(process.env.COVERAGE_SOURCE_OMIT_PREFIX, process.env.COVERAGE_SOURCE_APPEND_PREFIX);
-
-const createHashFilter = bundleHashes => hashToUrl => {
-  const scriptsUrls = bundleHashes.map(x => hashToUrl[x.hash]).filter(x => !!x);
-  return url => url && scriptsUrls.includes(url);
-};
-
-const extractScriptName = url => url.substring(url.lastIndexOf('/') + 1) || undefined;
-
-// const scriptNameFilter = R.pipe(R.prop('url'), extractScriptName, createScriptNameFilter(bundleScriptNames));
-// const createScriptNameFilter = (scriptNames: string[]) => R.includes(R.__, scriptNames);
+const transformSource = createSourceTransformer(process.env.RECEIVED_PATH_OMIT_PREFIX, process.env.RECEIVED_PATH_APPEND_PREFIX);
 
 const passNotCovered = R.propEq('count', 0);
 
@@ -239,18 +207,11 @@ const allMethodProbesAre =
     ? method => (value: boolean) => () => method.probes.map(probeDebugInfo(value))
     : method => value => () => createArray(method.probes.length)(value);
 
-const allEntityProbesAre =
-  process.env.DEBUG_PROBES_ENABLED === 'true'
-    ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      entity => value => () => R.pipe(R.prop('methods'), R.pluck('probes'), R.flatten, R.map(probeDebugInfo(value)))(entity)
-    : entity => (value: boolean) => () => createArray(entity.methods.reduce((a, x) => a + x.probes.length, 0))(value);
-
 const createArray = length => value => new Array(length).fill(value);
 
 const probeDebugInfo = isCovered => probe => ({ ...probe, isCovered });
 
-/* HACK-ish implementation
+/* HACK-ish implementation (see HACK#1)
     In most cases there is 1-to-1 mapping from transpiled function to the original function
     The relation is establish by __the function starting location__ (the exact line:column) obtained from sourcemap
 
@@ -272,7 +233,7 @@ const mapCoverageToMethod = entityCoverage => method =>
       R.isEmpty,
       allMethodProbesAre(method)(false),
       R.pipe(
-        R.last,
+        R.last, // here is the HACK#1 - pick only innermost's function coverage
         R.pipe(R.prop('ranges'), R.filter(passNotCovered), R.ifElse(R.isEmpty, allMethodProbesAre(method)(true), mapProbes(method.probes))),
       ),
     ),
@@ -327,6 +288,52 @@ const mergeProbeCoverage =
     ? mergeArrays((a, b) => ({ ...a, isCovered: a.isCovered || b.isCovered }))
     : mergeArrays((a, b) => a || b);
 
+// DEBUG / UTILITY functions
+
+const arrayToMap = (property: string) => <T>(data: any[]): T =>
+  data.reduce((a, x) => {
+    // eslint-disable-next-line no-param-reassign
+    a[x[property]] = x;
+    return a;
+  }, {});
+
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 const stripDebugInfoFromProbes = R.map(computeProperty('probes')(R.pipe(R.prop('probes'), R.map(R.prop('isCovered')))));
+
+function printPathTroubleshootingGuide(coverageSourceMapped: any[], astEntities: AstEntity[]) {
+  logger.warning(
+    [
+      'MAPPING FAILURE:',
+      '_received_ file paths do not match file paths _scanned_ by drill4j/js-parser.\n',
+
+      'Set the following env vars to adjust _received_ path (example):',
+      '"RECEIVED_PATH_APPEND_PREFIX": "src/",       - append prefix "src/"',
+      '"RECEIVED_PATH_OMIT_PREFIX":   "webpack:///" - remove prefix "webpack:///"\n',
+
+      'Current values:',
+      `"RECEIVED_PATH_APPEND_PREFIX": ${process.env.RECEIVED_PATH_APPEND_PREFIX ? process.env.RECEIVED_PATH_APPEND_PREFIX : 'unset'}`,
+      `"RECEIVED_PATH_OMIT_PREFIX": ${process.env.RECEIVED_PATH_OMIT_PREFIX ? process.env.RECEIVED_PATH_OMIT_PREFIX : 'unset'}`,
+    ].join('\n\t'),
+  );
+
+  const msg = getPathsTroubleshootingInfo(coverageSourceMapped, astEntities);
+
+  logger.warning('Printing paths info:', '\n\t', msg);
+}
+
+function getPathsTroubleshootingInfo(coverageSourceMapped: any[], astEntities: AstEntity[]) {
+  const findMismatches = scriptsCoverage => entity =>
+    R.pipe(
+      R.flatten,
+      R.map(x => entity.filePath.includes(x.location.source) && [{ scanned: entity.filePath, received: x.location.source }]),
+    )(scriptsCoverage);
+
+  return R.pipe(
+    R.map(findMismatches(coverageSourceMapped)),
+    R.flatten,
+    R.filter(x => !!x),
+    R.map(({ scanned, received }) => `${scanned} - scanned\n\t${received} - received`),
+    R.join('\n\n\t'),
+  )(astEntities);
+}
