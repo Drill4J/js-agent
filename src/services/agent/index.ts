@@ -198,6 +198,8 @@ export class Agent {
         if (isTest2CodePlugin(plugin)) {
           await plugin.handleAction(action);
         }
+
+        this.sendDeliveryConfirmation(`/plugin/action/${btoa(JSON.stringify(action))}`);
         break;
       }
 
