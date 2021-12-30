@@ -39,7 +39,7 @@ import * as sourcemapUtil from './sourcemap-util';
 import { Scope, Test2CodeAction } from './types';
 import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
-import storage from '../../../storage';
+import { formatAst } from './processors/ast';
 import Plugin from '../plugin';
 
 export class Test2CodePlugin extends Plugin {
