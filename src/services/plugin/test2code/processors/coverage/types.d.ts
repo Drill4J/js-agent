@@ -61,11 +61,6 @@ export type RawSourceString = Opaque<'SourceString', string>;
 export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
 
-export type Test = {
-  testType: string;
-  testName: string;
-};
-
 export type V8Coverage = V8ScriptCoverage[];
 
 export interface V8ScriptCoverage {

@@ -24,7 +24,7 @@ import LoggerProvider from '@util/logger';
 import normalizeScriptPath from '@util/normalize-script-path';
 import { getDataPath } from '@util/misc';
 import Source, { Line } from './third-party/source';
-import { AstEntity, BundleHashes, BundleScriptNames, RawSourceString, Test, V8Coverage, V8ScriptCoverage } from './types';
+import { AstEntity, V8Coverage } from './types';
 
 export const logger = LoggerProvider.getLogger('coverage-processor');
 
@@ -43,10 +43,10 @@ type ScriptSourceData = {
 export default async function processCoverage(
   astEntities: AstEntity[],
   bundleData: BundleFileData[],
-  targetData: { coverage: V8Coverage; scriptSources: ScriptSourceData; testName: string },
+  targetData: { coverage: V8Coverage; scriptSources: ScriptSourceData; testId: string },
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const { testName, coverage: coverageUnfiltered } = targetData;
+  const { testId, coverage: coverageUnfiltered } = targetData;
 
   if (!coverageUnfiltered || coverageUnfiltered.length === 0) {
     logger.warning('received empty coverage');
@@ -84,7 +84,7 @@ export default async function processCoverage(
     R.map((entity: AstEntity) => ({
       id: undefined,
       className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
-      testName,
+      testId,
       probes: mapEntityProbes(entity),
     })),
     R.filter(passProbesNotNull),
@@ -94,16 +94,16 @@ export default async function processCoverage(
     printPathTroubleshootingGuide(coverageSourceMapped, astEntities);
   }
 
-  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, result, testName);
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, result, testId);
   return result;
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
-const writeAndStripDebugInfo = async (rawData, data, testName): Promise<ExecClassData[]> => {
+const writeAndStripDebugInfo = async (rawData, data, testId): Promise<ExecClassData[]> => {
   const ts = Date.now();
   const result = stripDebugInfoFromProbes(data);
-  const outFolderPath = getDataPath('out', ts.toString(), testName);
+  const outFolderPath = getDataPath('out', ts.toString(), testId);
   await fsExtra.ensureDir(outFolderPath);
   await fsExtra.writeJSON(`${outFolderPath}/input.json`, rawData, { spaces: 2 });
   await fsExtra.writeJSON(`${outFolderPath}/debug.json`, data, { spaces: 2 });
