@@ -9,9 +9,10 @@
     "baseUrl": "src",
     "paths": {
       "@util/*": ["util/*"]
-    }
+    },
+    "lib": ["es2016"],
+    "resolveJsonModule": true
   },
-  "lib": ["es2016"],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "__tests__", "**/*.spec.ts"]
 }

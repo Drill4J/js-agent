@@ -60,8 +60,11 @@ export default async function processCoverage(
   //  hashes provided _by @drill4j/js-parser_
   const bundleMap = arrayToMap('hash')<Record<string, BundleFileData>>(bundleData); // TODO infer return type from data
   const coverageBundle = targetData.coverage
+    // filter out script source urls that have no corresponding hashes (e.g. empty urls "")
     .filter(x => !!targetData.scriptSources.urlToHash[x.url]) // TODO make it more readable
+    // get the corresponding hashes for passed script sources
     .map(x => ({ ...x, hash: targetData.scriptSources.urlToHash[x.url] }))
+    // filter script sources with hashes not matching the expected hashes
     .filter(x => !!bundleMap[targetData.scriptSources.urlToHash[x.url]]);
 
   if (R.isEmpty(coverageBundle)) {
@@ -199,6 +202,7 @@ const transformSource = createSourceTransformer(process.env.RECEIVED_PATH_OMIT_P
 const passNotCovered = R.propEq('count', 0);
 
 const passSameLocation = method => functionCoverage =>
+  method.location &&
   functionCoverage.location.startLine === method.location.start.line &&
   functionCoverage.location.relStartCol === method.location.start.column;
 

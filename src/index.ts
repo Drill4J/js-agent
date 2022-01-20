@@ -19,6 +19,9 @@ import { AgentHubConfig } from './services/hub/types';
 import { AgentHub } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
 import * as AgentsInfoProvider from './services/agents-info-provider';
+import { version } from '../package.json';
+
+console.log('js-agent version:', version);
 
 const startupLogger = LoggerProvider.getLogger('startup');
 

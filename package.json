@@ -1,5 +1,6 @@
 {
   "private": true,
+  "version": "0.3.0-beta.0",
   "scripts": {
     "build": "set NODE_ENV=production&& npx webpack --config webpack.config.js",
     "lint": "eslint . --ext .ts --fix",
