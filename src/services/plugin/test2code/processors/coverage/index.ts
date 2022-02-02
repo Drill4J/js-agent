@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 /* eslint-disable import/no-unresolved */
-import { AstMethod, ExecClassData } from '@drill4j/test2code-types';
-import isEmpty from 'lodash.isempty';
+import { ExecClassData } from '@drill4j/test2code-types';
 import { assert } from 'console';
 import fsExtra from 'fs-extra';
 import R from 'ramda';
@@ -24,7 +23,7 @@ import LoggerProvider from '@util/logger';
 import normalizeScriptPath from '@util/normalize-script-path';
 import { getDataPath } from '@util/misc';
 import Source, { Line } from './third-party/source';
-import { AstEntity, V8Coverage } from './types';
+import { AstEntity, V8ScriptCoverageData, V8ScriptParsedEventData } from './types';
 
 export const logger = LoggerProvider.getLogger('coverage-processor');
 
@@ -35,52 +34,46 @@ type BundleFileData = {
   rawSourceMap: RawSourceMap;
 };
 
-type ScriptSourceData = {
-  urlToHash: Record<string, string>;
-  hashToUrl: Record<string, string>;
-};
-
+// Map V8 coverage -> source coverage -> Drill4J entities (packages/classes/methods table)
 export default async function processCoverage(
   astEntities: AstEntity[],
   bundleData: BundleFileData[],
-  targetData: { coverage: V8Coverage; scriptSources: ScriptSourceData; testId: string },
+  targetData: { coverage: V8ScriptCoverageData; scripts: V8ScriptParsedEventData[]; testId: string },
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const { testId, coverage: coverageUnfiltered } = targetData;
+  const { testId, scripts } = targetData;
 
-  if (!coverageUnfiltered || coverageUnfiltered.length === 0) {
+  if (!targetData?.coverage || !Array.isArray(targetData?.coverage.result) || targetData?.coverage.result.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
 
-  // STEP#1 - Filter coverage of irrelevant files by checking hashes
-  //  Compares
-  //  hashes received _from browser_ (target)
-  //  with
-  //  hashes provided _by @drill4j/js-parser_
-  const bundleMap = arrayToMap('hash')<Record<string, BundleFileData>>(bundleData); // TODO infer return type from data
-  const coverageBundle = targetData.coverage
-    // filter out script source urls that have no corresponding hashes (e.g. empty urls "")
-    .filter(x => !!targetData.scriptSources.urlToHash[x.url]) // TODO make it more readable
-    // get the corresponding hashes for passed script sources
-    .map(x => ({ ...x, hash: targetData.scriptSources.urlToHash[x.url] }))
-    // filter script sources with hashes not matching the expected hashes
-    .filter(x => !!bundleMap[targetData.scriptSources.urlToHash[x.url]]);
+  // STEP#1 - Filter coverage of irrelevant files
+  const scriptUrlToHash = createPropToPropMap<string>('url', 'hash')(scripts);
+  const bundleMap = createPropToEntryMap<BundleFileData>('hash')(bundleData);
+  const coverage = targetData.coverage.result
+    // .filter(x => !!x.url) // filter scripts with empty urls
+    .filter(x => !!scriptUrlToHash[x.url]) // filter scripts with no corresponding hashes
+    .map(x => ({ ...x, hash: scriptUrlToHash[x.url] })) // mark coverage entries with the respective script hash
+    .filter(x => !!bundleMap[scriptUrlToHash[x.url]]); // filter script sources with hashes not matching the expected hashes
 
-  if (R.isEmpty(coverageBundle)) {
+  if (R.isEmpty(coverage)) {
     logger.warning('all coverage was filtered');
     return [];
   }
 
-  // STEP#2 - Map coverage of raw bundle files to original source files
-  const hashes = R.pipe(R.pluck('hash'), R.uniq)(coverageBundle);
+  // STEP#2 - Map to original source files
+  const hashes = R.pipe(R.pluck('hash'), R.uniq)(coverage);
   const getMappingFnByHash = await prepareMappingFns(bundleMap, cache)(hashes);
   const obtainMappingFunction = R.pipe(R.prop('hash'), getMappingFnByHash);
-  const coverageSourceMapped = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(coverageBundle);
+  const sourceCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(coverage);
 
-  // STEP#3 - Map source mapped coverage onto Drill4J entity format
-  const mapEntityProbes = createProbeMapper(coverageSourceMapped);
-  const result = R.pipe(
+  // FIXME come up with a check for sourcemapping issues
+  // IDEA could also perform it in js-parser (validate AST positions in sourcemap locations)
+
+  // STEP#3 - Map to Drill4J entity format
+  const mapEntityProbes = createProbeMapper(sourceCoverage);
+  const d4jCoverage = R.pipe(
     R.map((entity: AstEntity) => ({
       id: undefined,
       className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
@@ -90,12 +83,14 @@ export default async function processCoverage(
     R.filter(passProbesNotNull),
   )(astEntities);
 
-  if (result.length === 0) {
-    printPathTroubleshootingGuide(coverageSourceMapped, astEntities);
+  // If there was relevant coverage, but after mapping there is none
+  // there _must_ be a mapping issue
+  if (d4jCoverage.length === 0) {
+    printPathTroubleshootingGuide(sourceCoverage, astEntities);
   }
 
-  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, result, testId);
-  return result;
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, d4jCoverage, testId);
+  return d4jCoverage;
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
@@ -294,10 +289,17 @@ const mergeProbeCoverage =
 
 // DEBUG / UTILITY functions
 
-const arrayToMap = (property: string) => <T>(data: any[]): T =>
-  data.reduce((a, x) => {
+const createPropToEntryMap = <T>(property: string) => (entries: T[]): Record<string, T> =>
+  entries.reduce((a, x) => {
     // eslint-disable-next-line no-param-reassign
     a[x[property]] = x;
+    return a;
+  }, {});
+
+const createPropToPropMap = <T>(keyProp, valueProp) => (arr): Record<string, T> =>
+  arr.reduce((a, x) => {
+    // eslint-disable-next-line no-param-reassign
+    a[x[keyProp]] = x[valueProp];
     return a;
   }, {});
 

@@ -61,7 +61,15 @@ export type RawSourceString = Opaque<'SourceString', string>;
 export type ScriptName = Opaque<'ScriptName', string>;
 export type ScriptUrl = Opaque<'ScriptUrl', string>;
 
-export type V8Coverage = V8ScriptCoverage[];
+export type V8ScriptParsedEventData = {
+  url: string;
+  hash: string;
+};
+
+export interface V8ScriptCoverageData {
+  timestamp: number;
+  result: V8ScriptCoverage[];
+}
 
 export interface V8ScriptCoverage {
   functions: V8FunctionCoverage[];
