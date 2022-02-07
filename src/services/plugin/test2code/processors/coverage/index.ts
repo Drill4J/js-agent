@@ -41,9 +41,12 @@ export default async function processCoverage(
   targetData: { coverage: V8ScriptCoverageData; scripts: V8ScriptParsedEventData[]; testId: string },
   cache: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const { testId, scripts } = targetData;
+  const { testId } = targetData;
 
-  if (!targetData?.coverage || !Array.isArray(targetData?.coverage.result) || targetData?.coverage.result.length === 0) {
+  const scripts: V8ScriptParsedEventData[] = JSON.parse(targetData.scripts as any);
+  const targetDataCoverage: V8ScriptCoverageData = JSON.parse(targetData.coverage as any);
+
+  if (!Array.isArray(targetDataCoverage?.result) || targetDataCoverage.result.length === 0) {
     logger.warning('received empty coverage');
     return [];
   }
@@ -51,7 +54,8 @@ export default async function processCoverage(
   // STEP#1 - Filter coverage of irrelevant files
   const scriptUrlToHash = createPropToPropMap<string>('url', 'hash')(scripts);
   const bundleMap = createPropToEntryMap<BundleFileData>('hash')(bundleData);
-  const coverage = targetData.coverage.result
+
+  const coverage = targetDataCoverage.result
     // .filter(x => !!x.url) // filter scripts with empty urls
     .filter(x => !!scriptUrlToHash[x.url]) // filter scripts with no corresponding hashes
     .map(x => ({ ...x, hash: scriptUrlToHash[x.url] })) // mark coverage entries with the respective script hash
