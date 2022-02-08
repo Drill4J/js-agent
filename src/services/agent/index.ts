@@ -192,14 +192,14 @@ export class Agent {
 
       case '/plugin/action': {
         const {
-          message: { id, message: action },
+          message: { id, confirmationKey, message: action },
         } = data;
         const plugin = await this.ensurePluginInstance(id);
         if (isTest2CodePlugin(plugin)) {
           await plugin.handleAction(action);
         }
 
-        this.sendDeliveryConfirmation(`/plugin/action/${btoa(JSON.stringify(action))}`);
+        this.sendDeliveryConfirmation(`/plugin/action/${confirmationKey}`);
         break;
       }
 
