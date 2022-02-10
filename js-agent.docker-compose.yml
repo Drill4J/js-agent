@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  js-agent:
+    image: drill4j/js-agent:${JS_AGENT_VERSION}
+    ports:
+      - '8092:8080'
+    environment:
+      # RECEIVED_PATH_OMIT_PREFIX: "webpack:///"
+      RECEIVED_PATH_APPEND_PREFIX: 'js/'
+      DRILL_ADMIN_HOST: 'host.docker.internal:8090'
+      DRILL_ADMIN_PROTOCOL: 'http'
+      DEBUG_PROBES_ENABLED: 'true'
+      PERF_MEASUREMENT_ENABLED: 'true'
+      PERF_DIFFS_ENABLED: 'true'
+      DEBUG_AGENT_SERVICE_CONNECTION: 'true'
+      DEBUG_AGENT_SERVICE_CONNECTION_MAX_ARGS_LENGTH: '400'
+
+    networks:
+      - drill4j-dev-network
+    volumes:
+      - drill-data-js-agent:/usr/src/app/js-agent-data
+
+volumes:
+  drill-data-js-agent:
+
+networks:
+  drill4j-dev-network:

@@ -4,7 +4,6 @@ FROM node:16.13.0-alpine
 WORKDIR /usr/src/app
 
 # Install dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied where available (npm@5+)
 COPY package*.json ./
 RUN npm install
 
@@ -15,9 +14,10 @@ RUN npm run build
 # Setup process.env
 ENV DRILL_ADMIN_PROTOCOL=$DRILL_ADMIN_PROTOCOL
 ENV DRILL_ADMIN_HOST=$DRILL_ADMIN_HOST
-ENV MONGO_HOST=$DRILL_ADMIN_HOST
-ENV MONGO_DBNAME=$DRILL_ADMIN_HOST
-ENV SOURCE_MAP_FOLDER ./sourceMaps
+ENV DEBUG="drill:*"
+ENV DEBUG_COLORS="true"
+ENV FORCE_COLOR="3"
+ENV DEBUG_LOG_LEVEL="4"
 
 # Setup wait utility
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
