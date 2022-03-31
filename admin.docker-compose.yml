@@ -7,6 +7,7 @@ services:
       - TEST2CODE_PLUGIN_VERSION=${TEST2CODE_PLUGIN_VERSION}
       - JAVA_TOOL_OPTIONS="-Dplugin.feature.drealtime=true"
       - LOG_LEVEL=debug
+      - DRILL_AGENTS_SOCKET_TIMEOUT=1200
       - DRILL_DEFAULT_PACKAGES=org/springframework/samples/petclinic
       - DRILL_DB_PORT=5432
       - DRILL_DB_HOST=${POSTGRES_HOST}
@@ -14,7 +15,7 @@ services:
       - DRILL_DB_USER_NAME=${POSTGRES_USER}
       - DRILL_DB_PASSWORD=${POSTGRES_PASSWORD}
       - DRILL_DB_MAX_POOL_SIZE=${DRILL_DB_MAX_POOL_SIZE}
-      # - LOG_MESSAGE_MAX_LENGTH=2000
+      - LOG_MESSAGE_MAX_LENGTH=2000
     ports:
       - 8090:8090
       - 6006:5006

@@ -6,8 +6,8 @@ services:
     ports:
       - '8092:8080'
     environment:
-      # RECEIVED_PATH_OMIT_PREFIX: "webpack:///"
-      RECEIVED_PATH_APPEND_PREFIX: 'js/'
+      RECEIVED_PATH_APPEND_PREFIX: ${JS_AGENT_RECEIVED_PATH_APPEND_PREFIX}
+      RECEIVED_PATH_OMIT_PREFIX: ${JS_AGENT_RECEIVED_PATH_OMIT_PREFIX}
       DRILL_ADMIN_HOST: 'host.docker.internal:8090'
       DRILL_ADMIN_PROTOCOL: 'http'
       DEBUG_PROBES_ENABLED: 'true'
