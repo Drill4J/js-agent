@@ -49,7 +49,7 @@ export interface AgentInfo {
   group?: string;
   instanceIds?: string[];
   plugins: PluginInfo[];
-  status: 'ONLINE' | 'OFFLINE' | 'NOT_REGISTERED';
+  agentStatus: 'NOT_REGISTERED' | 'PREREGISTERED' | 'REGISTERING' | 'REGISTERED';
 }
 
 export interface PluginInfo {

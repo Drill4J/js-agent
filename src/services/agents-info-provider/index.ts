@@ -19,17 +19,17 @@ import parseJsonRecursive from '@util/parse-json-recursive';
 import { Message, AgentInfo } from '../agent/types';
 
 const AgentStatus = {
-  ONLINE: 'ONLINE',
   NOT_REGISTERED: 'NOT_REGISTERED',
-  OFFLINE: 'OFFLINE',
-  BUSY: 'BUSY',
+  REGISTERED: 'REGISTERED',
+  REGISTERING: 'REGISTERING',
+  PREREGISTERED: 'PREREGISTERED',
 };
 
 export async function get(): Promise<unknown[]> {
   const connection = await connect();
   const agentsInfo = await getData(connection);
-  return agentsInfo
-    .filter(x => x.status === AgentStatus.OFFLINE)
+  const result = agentsInfo
+    .filter(x => x.agentStatus === AgentStatus.REGISTERED)
     .map(x => ({
       data: {
         id: x.id,
@@ -40,6 +40,7 @@ export async function get(): Promise<unknown[]> {
       },
       plugins: x.plugins.map(p => ({ id: p.id })),
     }));
+  return result;
 }
 
 async function connect() {
@@ -51,7 +52,6 @@ async function connect() {
 }
 
 async function getAuthToken() {
-  // TODO add non-hardcoded protocol & https support
   const url = `${process.env.DRILL_ADMIN_PROTOCOL}://${process.env.DRILL_ADMIN_HOST}/api`;
   const response = await axios.post(`${url}/login`);
   if (response.status !== 200) {
@@ -60,13 +60,31 @@ async function getAuthToken() {
   return response.headers.authorization;
 }
 
+const isJsAgent = x => String(x.agentType).toLowerCase() === 'node.js';
+
 async function getData(connection) {
-  const agentsData = (await socketMessageRequest(connection, '/api/agents')) as AgentInfo[];
-  if (Array.isArray(agentsData)) {
-    const jsAgents = agentsData.filter(x => String(x.agentType).toLowerCase() === 'node.js');
-    return jsAgents;
+  const agents = await socketMessageRequest<AgentInfo[]>(connection, '/api/agents');
+  return Promise.all(agents.filter(isJsAgent).map(populateBuildData(connection)));
+}
+
+const populateBuildData = connection =>
+  async function (agentData: any): Promise<any> {
+    const { buildVersion, buildStatus, systemSettings } = await getLatestBuild(connection, agentData.id);
+    return {
+      ...agentData,
+      buildVersion,
+      status: buildStatus,
+      systemSettings,
+    };
+  };
+
+async function getLatestBuild(connection, agentId): Promise<any> {
+  const data = await socketMessageRequest(connection, `/api/agent/${agentId}/builds`);
+  const latestBuild = Array.isArray(data) && data[0];
+  if (!latestBuild) {
+    throw new Error(`Agent ${agentId} - failed to obtain build info`);
   }
-  throw new Error('failed to fetch agents data');
+  return latestBuild;
 }
 
 async function socketEvent(connection, event, timeout = 10000): Promise<unknown[]> {
@@ -78,8 +96,8 @@ async function socketEvent(connection, event, timeout = 10000): Promise<unknown[
   });
 }
 
-async function socketMessageRequest(connection, destination: string, timeout = 10000): Promise<unknown> {
-  const responsePromise = new Promise<unknown>((resolve, reject) => {
+async function socketMessageRequest<T>(connection, destination: string, timeout = 10000): Promise<T> {
+  const responsePromise = new Promise<any>((resolve, reject) => {
     connection.on('message', async (rawMessage: string) => {
       const message = parseJsonRecursive(rawMessage) as Message;
       if (message.type !== 'MESSAGE') {
