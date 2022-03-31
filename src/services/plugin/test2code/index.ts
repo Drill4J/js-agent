@@ -60,6 +60,18 @@ export class Test2CodePlugin extends Plugin {
     this.logger.debug('init: done');
   }
 
+  // required for coverage highlight in vscode extension
+  public async getAst(buildVersion: string) {
+    const dataPath = getDataPath(this.agentId, buildVersion);
+    let ast;
+    try {
+      ast = await fsExtra.readJSON(`${dataPath}/ast.json`);
+    } catch (e) {
+      throw new Error(`Failed to obtain AST data. Reason: ${e.message}`);
+    }
+    return ast;
+  }
+
   public async handleAction(action: unknown): Promise<void> {
     switch ((action as Test2CodeAction).type) {
       // #region Handlers added for Admin Backend API compatibility / do not actually call/modify anything
@@ -120,7 +132,7 @@ export class Test2CodePlugin extends Plugin {
           });
         } catch (e) {
           this.logger.warning(
-            `failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}`,
+            `failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}\n${e?.stack}`,
           );
         }
         break;

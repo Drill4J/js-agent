@@ -18,7 +18,7 @@ import normalizeScriptPath from '@util/normalize-script-path';
 
 export function formatAst(astTreeData) {
   return astTreeData.map(({ path, suffix, methods = [] }) => ({
-    filePath: upath.toUnix(path),
+    filePath: upath.toUnix(path), // #FIX1 (see bellow)
     suffix,
     methods: methods.map(({ name, parentNameChain, params = [], probes, returnType = 'void', checksum, range, location }) => ({
       name: `${parentNameChain ? `${parentNameChain}.` : ''}${name}`,
@@ -35,6 +35,7 @@ export function formatAst(astTreeData) {
 
 export function formatForBackend(data) {
   return data.map(file => {
+    // FIXME move normalizeScriptPath call to "formatAst" (line #FIX1)
     const parsedPath = upath.parse(normalizeScriptPath(file.filePath));
     const path = parsedPath.dir;
     const name = parsedPath.base + (file.suffix ? `.${file.suffix}` : '');
