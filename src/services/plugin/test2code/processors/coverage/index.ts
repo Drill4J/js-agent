@@ -71,10 +71,6 @@ export default async function processCoverage(
   const getMappingFnByHash = await prepareMappingFns(bundleMap, cache)(hashes);
   const obtainMappingFunction = R.pipe(R.prop('hash'), getMappingFnByHash);
   const sourceCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(coverage);
-
-  // FIXME come up with a check for sourcemapping issues
-  // IDEA could also perform it in js-parser (validate AST positions in sourcemap locations)
-
   // STEP#3 - Map to Drill4J entity format
   const mapEntityProbes = createProbeMapper(sourceCoverage);
   const d4jCoverage = R.pipe(
@@ -110,21 +106,48 @@ const writeAndStripDebugInfo = async (rawData, data, testId): Promise<ExecClassD
   return result;
 };
 
-const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data); // TODO is there a matching function in R?
+const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data);
 
-const transformCoverage = rangeMappingFn =>
+const transformCoverage = (sourceData: Source) =>
   R.pipe(
     R.prop('functions'),
-    R.map(computeProperty('location')(R.pipe(R.prop('ranges'), R.head, rangeMappingFn))), // TODO this is getting hard to read
-    R.filter(R.pipe(R.prop('location'), R.allPass([sourceIsNotNil, sourceIsNotInNodeModules]))),
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    R.filter((x: any) => x.isBlockCoverage),
+
+    // find original file and position of corresponding function
+    R.map(
+      computeProperty('location')(
+        R.pipe(R.prop('ranges'), R.head, ({ startOffset, count }) => {
+          const originalPosition = sourceData.mapToOriginalPosition(startOffset);
+          if (!originalPosition) return null;
+          const { line, column, source } = originalPosition;
+          return {
+            source,
+            line,
+            column,
+            count,
+          };
+        }),
+      ),
+    ),
+
+    // filter functions from irrelevant files (node_modules, /webpack/ boilerplate, etc)
+    R.filter(R.pipe(R.path(['location', 'source']), R.allPass([isNotNil, notIncludes(process.env.IGNORE_SOURCES.split(', '))]))),
+
+    // adjust file source path
     R.map(computeProperty('location')(R.pipe(R.prop('location'), transformSource))),
+
+    // convert ranges from absolute columns (aka offsets) to line:column (though still in the _bundle_ positions)
     R.map(
       computeProperty('ranges')(
         R.pipe(
           R.prop('ranges'),
-          R.map(rangeMappingFn),
-          R.filter(R.allPass([sourceIsNotNil, sourceIsNotInNodeModules])),
-          R.map(transformSource),
+          R.map(({ startOffset, endOffset, count }) => ({
+            start: sourceData.convertToLineColumn(startOffset),
+            end: sourceData.convertToLineColumn(endOffset),
+            count,
+          })),
         ),
       ),
     ),
@@ -132,6 +155,7 @@ const transformCoverage = rangeMappingFn =>
 
 const createProbeMapper = scriptsCoverage => entity =>
   R.pipe(
+    // TODO use key-value - scriptsCoverage by source (to avoid mapping/filtering multiple times)
     R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
     R.filter(passNotEmpty),
     R.ifElse(
@@ -162,18 +186,14 @@ const prepareMappingFns = (bundleFilesHashMap: Record<string, BundleFileData>, c
       cache[hash] = new Source(bundleFile.linesMetadata, await new SourceMapConsumer(bundleFile.rawSourceMap));
     })(bundleHashes),
   );
-
-  return hash => ({ startOffset, endOffset, count }) => ({
-    ...cache[hash].getOriginalPosition(startOffset, endOffset),
-    count,
-  });
+  return hash => cache[hash];
 };
 
-const sourceIsNotNil = (x: any) => !R.isNil(x?.source);
+const isNotNil = (x: unknown) => !R.isNil(x);
 
 const passNotEmpty = R.complement(R.isEmpty);
 
-const sourceIsNotInNodeModules = (x: any) => !x.source.includes('node_modules');
+const notIncludes = (ignore: string[]) => (x: any) => !ignore.some(src => x.includes(src));
 
 const createSourceTransformer = (prefixToOmit, newPrefix) => {
   if (prefixToOmit && newPrefix) {
@@ -201,9 +221,7 @@ const transformSource = createSourceTransformer(process.env.RECEIVED_PATH_OMIT_P
 const passNotCovered = R.propEq('count', 0);
 
 const passSameLocation = method => functionCoverage =>
-  method.location &&
-  functionCoverage.location.startLine === method.location.start.line &&
-  functionCoverage.location.relStartCol === method.location.start.column;
+  functionCoverage.location.line === method.location.start.line && functionCoverage.location.column === method.location.start.column;
 
 const allMethodProbesAre =
   process.env.DEBUG_PROBES_ENABLED === 'true'
@@ -223,14 +241,19 @@ const probeDebugInfo = isCovered => probe => ({ ...probe, isCovered });
 
     All wrapping functions:
       - are sourcemapped to __the same original function starting position__
-      - have 100% coverage
+      - have 100% coverage (if innermost function is called at least once)
     
-    That collides with the "real" probes placed in the original code (because of the same location)
+    That collides with the probes placed in the original code (because of the same location)
 
     The solution: map coverage only from the innermost function
 */
 const mapCoverageToMethod = entityCoverage => method =>
   R.pipe(
+    R.tap((x: any) => {
+      console.log(x.length);
+    }),
+    // TODO optimize - use key-value - coverage by location (to avoid excessive mapping/filtering)
+    // mark not-used coverage parts (values) (will happen due to location mismatch)
     R.filter(passSameLocation(method)),
     R.ifElse(
       R.isEmpty,
@@ -251,27 +274,28 @@ const mapProbes =
     ? probes => notCoveredRanges => probes.map(probe => probeDebugInfo(isProbeCovered(notCoveredRanges)(probe))(probe)) // TODO ugly
     : probes => notCoveredRanges => probes.map(isProbeCovered(notCoveredRanges));
 
-const isProbeCovered = ranges => probe => ranges.findIndex(range => isProbeInsideRange(probe, range)) === -1;
+const isProbeCovered = notCoveredRanges => probe =>
+  notCoveredRanges.findIndex(range => areMappingsInsideRange(probe.mappings, range)) === -1;
 
-function isProbeInsideRange(probe, range) {
-  const isProbeLineInsideRange = probe.line >= range.startLine && probe.line <= range.endLine;
-  if (!isProbeLineInsideRange) return false;
+function areMappingsInsideRange(mappings, range) {
+  return mappings.some(m => {
+    const isMappingLineInsideRange = m.generatedLine >= range.start.line && m.generatedLine <= range.end.line;
+    if (!isMappingLineInsideRange) return false;
 
-  const isSingleLineRange = range.startLine === range.endLine;
-  if (isSingleLineRange) {
-    return probe.column >= range.relStartCol && probe.column <= range.relEndCol;
-  }
-
-  if (probe.line === range.startLine) {
-    return probe.column >= range.relStartCol;
-  }
-  if (probe.line === range.endLine) {
-    return probe.column <= range.relEndCol;
-  }
-
-  // probe is inside range - line is in between range start & end lines
-  // probe column is irrelevant
-  return true;
+    const isSingleLineRange = range.start.line === range.end.line;
+    if (isSingleLineRange) {
+      return m.generatedColumn >= range.start.column && m.generatedColumn <= range.end.column;
+    }
+    if (m.generatedLine === range.start.line) {
+      return m.generatedColumn >= range.start.column;
+    }
+    if (m.generatedLine === range.end.line) {
+      return m.generatedColumn <= range.end.column;
+    }
+    // mapping is inside range - line is in between range start & end lines
+    // column is irrelevant
+    return true;
+  });
 }
 
 const mergeArrays = elementMerger => arrays => {
