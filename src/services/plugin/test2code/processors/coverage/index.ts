@@ -22,7 +22,7 @@ import { RawSourceMap, SourceMapConsumer } from 'source-map';
 import LoggerProvider from '@util/logger';
 import normalizeScriptPath from '@util/normalize-script-path';
 import { getDataPath } from '@util/misc';
-import Source, { Line } from './third-party/source';
+import Source, { Line } from './source';
 import { AstEntity, V8ScriptCoverageData, V8ScriptParsedEventData } from './types';
 
 export const logger = LoggerProvider.getLogger('coverage-processor');
