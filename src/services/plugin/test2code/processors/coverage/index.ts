@@ -183,7 +183,7 @@ const prepareMappingFns = (bundleFilesHashMap: Record<string, BundleFileData>, c
       if (cache[hash]) return;
       const bundleFile = bundleFilesHashMap[hash];
       // eslint-disable-next-line no-param-reassign
-      cache[hash] = new Source(bundleFile.linesMetadata, await new SourceMapConsumer(bundleFile.rawSourceMap));
+      cache[hash] = new Source(bundleFile.linesMetadata, await new SourceMapConsumer(bundleFile.rawSourceMap), logger);
     })(bundleHashes),
   );
   return hash => cache[hash];

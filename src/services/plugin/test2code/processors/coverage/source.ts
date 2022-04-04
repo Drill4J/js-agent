@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ILogger } from '@util/logger';
 import { MappingItem, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 
 const { GREATEST_LOWER_BOUND } = SourceMapConsumer;
@@ -32,11 +33,14 @@ export default class Source {
 
   mappingsBySource: Map<string, MappingItem[]>;
 
-  constructor(lines: Line[], sourceMap: SourceMapConsumer) {
+  logger: ILogger;
+
+  constructor(lines: Line[], sourceMap: SourceMapConsumer, logger?: ILogger) {
     this.lines = lines;
     this.mappings = new Map();
     this.mappingsBySource = new Map();
     this.sourceMap = sourceMap;
+    this.logger = logger;
   }
 
   public mapToOriginalPosition(column: number): NullableMappedPosition {
@@ -101,7 +105,7 @@ export default class Source {
     if (
       !generatedPositions.some(generated => backmappedLines.some(backmappedLine => generated.column + backmappedLine.startCol === column))
     ) {
-      console.log(
+      this.logger?.debug(
         'Mapping: no exact match',
         '\n',
         'bundle column',
@@ -116,7 +120,6 @@ export default class Source {
         '\t\t',
         JSON.stringify(generatedPositions),
       );
-      console.log('\n');
       return null;
     }
 
