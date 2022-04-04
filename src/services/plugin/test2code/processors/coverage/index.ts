@@ -249,9 +249,6 @@ const probeDebugInfo = isCovered => probe => ({ ...probe, isCovered });
 */
 const mapCoverageToMethod = entityCoverage => method =>
   R.pipe(
-    R.tap((x: any) => {
-      console.log(x.length);
-    }),
     // TODO optimize - use key-value - coverage by location (to avoid excessive mapping/filtering)
     // mark not-used coverage parts (values) (will happen due to location mismatch)
     R.filter(passSameLocation(method)),
