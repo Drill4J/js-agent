@@ -95,21 +95,26 @@ export default class Source {
       thus, the "backmap" check is perfromed (bundle pos -> original pos -> the same bundle pos)
       */
     // TODO check perf costs
-    const generated = this.sourceMap.generatedPositionFor(original);
-    const backmappedLine = this.lines.find(x => x.index === generated.line);
-    if (generated.column + backmappedLine.startCol !== column) {
+    const generatedPositions = this.sourceMap.allGeneratedPositionsFor(original);
+    const backmappedLines = generatedPositions.map(generated => this.lines.find(x => x.index === generated.line)).filter(x => x);
+
+    if (
+      !generatedPositions.some(generated => backmappedLines.some(backmappedLine => generated.column + backmappedLine.startCol === column))
+    ) {
       console.log(
         'Mapping: no exact match',
         '\n',
         'bundle column',
-        '\t',
+        '\t\t',
         column,
+        '\n',
         'mapped pos',
-        '\t',
+        '\t\t',
         JSON.stringify(original),
+        '\n',
         'backmapped pos',
-        '\t',
-        JSON.stringify(generated),
+        '\t\t',
+        JSON.stringify(generatedPositions),
       );
       console.log('\n');
       return null;
