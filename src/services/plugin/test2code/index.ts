@@ -50,9 +50,11 @@ export class Test2CodePlugin extends Plugin {
 
     const dataPath = getDataPath(this.agentId, this.currentBuildVersion);
     const sourceAst = await fsExtra.readJSON(`${dataPath}/ast.json`);
+    const astEntities = astProcessor.formatForBackend(sourceAst);
+    await fsExtra.writeJSON(`${dataPath}/ast-formatted.json`, astEntities);
     super.send<InitDataPart>({
       type: 'INIT_DATA_PART',
-      astEntities: astProcessor.formatForBackend(sourceAst),
+      astEntities,
     });
 
     super.send<Initialized>({ type: 'INITIALIZED', msg: '' });
@@ -145,7 +147,7 @@ export class Test2CodePlugin extends Plugin {
   }
 
   public async updateBuildInfo(buildVersion: string, buildInfo): Promise<void> {
-    const { bundleFiles, data } = buildInfo;
+    const { bundleFiles, data, config } = buildInfo;
 
     this.logger.info('build', buildVersion, 'saving data...');
 
@@ -158,6 +160,7 @@ export class Test2CodePlugin extends Plugin {
     // save data
     await fsExtra.writeJSON(`${dataPath}/bundle.json`, bundleFiles);
     await fsExtra.writeJSON(`${dataPath}/ast.json`, formatAst(data));
+    await fsExtra.writeJSON(`${dataPath}/config.json`, config);
     this.logger.info('build', buildVersion, 'data saved!');
   }
 
@@ -166,10 +169,11 @@ export class Test2CodePlugin extends Plugin {
     const dataPath = getDataPath(this.agentId, this.currentBuildVersion);
     const sourceAst = await fsExtra.readJSON(`${dataPath}/ast.json`);
     const bundleData = await fsExtra.readJSON(`${dataPath}/bundle.json`);
+    const config = await fsExtra.readJSON(`${dataPath}/config.json`);
     global.prf.measure(perfMark1);
 
     const perfMark2 = global.prf.mark('process');
-    const data = await coverageProcessor(sourceAst, bundleData, rawData, this.cache);
+    const data = await coverageProcessor(sourceAst, bundleData, rawData, this.cache, config.projectPaths);
     global.prf.measure(perfMark2);
 
     global.prf.print();

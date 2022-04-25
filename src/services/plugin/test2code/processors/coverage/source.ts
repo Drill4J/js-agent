@@ -35,19 +35,26 @@ export default class Source {
 
   logger: ILogger;
 
-  constructor(lines: Line[], sourceMap: SourceMapConsumer, logger?: ILogger) {
-    this.lines = lines;
+  file: string;
+
+  hash: string;
+
+  constructor(bundleFile, sourceMap: SourceMapConsumer, logger?: ILogger) {
+    this.lines = bundleFile.linesMetadata;
+    this.file = bundleFile.file;
+    this.hash = bundleFile.hash;
+
     this.mappings = new Map();
     this.mappingsBySource = new Map();
     this.sourceMap = sourceMap;
     this.logger = logger;
   }
 
-  public mapToOriginalPosition(column: number): NullableMappedPosition {
+  public mapToOriginalPosition(column: number, noMappingDEBUG): NullableMappedPosition {
     const key = `${column}`;
     if (this.mappings.has(key)) return this.mappings.get(key);
 
-    const mapping = this._mapToOriginalPosition(column);
+    const mapping = this._mapToOriginalPosition(column, noMappingDEBUG);
     this.mappings.set(key, mapping);
     return mapping;
   }
@@ -80,7 +87,7 @@ export default class Source {
     If there is no mapping for the passed _bundle column_
     then return value is null
   */
-  private _mapToOriginalPosition(column: number): NullableMappedPosition | null {
+  private _mapToOriginalPosition(column: number, noMappingDEBUG): NullableMappedPosition | null {
     // determine bundle line index
     const line = this.findLine(column);
     if (!line) return null;
@@ -105,6 +112,13 @@ export default class Source {
     if (
       !generatedPositions.some(generated => backmappedLines.some(backmappedLine => generated.column + backmappedLine.startCol === column))
     ) {
+      noMappingDEBUG.push({
+        hash: this.hash,
+        file: this.file,
+        column,
+        original,
+        generatedPositions,
+      });
       this.logger?.debug(
         'Mapping: no exact match',
         '\n',
