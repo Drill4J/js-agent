@@ -28,7 +28,6 @@ export function formatAst(astTreeData) {
       returnType,
       checksum,
       probes,
-      count: probes.length,
     })),
   }));
 }
@@ -51,17 +50,31 @@ function convertMethodsToSequentialProbes(methods) {
   let probeCounter = 0;
 
   return methods.reduce((acc, x) => {
+    /*
+      ASSUMPTION
+        1 original file (aka module)
+        included in
+        N bundle files (aka chunks)
+        will have _the same number of mappings_ in all bundle files
+        and thus - number of probes
+        
+        // @drill4j/js-parser guarantees that this assumption is true
+        
+      CONSEQUENCE
+        we can pick a number of probes from the any bundle file
+    */
+    const probesLength = (Object.values(x.probes)[0] as any[]).length;
     const method: any = {
       name: x.name,
       params: x.params,
       returnType: x.returnType,
-      probes: getRangeOfNumbers(probeCounter, x.probes.length),
-      count: x.count,
+      probes: getRangeOfNumbers(probeCounter, probesLength),
+      count: probesLength,
     };
     if (x.checksum) {
       method.checksum = x.checksum;
     }
-    probeCounter += x.probes.length;
+    probeCounter += probesLength;
     acc.push(method);
     return acc;
   }, []);
