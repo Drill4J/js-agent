@@ -38,8 +38,13 @@ type BundleFileData = {
 export default async function processCoverage(
   astEntities: AstEntity[],
   bundleData: BundleFileData[],
-  targetData: { coverage: V8ScriptCoverageData; scripts: V8ScriptParsedEventData[]; testId: string },
+  targetData: {
+    coverage: V8ScriptCoverageData;
+    scripts: V8ScriptParsedEventData[];
+    testId: string;
+  },
   cache: Record<string, any>,
+  projectPaths: Record<string, any>,
 ): Promise<ExecClassData[]> {
   const { testId } = targetData;
 
@@ -66,13 +71,15 @@ export default async function processCoverage(
     return [];
   }
 
+  const DEBUGNotMapped = [];
   // STEP#2 - Map to original source files
   const hashes = R.pipe(R.pluck('hash'), R.uniq)(coverage);
   const getMappingFnByHash = await prepareMappingFns(bundleMap, cache)(hashes);
   const obtainMappingFunction = R.pipe(R.prop('hash'), getMappingFnByHash);
-  const sourceCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage))(coverage);
+  const sourceCoverage = R.map(weirdPipe(obtainMappingFunction, transformCoverage(projectPaths.ignoredSources, DEBUGNotMapped)))(coverage);
+
   // STEP#3 - Map to Drill4J entity format
-  const mapEntityProbes = createProbeMapper(sourceCoverage);
+  const mapEntityProbes = createProbeMapper(sourceCoverage, projectPaths.sourcesPath);
   const d4jCoverage = R.pipe(
     R.map((entity: AstEntity) => ({
       id: undefined,
@@ -86,78 +93,91 @@ export default async function processCoverage(
   // If there was relevant coverage, but after mapping there is none
   // there _must_ be a mapping issue
   if (d4jCoverage.length === 0) {
-    printPathTroubleshootingGuide(sourceCoverage, astEntities);
+    logger.warning('no coverage was mapped');
   }
 
-  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, d4jCoverage, testId);
+  if (process.env.DEBUG_PROBES_ENABLED === 'true') return writeAndStripDebugInfo(targetData, d4jCoverage, testId, DEBUGNotMapped);
   return d4jCoverage;
 }
 
 const passProbesNotNull = R.pipe(R.prop('probes'), R.complement(R.isNil));
 
-const writeAndStripDebugInfo = async (rawData, data, testId): Promise<ExecClassData[]> => {
+const writeAndStripDebugInfo = async (rawData, data, testId, DEBUGNotMapped): Promise<ExecClassData[]> => {
   const ts = Date.now();
   const result = stripDebugInfoFromProbes(data);
   const outFolderPath = getDataPath('out', ts.toString(), testId);
   await fsExtra.ensureDir(outFolderPath);
-  await fsExtra.writeJSON(`${outFolderPath}/input.json`, rawData, { spaces: 2 });
+  await fsExtra.writeJSON(`${outFolderPath}/input.json`, rawData, {
+    spaces: 2,
+  });
   await fsExtra.writeJSON(`${outFolderPath}/debug.json`, data, { spaces: 2 });
-  await fsExtra.writeJSON(`${outFolderPath}/output.json`, result, { spaces: 2 });
+  await fsExtra.writeJSON(`${outFolderPath}/output.json`, result, {
+    spaces: 2,
+  });
+  await fsExtra.writeJSON(`${outFolderPath}/DEBUGNotMapped.json`, DEBUGNotMapped, { spaces: 2 });
   return result;
 };
 
 const weirdPipe = (fn1, fn2) => data => fn2(fn1(data))(data);
 
-const transformCoverage = (sourceData: Source) =>
-  R.pipe(
-    R.prop('functions'),
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    R.filter((x: any) => x.isBlockCoverage),
+const transformCoverage = (ignoredSources: string[], DEBUGNotMapped) => (sourceData: Source) => coverageData => {
+  return {
+    hash: R.prop('hash')(coverageData),
+    coverage: R.pipe(
+      R.prop('functions'),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      R.filter((x: any) => x.isBlockCoverage),
 
-    // find original file and position of corresponding function
-    R.map(
-      computeProperty('location')(
-        R.pipe(R.prop('ranges'), R.head, ({ startOffset, count }) => {
-          const originalPosition = sourceData.mapToOriginalPosition(startOffset);
-          if (!originalPosition) return null;
-          const { line, column, source } = originalPosition;
-          return {
-            source,
-            line,
-            column,
-            count,
-          };
-        }),
-      ),
-    ),
-
-    // filter functions from irrelevant files (node_modules, /webpack/ boilerplate, etc)
-    R.filter(R.pipe(R.path(['location', 'source']), R.allPass([isNotNil, notIncludes(process.env.IGNORE_SOURCES.split(', '))]))),
-
-    // adjust file source path
-    R.map(computeProperty('location')(R.pipe(R.prop('location'), transformSource))),
-
-    // convert ranges from absolute columns (aka offsets) to line:column (though still in the _bundle_ positions)
-    R.map(
-      computeProperty('ranges')(
-        R.pipe(
-          R.prop('ranges'),
-          R.map(({ startOffset, endOffset, count }) => ({
-            start: sourceData.convertToLineColumn(startOffset),
-            end: sourceData.convertToLineColumn(endOffset),
-            count,
-          })),
+      // find original file and position of corresponding function
+      R.map(
+        computeProperty('location')(
+          R.pipe(R.prop('ranges'), R.head, ({ startOffset, count }) => {
+            const originalPosition = sourceData.mapToOriginalPosition(startOffset, DEBUGNotMapped);
+            if (!originalPosition) return null;
+            const { line, column, source } = originalPosition;
+            return {
+              source,
+              line,
+              column,
+              count,
+            };
+          }),
         ),
       ),
-    ),
-  );
 
-const createProbeMapper = scriptsCoverage => entity =>
+      // filter functions from irrelevant files (node_modules, /webpack/ boilerplate, etc)
+      R.filter(R.pipe(R.path(['location', 'source']), R.allPass([isNotNil, notIncludes(ignoredSources)]))),
+
+      // convert ranges from absolute columns (aka offsets) to line:column (though still in the _bundle_ positions)
+      R.map(
+        computeProperty('ranges')(
+          R.pipe(
+            R.prop('ranges'),
+            R.map(({ startOffset, endOffset, count }) => ({
+              start: sourceData.convertToLineColumn(startOffset),
+              end: sourceData.convertToLineColumn(endOffset),
+              count,
+            })),
+          ),
+        ),
+      ),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+    )(coverageData),
+  };
+};
+
+const createProbeMapper = (scriptsCoverage, sourcePathPrefix) => entity =>
   R.pipe(
     // TODO use key-value - scriptsCoverage by source (to avoid mapping/filtering multiple times)
-    R.map(R.filter((covPart: any) => covPart.location.source === entity.filePath)),
-    R.filter(passNotEmpty),
+    R.map((x: any) => {
+      return {
+        ...x,
+        coverage: R.filter((covPart: any) => `${sourcePathPrefix}${covPart.location.source}` === entity.filePath)(x.coverage),
+      };
+    }),
+    R.filter(R.pipe(R.prop('coverage'), passNotEmpty)),
     R.ifElse(
       R.isEmpty,
       () => null,
@@ -183,7 +203,7 @@ const prepareMappingFns = (bundleFilesHashMap: Record<string, BundleFileData>, c
       if (cache[hash]) return;
       const bundleFile = bundleFilesHashMap[hash];
       // eslint-disable-next-line no-param-reassign
-      cache[hash] = new Source(bundleFile.linesMetadata, await new SourceMapConsumer(bundleFile.rawSourceMap), logger);
+      cache[hash] = new Source(bundleFile, await new SourceMapConsumer(bundleFile.rawSourceMap), logger);
     })(bundleHashes),
   );
   return hash => cache[hash];
@@ -194,29 +214,6 @@ const isNotNil = (x: unknown) => !R.isNil(x);
 const passNotEmpty = R.complement(R.isEmpty);
 
 const notIncludes = (ignore: string[]) => (x: any) => !ignore.some(src => x.includes(src));
-
-const createSourceTransformer = (prefixToOmit, newPrefix) => {
-  if (prefixToOmit && newPrefix) {
-    return computeProperty('source')(R.pipe(R.prop('source'), omitPrefix(prefixToOmit), appendPrefix(newPrefix)));
-  }
-
-  if (newPrefix) {
-    return computeProperty('source')(R.pipe(R.prop('source'), appendPrefix(newPrefix)));
-  }
-
-  if (prefixToOmit) {
-    return computeProperty('source')(R.pipe(R.prop('source'), omitPrefix(prefixToOmit)));
-  }
-
-  return R.identity;
-};
-
-const omitPrefix = prefix => str => str.replace(prefix, '');
-
-const appendPrefix = prefix => str => `${prefix}${str}`;
-
-// TODO set prefix to omit/new prefix in agent's settings (either in admin panel or ast-parser config)
-const transformSource = createSourceTransformer(process.env.RECEIVED_PATH_OMIT_PREFIX, process.env.RECEIVED_PATH_APPEND_PREFIX);
 
 const passNotCovered = R.propEq('count', 0);
 
@@ -263,7 +260,12 @@ const mapCoverageToMethod = entityCoverage => method =>
   )(entityCoverage);
 
 const mapCoverageToEntity = entity => entityCoverage => {
-  return R.pipe(R.map(mapCoverageToMethod(entityCoverage)), R.flatten)(entity.methods);
+  // pick probes for the respective bundle file
+  const methods = entity.methods.map(x => ({
+    ...x,
+    probes: x.probes[entityCoverage.hash],
+  }));
+  return R.pipe(R.map(mapCoverageToMethod(entityCoverage.coverage)), R.flatten)(methods);
 };
 
 const mapProbes =
@@ -331,40 +333,3 @@ const createPropToPropMap = <T>(keyProp, valueProp) => (arr): Record<string, T> 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 const stripDebugInfoFromProbes = R.map(computeProperty('probes')(R.pipe(R.prop('probes'), R.map(R.prop('isCovered')))));
-
-function printPathTroubleshootingGuide(coverageSourceMapped: any[], astEntities: AstEntity[]) {
-  logger.warning(
-    [
-      'MAPPING FAILURE:',
-      '_received_ file paths do not match file paths _scanned_ by drill4j/js-parser.\n',
-
-      'Set the following env vars to adjust _received_ path (example):',
-      '"RECEIVED_PATH_APPEND_PREFIX": "src/",       - append prefix "src/"',
-      '"RECEIVED_PATH_OMIT_PREFIX":   "webpack:///" - remove prefix "webpack:///"\n',
-
-      'Current values:',
-      `"RECEIVED_PATH_APPEND_PREFIX": ${process.env.RECEIVED_PATH_APPEND_PREFIX ? process.env.RECEIVED_PATH_APPEND_PREFIX : 'unset'}`,
-      `"RECEIVED_PATH_OMIT_PREFIX": ${process.env.RECEIVED_PATH_OMIT_PREFIX ? process.env.RECEIVED_PATH_OMIT_PREFIX : 'unset'}`,
-    ].join('\n\t'),
-  );
-
-  const msg = getPathsTroubleshootingInfo(coverageSourceMapped, astEntities);
-
-  logger.warning('Printing paths info:', '\n\t', msg);
-}
-
-function getPathsTroubleshootingInfo(coverageSourceMapped: any[], astEntities: AstEntity[]) {
-  const findMismatches = scriptsCoverage => entity =>
-    R.pipe(
-      R.flatten,
-      R.map(x => entity.filePath.includes(x.location.source) && [{ scanned: entity.filePath, received: x.location.source }]),
-    )(scriptsCoverage);
-
-  return R.pipe(
-    R.map(findMismatches(coverageSourceMapped)),
-    R.flatten,
-    R.filter(x => !!x),
-    R.map(({ scanned, received }) => `${scanned} - scanned\n\t${received} - received`),
-    R.join('\n\n\t'),
-  )(astEntities);
-}
