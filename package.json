@@ -63,7 +63,7 @@
     "jest-each": "^26.4.2",
     "jest-extended": "^0.11.5",
     "js-flock": "^3.14.0",
-    "nodemon": "^2.0.4",
+    "nodemon": "^2.0.20",
     "prettier": "^2.1.2",
     "ts-jest": "^24.3.0",
     "ts-loader": "^8.0.4",
