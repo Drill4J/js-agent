@@ -45,19 +45,42 @@ export async function get(): Promise<unknown[]> {
 
 async function connect() {
   const token = await getAuthToken();
-  const socketApiUrl = `${process.env.DRILL_ADMIN_PROTOCOL}://${process.env.DRILL_ADMIN_HOST}/ws/drill-admin-socket?token=${token}`;
+  const protocol = process.env.DRILL_ADMIN_IS_SECURE_CONNECTION == 'true' ? 'wss' : 'ws';
+  const socketApiUrl = `${protocol}://${process.env.DRILL_ADMIN_HOST}/ws/drill-admin-socket?token=${token}`;
   const connection = new Websocket(socketApiUrl);
   await socketEvent(connection, 'open');
   return connection;
 }
 
 async function getAuthToken() {
-  const url = `${process.env.DRILL_ADMIN_PROTOCOL}://${process.env.DRILL_ADMIN_HOST}/api`;
-  const response = await axios.post(`${url}/login`);
-  if (response.status !== 200) {
-    throw new Error('failed to authorize');
+  const protocol = process.env.DRILL_ADMIN_IS_SECURE_CONNECTION == 'true' ? 'https' : 'http';
+  const url = `${protocol}://${process.env.DRILL_ADMIN_HOST}/api`;
+  try {
+    const response = await axios.post(`${url}/sign-in`, {
+      username: process.env.DRILL_ADMIN_USERNAME,
+      password: process.env.DRILL_ADMIN_PASSWORD,
+    });
+    if (response && response.status !== 200) throw new Error(`Response failed with the status: ${response.status}`);
+    return response.headers.authorization;
+  } catch (e) {
+    throw new Error(
+      'Failed to authorize in Drill4J Admin Backend service.' +
+        '\n\t' +
+        `Reason: ${e.message ? e.message : 'unknown'}` +
+        '\n\t' +
+        'Please check the following env variables to contain appropriate values:' +
+        '\n\t\t' +
+        `DRILL_ADMIN_IS_SECURE_CONNECTION = ${process.env.DRILL_ADMIN_IS_SECURE_CONNECTION}` +
+        '\n\t\t' +
+        `DRILL_ADMIN_HOST = ${process.env.DRILL_ADMIN_HOST}` +
+        '\n\t\t' +
+        `DRILL_ADMIN_USERNAME = ${process.env.DRILL_ADMIN_USERNAME}` +
+        '\n\t\t' +
+        `DRILL_ADMIN_PASSWORD = ${process.env.DRILL_ADMIN_PASSWORD}` +
+        '\n\t' +
+        'If everything looks correct make sure Drill4J Admin Backend API is running and reachable',
+    );
   }
-  return response.headers.authorization;
 }
 
 const isJsAgent = x => String(x.agentType).toLowerCase() === 'node.js';
