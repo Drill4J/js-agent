@@ -69,6 +69,7 @@ function convertMethodsToSequentialProbes(methods) {
       params: x.params,
       returnType: x.returnType,
       probes: getRangeOfNumbers(probeCounter, probesLength),
+      probesStartPos: probeCounter,
       count: probesLength,
     };
     if (x.checksum) {
