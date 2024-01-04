@@ -33,7 +33,7 @@ export async function get(): Promise<unknown[]> {
     .map(x => ({
       data: {
         id: x.id,
-        instanceId: '',
+        instanceId: x.instanceId,
         buildVersion: x.buildVersion,
         serviceGroupId: x.group,
         agentType: 'NODEJS',

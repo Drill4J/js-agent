@@ -90,7 +90,9 @@ export class App {
         const { version, groupId } = ctx.request.body;
         const agentData: AgentData = {
           id: agentId,
-          instanceId: '',
+          // send build version in place of instanceId to avoid mixing up classes from different versions
+          instanceId: version, // TODO implement actual instanceId (Idk how yet)
+          //   or just make _build verfsion_ the ID of the "unique classes set" (risky due to runtime code changes / differences)
           buildVersion: version,
           serviceGroupId: groupId || '',
           agentType: 'NODEJS',
