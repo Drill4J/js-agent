@@ -15,6 +15,7 @@
  */
 import * as upath from 'upath';
 import normalizeScriptPath from '@util/normalize-script-path';
+import { AstEntity, AstMethod } from '@drill4j/test2code-types';
 
 export function formatAst(astTreeData) {
   return astTreeData.map(({ path, suffix, methods = [] }) => ({
@@ -32,7 +33,7 @@ export function formatAst(astTreeData) {
   }));
 }
 
-export function formatForBackend(data) {
+export function formatForBackend(data): AstEntity[] {
   return data.map(file => {
     // FIXME move normalizeScriptPath call to "formatAst" (line #FIX1)
     const parsedPath = upath.parse(normalizeScriptPath(file.filePath));
@@ -46,7 +47,7 @@ export function formatForBackend(data) {
   });
 }
 
-function convertMethodsToSequentialProbes(methods) {
+function convertMethodsToSequentialProbes(methods): AstMethod[] {
   let probeCounter = 0;
 
   return methods.reduce((acc, x) => {
