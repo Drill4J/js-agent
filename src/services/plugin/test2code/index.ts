@@ -17,9 +17,7 @@
 import { ExecClassData } from '@drill4j/test2code-types';
 
 import fsExtra from 'fs-extra';
-import * as upath from 'upath';
 import { getDataPath } from '@util/misc';
-import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import { formatAst } from './processors/ast';
 import { ILoggerProvider } from '@util/logger';
