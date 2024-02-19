@@ -19,25 +19,31 @@ import axios from 'axios';
 
 export default { sendInstance, sendClassMetadata, sendClassMetadataCompleted, sendCoverage };
 
-async function sendInstance(agentId: string, data: AgentConfig) {
-  await axios.put(`/agents`, JSON.stringify(data));
+async function sendInstance(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: AgentConfig) {
+  await axios.put(`/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}`, JSON.stringify(data));
 }
 
-async function sendCoverage(agentId: string, buildVersion: string, data: ExecClassData[]) {
+async function sendCoverage(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: ExecClassData[]) {
   await axios.post(
-    `/agents/${agentId}/builds/${buildVersion}/coverage`,
+    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/coverage`,
     JSON.stringify({
       execClassData: data,
     }),
   );
 }
 
-async function sendClassMetadata(agentId: string, buildVersion: string, data: AstEntity[]) {
-  await axios.post(`/agents/${agentId}/builds/${buildVersion}/class-metadata`, JSON.stringify({ astEntities: data }));
+async function sendClassMetadata(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: AstEntity[]) {
+  await axios.post(
+    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/class-metadata`,
+    JSON.stringify({ astEntities: data }),
+  );
 }
 
 // TODO delete once t2c is removed from admin
-async function sendClassMetadataCompleted(agentId: string, buildVersion: string) {
+async function sendClassMetadataCompleted(groupId: string, agentId: string, buildVersion: string, instanceId: string) {
   // empty object is to be serialized to AgentMessage
-  await axios.post(`/agents/${agentId}/builds/${buildVersion}/class-metadata/complete`, JSON.stringify({}));
+  await axios.post(
+    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/class-metadata/complete`,
+    JSON.stringify({}),
+  );
 }

@@ -69,6 +69,7 @@ function convertMethodsToSequentialProbes(methods): AstMethod[] {
       name: x.name,
       params: x.params,
       returnType: x.returnType,
+      probesStartPos: probeCounter,
       probes: getRangeOfNumbers(probeCounter, probesLength),
       count: probesLength,
     };
