@@ -130,7 +130,7 @@ export class App {
       '/groups/:groupId/agents/:agentId/builds/:buildVersion/v8-coverage',
       async (ctx: ExtendableContext & IRouterParamContext) => {
         const { groupId, agentId, buildVersion } = ctx.params;
-        const { data, sessionId } = (ctx.request.body as AddSessionData).payload;
+        const { data, sessionId } = ctx.request.body as AddSessionData;
         const agentKey = getAgentBuildKey(groupId, agentId, buildVersion);
 
         console.log('convert coverage for', agentKey);

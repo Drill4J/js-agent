@@ -60,10 +60,6 @@ declare module '@drill4j/test2code-types' {
 
   // incoming V8 coverage
   export type AddSessionData = {
-    type: 'ADD_SESSION_DATA';
-    payload: SessionDataPayload;
-  };
-  export type SessionDataPayload = {
     sessionId: string;
     data: string;
   };
