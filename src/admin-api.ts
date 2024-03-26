@@ -17,33 +17,21 @@
 import { AgentConfig, AstEntity, ExecClassData } from '@drill4j/test2code-types';
 import axios from 'axios';
 
-export default { sendInstance, sendClassMetadata, sendClassMetadataCompleted, sendCoverage };
+export default { sendInstance, sendClassMetadata, sendCoverage };
 
-async function sendInstance(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: AgentConfig) {
-  await axios.put(`/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}`, JSON.stringify(data));
+async function sendInstance(instanceId: string, data: AgentConfig) {
+  await axios.put(`/instances/${instanceId}`, JSON.stringify(data));
 }
 
-async function sendCoverage(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: ExecClassData[]) {
+async function sendCoverage(instanceId: string, data: ExecClassData[]) {
   await axios.post(
-    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/coverage`,
+    `/instances/${instanceId}/coverage`,
     JSON.stringify({
       execClassData: data,
     }),
   );
 }
 
-async function sendClassMetadata(groupId: string, agentId: string, buildVersion: string, instanceId: string, data: AstEntity[]) {
-  await axios.post(
-    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/class-metadata`,
-    JSON.stringify({ astEntities: data }),
-  );
-}
-
-// TODO delete once t2c is removed from admin
-async function sendClassMetadataCompleted(groupId: string, agentId: string, buildVersion: string, instanceId: string) {
-  // empty object is to be serialized to AgentMessage
-  await axios.post(
-    `/groups/${groupId}/agents/${agentId}/builds/${buildVersion}/instances/${instanceId}/class-metadata/complete`,
-    JSON.stringify({}),
-  );
+async function sendClassMetadata(instanceId: string, data: AstEntity[]) {
+  await axios.post(`/instances/${instanceId}/class-metadata`, JSON.stringify({ astEntities: data }));
 }

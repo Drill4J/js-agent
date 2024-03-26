@@ -99,7 +99,7 @@ export class App {
       // HACK figure out instanceIds
       const instanceId = version;
 
-      await AdminAPI.sendInstance(groupId, agentId, version, instanceId, agentConfig);
+      await AdminAPI.sendInstance(instanceId, agentConfig);
 
       // HACK to allow admin save AgentConfig data before accepting classes
       // TODO remove once test2code is removed from admin
@@ -108,11 +108,7 @@ export class App {
       // STEP#2 Send classes metadata
       const astEntities = formatForBackend(formatAst(rawAstEntites));
 
-      await AdminAPI.sendClassMetadata(groupId, agentId, version, instanceId, astEntities);
-
-      // TODO remove completed once migrated to new metrics calc
-      // STEP#3 Send completed
-      await AdminAPI.sendClassMetadataCompleted(groupId, agentId, version, instanceId);
+      await AdminAPI.sendClassMetadata(instanceId, astEntities);
 
       // STEP#4 Create coverage mapper
       if (this.agentKeyToConverter[agentKey] != undefined) return;
@@ -144,7 +140,7 @@ export class App {
 
         // HACK figure out instanceIds
         const instanceId = buildVersion;
-        await AdminAPI.sendCoverage(groupId, agentId, buildVersion, instanceId, coverage);
+        await AdminAPI.sendCoverage(instanceId, coverage);
       },
     );
 
