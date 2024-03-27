@@ -14,142 +14,37 @@
  * limitations under the License.
  */
 /* eslint-disable import/no-unresolved */
-import {
-  CoverDataPart,
-  InitInfo,
-  InitDataPart,
-  Initialized,
-  SessionStarted,
-  SessionFinished,
-  SessionCancelled,
-  ScopeInitialized,
-  StopSession,
-  StartSession,
-  CancelSession,
-  InitActiveScope,
-  AddSessionData,
-} from '@drill4j/test2code-types';
+import { ExecClassData } from '@drill4j/test2code-types';
 
 import fsExtra from 'fs-extra';
-import * as upath from 'upath';
 import { getDataPath } from '@util/misc';
-import { Test2CodeAction } from './types';
-import * as astProcessor from './processors/ast';
 import coverageProcessor from './processors/coverage';
 import { formatAst } from './processors/ast';
-import Plugin from '../plugin';
+import { ILoggerProvider } from '@util/logger';
+import { AgentKey } from 'app.types';
 
-export class Test2CodePlugin extends Plugin {
+export class Test2CodePlugin {
+  private logger: any;
+
+  constructor(agentKey: AgentKey, loggerProvider: ILoggerProvider) {
+    this.logger = loggerProvider.getLogger('build', agentKey);
+  }
+
   private cache: Record<string, any> = {};
 
-  public async init(): Promise<void> {
-    this.logger.info('init');
-
-    // classesCount: 0 - legacy param from Java agent implementation
-    super.send<InitInfo>({ type: 'INIT', classesCount: 0, message: `Initializing plugin ${this.id}`, init: true });
-
-    const dataPath = getDataPath(this.agentId, this.currentBuildVersion);
-    const sourceAst = await fsExtra.readJSON(`${dataPath}/ast.json`);
-    super.send<InitDataPart>({
-      type: 'INIT_DATA_PART',
-      astEntities: astProcessor.formatForBackend(sourceAst),
-    });
-
-    super.send<Initialized>({ type: 'INITIALIZED', msg: '' });
-
-    this.logger.debug('init: done');
+  public async convertV8Coverage(agentKey: AgentKey, data: string, sessionId: string): Promise<ExecClassData[]> {
+    const rawData = JSON.parse(data);
+    // TODO get rid of monkeypatching once we'll remove sessionId
+    rawData.sessionId = sessionId;
+    return this.processCoverage(agentKey, rawData);
   }
 
-  // required for coverage highlight in vscode extension
-  public async getAst(buildVersion: string) {
-    const dataPath = getDataPath(this.agentId, buildVersion);
-    let ast;
-    try {
-      ast = await fsExtra.readJSON(`${dataPath}/ast.json`);
-    } catch (e) {
-      throw new Error(`Failed to obtain AST data. Reason: ${e.message}`);
-    }
-    return ast;
-  }
-
-  public async handleAction(action: unknown): Promise<void> {
-    switch ((action as Test2CodeAction).type) {
-      // #region Handlers added for Admin Backend API compatibility / do not actually call/modify anything
-      case 'INIT_ACTIVE_SCOPE': {
-        const { id, name, prevId } = (action as InitActiveScope).payload;
-        this.logger.info('init active scope', id);
-        super.send<ScopeInitialized>({
-          type: 'SCOPE_INITIALIZED',
-          id,
-          name,
-          prevId,
-          ts: Date.now(),
-        });
-        break;
-      }
-
-      case 'START_AGENT_SESSION': {
-        const { testType, sessionId } = (action as StartSession).payload;
-        this.logger.info('start session', sessionId);
-        super.send<SessionStarted>({ type: 'SESSION_STARTED', sessionId, testType, ts: Date.now() });
-        break;
-      }
-
-      case 'STOP': {
-        const { sessionId } = (action as StopSession).payload;
-        this.logger.info('finish session', sessionId);
-
-        super.send<SessionFinished>({
-          type: 'SESSION_FINISHED',
-          sessionId,
-          ts: Date.now(),
-        });
-        break;
-      }
-
-      case 'CANCEL': {
-        const { sessionId } = (action as CancelSession).payload;
-        this.logger.info('cancel session', sessionId);
-        super.send<SessionCancelled>({
-          type: 'SESSION_CANCELLED',
-          sessionId,
-          ts: Date.now(),
-        });
-        break;
-      }
-      // #endregion
-
-      case 'ADD_SESSION_DATA': {
-        const { data, sessionId } = (action as AddSessionData).payload;
-        this.logger.info('process coverage', sessionId);
-        try {
-          const rawData = JSON.parse(data);
-          const coverage = await this.processCoverage(rawData);
-          super.send<CoverDataPart>({
-            type: 'COVERAGE_DATA_PART',
-            sessionId,
-            data: coverage,
-          });
-        } catch (e) {
-          this.logger.warning(
-            `failed to process coverage. Coverage data will be lost\n\tsessionId ${sessionId}\n\treason:\n\t${e?.message}\n${e?.stack}`,
-          );
-        }
-        break;
-      }
-
-      default:
-        this.logger.debug('received unknown action %o', action);
-        break;
-    }
-  }
-
-  public async updateBuildInfo(buildVersion: string, buildInfo): Promise<void> {
+  public async saveBuildMetadata(agentKey: AgentKey, buildInfo): Promise<void> {
     const { bundleFiles, data, config } = buildInfo;
 
-    this.logger.info('build', buildVersion, 'saving data...');
+    this.logger.info(agentKey, 'saving data...');
 
-    const dataPath = getDataPath(this.agentId, buildVersion);
+    const dataPath = getDataPath(agentKey);
 
     // prepare dir
     await fsExtra.remove(dataPath);
@@ -159,12 +54,12 @@ export class Test2CodePlugin extends Plugin {
     await fsExtra.writeJSON(`${dataPath}/bundle.json`, bundleFiles);
     await fsExtra.writeJSON(`${dataPath}/ast.json`, formatAst(data));
     await fsExtra.writeJSON(`${dataPath}/config.json`, config);
-    this.logger.info('build', buildVersion, 'data saved!');
+    this.logger.info(agentKey, 'data saved!');
   }
 
-  private async processCoverage(rawData): Promise<any> {
+  private async processCoverage(agentKey: AgentKey, rawData: any): Promise<any> {
     const perfMark1 = global.prf.mark('prepare');
-    const dataPath = getDataPath(this.agentId, this.currentBuildVersion);
+    const dataPath = getDataPath(agentKey);
     const sourceAst = await fsExtra.readJSON(`${dataPath}/ast.json`);
     const bundleData = await fsExtra.readJSON(`${dataPath}/bundle.json`);
     const config = await fsExtra.readJSON(`${dataPath}/config.json`);
