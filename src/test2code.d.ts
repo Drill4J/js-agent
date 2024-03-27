@@ -21,8 +21,7 @@ declare module '@drill4j/test2code-types' {
     buildVersion: string;
     serviceGroupId?: string;
 
-    // TODO send normal agent type
-    agentType: 'NODEJS';
+    agentType: 'JAVASCRIPT';
     // TODO send actual version (js-agent + js-parser?)
     agentVersion: '';
 

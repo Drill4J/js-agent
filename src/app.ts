@@ -92,7 +92,7 @@ export class App {
         //   or just make _build verfsion_ the ID of the "unique classes set" (risky due to runtime code changes / differences)
         buildVersion: version,
         serviceGroupId: groupId || '',
-        agentType: 'NODEJS',
+        agentType: 'JAVASCRIPT',
         agentVersion: '',
       };
 
