@@ -42,11 +42,12 @@ export default async function processCoverage(
     coverage: V8ScriptCoverageData;
     scripts: V8ScriptParsedEventData[];
     testId: string;
+    sessionId: string;
   },
   cache: Record<string, any>,
   projectPaths: Record<string, any>,
 ): Promise<ExecClassData[]> {
-  const { testId } = targetData;
+  const { testId, sessionId } = targetData;
 
   const scripts: V8ScriptParsedEventData[] = JSON.parse(targetData.scripts as any);
   const targetDataCoverage: V8ScriptCoverageData = JSON.parse(targetData.coverage as any);
@@ -85,6 +86,7 @@ export default async function processCoverage(
       id: undefined,
       className: `${normalizeScriptPath(entity.filePath)}${entity.suffix ? `.${entity.suffix}` : ''}`,
       testId,
+      sessionId,
       probes: mapEntityProbes(entity),
     })),
     R.filter(passProbesNotNull),
@@ -194,6 +196,7 @@ const computeProperty = name => comp => data => ({
   [name]: comp(data),
 });
 
+// TODO perform in advance, when agent metadata is submitted?
 // Prepare and cache mapping functions
 // 1 bundle file -> 1 sourcemap -> N original files
 // building SourceMapConsumer takes a lot of time, hence, the caching

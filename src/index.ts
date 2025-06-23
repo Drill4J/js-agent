@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Websocket from 'ws';
+import axios from 'axios';
 import { App } from './app';
-import { AgentHubConfig } from './services/hub/types';
-import { AgentHub } from './services/hub';
 import LoggerProvider from './util/logger'; // TODO path aliases
-import * as AgentsInfoProvider from './services/agents-info-provider';
 import { version } from '../package.json';
+import './util/performance';
 
 console.log('js-agent version:', version);
 
@@ -28,28 +26,22 @@ const startupLogger = LoggerProvider.getLogger('startup');
 async function start(): Promise<void> {
   startupLogger.info('starting');
 
-  const agentHubConfig: AgentHubConfig = {
-    loggerProvider: LoggerProvider,
-    agentConfig: {
-      loggerProvider: LoggerProvider,
-      connection: {
-        protocol: process.env.DRILL_ADMIN_PROTOCOL || 'ws',
-        host: process.env.DRILL_ADMIN_HOST,
-        Provider: Websocket,
-      },
-    },
-  };
-  const agentHub = new AgentHub(AgentsInfoProvider, agentHubConfig);
-  await agentHub.initializing;
+  await setupAxios(process.env.DRILL_ADMIN_ADDRESS, process.env.DRILL_API_KEY);
 
-  const app = new App(
-    {
-      port: Number(process.env.APP_PORT) || 8080,
-      loggerProvider: LoggerProvider,
-    },
-    agentHub,
-  );
+  const app = new App({
+    port: Number(process.env.APP_PORT) || 8080,
+    loggerProvider: LoggerProvider,
+  });
   await app.start();
+}
+
+async function setupAxios(adminAddress: string, apiKey: string) {
+  axios.defaults.baseURL = `${adminAddress}/api`;
+  axios.defaults.headers.common['X-Api-Key'] = apiKey;
+
+  // TODO remove once Admin Backend learns to parse 'application/json; encoding: utf-8'
+  axios.defaults.headers.post['Content-Type'] = 'application/json';
+  axios.defaults.headers.put['Content-Type'] = 'application/json';
 }
 
 export default start();

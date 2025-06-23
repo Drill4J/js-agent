@@ -14,16 +14,11 @@
  * limitations under the License.
  */
 import { ILoggerProvider } from './util/logger';
-import { Agent } from './services/agent';
-import { Test2CodePlugin } from './services/plugin/test2code';
 
 declare module 'koa' {
   interface ExtendableContext {
     state: {
-      drill: {
-        agent: Agent;
-        test2Code?: Test2CodePlugin;
-      };
+      drill: {};
     };
   }
 }
@@ -36,3 +31,5 @@ export interface AppConfig {
   };
   loggerProvider: ILoggerProvider;
 }
+
+export type AgentKey = Opaque<'AgentKey', string>;
